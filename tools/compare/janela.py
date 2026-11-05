@@ -32,13 +32,23 @@ r = w.RECT(); u.GetWindowRect(h, ctypes.byref(r))
 KEYS = {'esc': 0x1B, 'enter': 0x0D, 'down': 0x28, 'up': 0x26, 'right': 0x27, 'left': 0x25}
 def mv(x, y): u.SetCursorPos(r.left + int(float(x)), r.top + int(float(y))); time.sleep(0.25)
 i = 0
+BOX = None
 while i < len(args):
     a = args[i]
     if a == 'r': mv(args[i+1], args[i+2]); u.mouse_event(8, 0, 0, 0, 0); time.sleep(0.08); u.mouse_event(16, 0, 0, 0, 0); time.sleep(0.8); i += 3
     elif a == 'm': mv(args[i+1], args[i+2]); time.sleep(0.6); i += 3
     elif a == 'k': v = KEYS.get(args[i+1]) or int(args[i+1], 16); u.keybd_event(v, 0, 0, 0); u.keybd_event(v, 0, 2, 0); time.sleep(0.5); i += 2
     elif a == 'w': time.sleep(float(args[i+1])); i += 2
+    elif a == 't':   # digita números (e - .)
+        for ch in args[i+1]:
+            v = {'-': 0xBD, '.': 0xBE}.get(ch) or ord(ch)
+            u.keybd_event(v, 0, 0, 0); u.keybd_event(v, 0, 2, 0); time.sleep(0.05)
+        time.sleep(0.3); i += 2
+    elif a == 'ca': u.keybd_event(0x11, 0, 0, 0); u.keybd_event(0x41, 0, 0, 0); u.keybd_event(0x41, 0, 2, 0); u.keybd_event(0x11, 0, 2, 0); time.sleep(0.3); i += 1
+    elif a == 'dc': mv(args[i+1], args[i+2]); [ (u.mouse_event(2,0,0,0,0), u.mouse_event(4,0,0,0,0), time.sleep(0.06)) for _ in range(2) ]; time.sleep(0.5); i += 3
+    elif a == 'box': BOX = tuple(int(float(x)) for x in args[i+1:i+5]); i += 5
     else: mv(a, args[i+1]); u.mouse_event(2, 0, 0, 0, 0); time.sleep(0.08); u.mouse_event(4, 0, 0, 0, 0); time.sleep(0.7); i += 2
 # fotografa a janela com uma folga embaixo e à direita, para o menu que abrir para fora dela
-ImageGrab.grab(bbox=(r.left, r.top, r.right + 300, r.bottom + 200), all_screens=True).save(png)
+if BOX: ImageGrab.grab(bbox=(r.left + BOX[0], r.top + BOX[1], r.left + BOX[2], r.top + BOX[3]), all_screens=True).save(png)
+else: ImageGrab.grab(bbox=(r.left, r.top, r.right + 300, r.bottom + 200), all_screens=True).save(png)
 print('ok', found[0][1], (r.left, r.top, r.right, r.bottom))

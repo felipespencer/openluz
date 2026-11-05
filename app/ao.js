@@ -19,7 +19,8 @@ export class AdvancedOutput {
     this.c = ctx;
     this.open = false; this.tab = 'in'; this.mode = 'move'; this.snap = false; this.grid = true; this.led = false; this.pan = false; this.zoom = 'fit';
     this.sel = null; this.selPt = -1; this.selPtK = null; this.selG = -1; this.nudgeT = 0; this.drawing = null; this.cursor = null; this.drag = null; this.scale = 1;
-    this.snapshot = ''; this.presetName = ''; this.hist = []; this.redoHist = []; this.space = false;
+    this.snapshot = ''; this.presetName = ''; this.clip = null;   // slice ou máscara copiado pelo botão direito (Copiar/Recortar)
+    this.hist = []; this.redoHist = []; this.space = false;
     Object.assign(this, propsKit(this));
     this.build();
   }
@@ -79,7 +80,8 @@ export class AdvancedOutput {
     addEventListener('pointerup', (e) => this.up(e));
     this.svg.addEventListener('dblclick', (e) => this.dbl(e));
     this.svg.addEventListener('pointerleave', () => { this.cursor = null; });
-    this.svg.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.svg.addEventListener('contextmenu', (e) => { e.preventDefault(); if (this.sel && this.sel.item && !this.drawing) this.ctxMenu(e.clientX, e.clientY); });
+    $('aoList').addEventListener('contextmenu', (e) => e.preventDefault());
     $('aoStage').addEventListener('pointerdown', (e) => this.panDown(e));
     addEventListener('keydown', (e) => this.key(e));
     addEventListener('keyup', (e) => { if (e.key === ' ') this.space = false; });
@@ -147,6 +149,7 @@ export class AdvancedOutput {
   }
   key(e) {
     if (!this.open || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (this.c.menuOpen && this.c.menuOpen()) return;   // com o menu do botão direito aberto, Esc fecha só o menu
     if (e.key === ' ') { this.space = true; e.preventDefault(); }
     else if (e.key === 'Escape') { if (this.drawing) { this.drawing = null; this.draw(); } else this.hide(true); }
     else if (e.key === 't' || e.key === 'T') { if (this.tab === 'out') this.setMode(this.mode === 'move' ? 'pts' : 'move'); }
@@ -527,6 +530,75 @@ export class AdvancedOutput {
     list.splice(list.indexOf(sc), 1); const n = list[0]; this.sel = { screen: n, item: n.items[0] || null }; this.c.onChange(); this.layout(); this.refresh();
   }
 
+  // ---------- botão direito (o mesmo menu do Resolume 7.28.1; medidas em tools/compare/saida/menu-ao/MEDIDAS.md) ----------
+  // Só abre com um item já selecionado e age sobre ele, onde quer que seja o clique no palco; na lista, a linha clicada
+  // passa a ser a selecionada (como lá).
+  ctxMenu(x, y) {
+    const sel = this.sel; if (!sel || !this.c.menu) return;
+    const sc = sel.screen, it = sel.item;
+    if (!it) { this.c.menu(this.screenMenu(sc), x, y); return; }
+    const out = this.tab === 'out' || it.type === 'mask', slice = it.type === 'slice';
+    const act = (fn) => () => { this.pushUndo(); fn(); M.touch(it); this.c.onChange(); this.refresh(); };
+    const R = () => this.menuRect(it, out), set = (r) => this.setMenuRect(it, out, r), B = this.menuBounds(sc, out);
+    const items = [
+      { label: 'Centralizar X', fn: act(() => { const r = R(); set({ ...r, x: (B.w - r.w) / 2 }); }) },
+      { label: 'Centralizar Y', fn: act(() => { const r = R(); set({ ...r, y: (B.h - r.h) / 2 }); }) },
+      { label: 'Espelhar X', fn: act(() => { const r = R(); set({ ...r, x: B.w - r.x - r.w }); }) },
+      { label: 'Espelhar Y', fn: act(() => { const r = R(); set({ ...r, y: B.h - r.y - r.h }); }) },
+      '-',
+      { label: 'Metade esquerda', fn: act(() => set({ x: 0, y: 0, w: B.w / 2, h: B.h })) },
+      { label: 'Metade de cima', fn: act(() => set({ x: 0, y: 0, w: B.w, h: B.h / 2 })) },
+      { label: 'Metade direita', fn: act(() => set({ x: B.w / 2, y: 0, w: B.w / 2, h: B.h })) },
+      { label: 'Metade de baixo', fn: act(() => set({ x: 0, y: B.h / 2, w: B.w, h: B.h / 2 })) },
+      { label: 'Área toda', fn: act(() => set({ x: 0, y: 0, w: B.w, h: B.h })) },
+    ];
+    if (slice && out) items.push('-', { label: 'Fazer círculo', fn: act(() => {
+      const r = M.outRect(it), d = Math.min(r.w, r.h), w = it.warp;
+      w.mode = 'mesh'; w.curve = true; w.divX = w.divY = 4; w.rot = 0; w.pts = M.circleMesh(r.x + r.w / 2, r.y + r.h / 2, d, 4);
+    }) });
+    if (slice) items.push('-',
+      out ? { label: 'Casar com a entrada', fn: act(() => M.fitOutRect(it, { ...it.in })) }
+          : { label: 'Casar com a saída', fn: act(() => { const o = M.outRect(it); Object.assign(it.in, { x: o.x, y: o.y, w: o.w, h: o.h }); }) },
+      { label: 'Trocar entrada e saída', fn: act(() => { const o = M.outRect(it), i = { ...it.in }; Object.assign(it.in, { x: o.x, y: o.y, w: o.w, h: o.h }); M.fitOutRect(it, i); }) });
+    const idx = sc.items.indexOf(it);
+    items.push('-',
+      { label: 'Trazer para frente', disabled: idx >= sc.items.length - 1, fn: () => this.reorder(sc, it, +1) },
+      { label: 'Mandar para trás', disabled: idx <= 0, fn: () => this.reorder(sc, it, -1) },
+      '-',
+      { label: 'Duplicar', fn: () => { this.pushUndo(); const n = M.cloneItem(it); n.name = M.uniqueName(sc, it.name); sc.items.splice(sc.items.indexOf(it) + 1, 0, n); this.sel = { screen: sc, item: n }; this.c.onChange(); this.refresh(); } },
+      { label: 'Copiar', fn: () => { this.clip = M.cloneItem(it); } },
+      { label: 'Recortar', fn: () => { this.clip = M.cloneItem(it); this.removeItem(it); const rest = sc.items[Math.min(idx, sc.items.length - 1)]; if (rest) this.select(sc, rest); } },
+      { label: 'Colar', disabled: !this.clip, fn: () => this.paste(sc, it) });
+    this.c.menu(items, x, y);
+  }
+  screenMenu(sc) {
+    const devs = [['auto', 'Automático (projetor, se houver)'], ['window', 'Janela'], ...this.c.displays().map(d => [d.id, d.label + ' (' + d.w + '×' + d.h + ')'])];
+    const setDev = (v) => { this.pushUndo(); if (this.c.setDevice) this.c.setDevice(sc, v); else { sc.device = v; const d = this.c.displays().find(x => x.id === v); if (d) M.resizeScreen(sc, d.w, d.h); } this.c.onChange(); this.layout(); this.refresh(); };
+    return [{ label: 'Dispositivos de saída', disabled: true }, ...devs.map(([id, label]) => ({ label, check: sc.device === id, fn: () => setDev(id) })), '-',
+      { label: 'Duplicar', fn: () => { this.pushUndo(); const list = this.screens(), n = M.deserialize(M.serialize([sc]))[0]; n.name = sc.name.replace(/\s+\d+$/, '') + ' ' + (list.length + 1); list.splice(list.indexOf(sc) + 1, 0, n); this.sel = { screen: n, item: null }; this.c.onChange(); this.layout(); this.refresh(); } },
+      { label: 'Colar', disabled: !this.clip, fn: () => this.paste(sc, null) }];
+  }
+  // retângulo em que o item do menu age: entrada do slice (pixels da composição), caixa da saída, ou caixa da máscara
+  menuRect(it, out) { return it.type === 'mask' ? bbox(it.pts) : out ? M.outRect(it) : { x: it.in.x, y: it.in.y, w: it.in.w, h: it.in.h }; }
+  menuBounds(sc, out) { return out ? { w: sc.w, h: sc.h } : { w: this.c.compW, h: this.c.compH }; }
+  setMenuRect(it, out, r) {
+    if (it.type === 'mask') { const b = bbox(it.pts), sx = b.w ? r.w / b.w : 1, sy = b.h ? r.h / b.h : 1; it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * sx; q[1] = r.y + (q[1] - b.y) * sy; }); }
+    else if (out) M.fitOutRect(it, r);
+    else Object.assign(it.in, { x: r.x, y: r.y, w: r.w, h: r.h });
+  }
+  // a lista mostra o da frente em cima (como no Resolume); no modelo, o da frente é o último desenhado
+  reorder(sc, it, dir) {
+    const i = sc.items.indexOf(it), j = i + dir; if (j < 0 || j >= sc.items.length) return;
+    this.pushUndo(); sc.items.splice(i, 1); sc.items.splice(j, 0, it); this.c.onChange(); this.refresh();
+  }
+  // Colar no item: a cópia entra logo atrás dele e a seleção fica no original; colar na tela: a cópia vai para o fundo
+  paste(sc, it) {
+    if (!this.clip) return;
+    this.pushUndo(); const n = M.cloneItem(this.clip); n.name = sc.items.some(i => i.name === n.name) ? M.uniqueName(sc, n.name) : n.name;
+    if (it) sc.items.splice(sc.items.indexOf(it), 0, n); else sc.items.unshift(n);
+    this.c.onChange(); this.refresh();
+  }
+
   // ---------- árvore de telas ----------
   refresh() { this.renderTree(); this.renderProps(); this.syncTools(); this.draw(); }
   devLabel(sc) { return sc.device === 'auto' ? 'Automático' : sc.device === 'window' ? 'Janela' : (this.c.displayLabel(sc.device) || 'Monitor'); }
@@ -540,15 +612,17 @@ export class AdvancedOutput {
       const nm = el('span', 'nm', sc.name); nm.ondblclick = (e) => { e.stopPropagation(); this.rename(nm, sc); };
       const x = el('span', 'x', '✕'); x.title = 'Apagar a tela e tudo dentro dela'; x.onclick = (e) => { e.stopPropagation(); this.removeScreen(sc); };
       row.append(ck, nm, x); row.onclick = () => this.select(sc, null);
+      row.oncontextmenu = (e) => { e.preventDefault(); this.select(sc, null); this.ctxMenu(e.clientX, e.clientY); };
       const sub = el('div', 'sub'); sub.innerHTML = `<i>${ICON.caret}</i><span>${this.devLabel(sc)} (${sc.w}×${sc.h})</span>`; sub.onclick = () => this.select(sc, null);
       box.append(row, sub);
-      for (const it of sc.items) {
+      for (const it of [...sc.items].reverse()) {   // o da frente em cima, como no Resolume (no modelo ele é o último desenhado)
         const r = el('div', 'row item' + (this.sel && this.sel.item === it ? ' sel' : '') + (it.enabled ? '' : ' off'));
         r.dataset.help = it.type === 'slice' ? 'Slice|Selecione o slice para editar. Clique duas vezes no nome para renomear.' : 'Máscara|Selecione a máscara para editar. Clique duas vezes no nome para renomear.';
         const c = el('i', 'ck' + (it.type === 'mask' ? ' mask' : '')); c.innerHTML = it.enabled ? ICON.item : ICON.itemOff; c.onclick = (e) => { e.stopPropagation(); this.pushUndo(); it.enabled = !it.enabled; M.touch(it); this.c.onChange(); this.refresh(); };
         const nm = el('span', 'nm', it.name); nm.ondblclick = (e) => { e.stopPropagation(); this.rename(nm, it); };
         const xx = el('span', 'x', '✕'); xx.title = 'Apagar'; xx.onclick = (e) => { e.stopPropagation(); this.sel = { screen: sc, item: it }; this.removeItem(it); };
         r.append(c, nm, xx); r.onclick = () => { this.select(sc, it); if (it.type === 'mask' && this.tab !== 'out') this.setTab('out'); };
+        r.oncontextmenu = (e) => { e.preventDefault(); r.onclick(); this.ctxMenu(e.clientX, e.clientY); };
         box.appendChild(r);
       }
       list.appendChild(box);

@@ -1029,6 +1029,7 @@ const ao = new AdvancedOutput({
   get compW() { return state.settings.w; }, get compH() { return state.settings.h; }, compCanvas: monCanvas,
   screens: () => state.screens, setScreens, layers: () => state.layers, screenCanvas,
   onChange: renderScreens, helpers, toast, setDevice: setScreenDevice,
+  menu: (items, x, y) => menubar.context(items, x, y), menuOpen: () => menubar.open === 99,
   displays: () => displays, displayLabel: (id) => (displays.find(d => d.id === id) || {}).label,
   presets: D ? D.presets : null,
 });

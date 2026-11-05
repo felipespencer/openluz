@@ -111,6 +111,36 @@ export function rotateOut(slice, deg) {
   w.rot = deg; touch(slice);
 }
 
+// ---------- menu do botão direito (medido no Resolume 7.28.1, tools/compare/saida/menu-ao/MEDIDAS.md) ----------
+// Cópia de slice ou máscara com id novo, pelo mesmo caminho do salvar/abrir (nada fica compartilhado com o original).
+export function cloneItem(it) {
+  const t = deserialize(serialize([{ name: '', device: 'auto', w: 1, h: 1, enabled: true, opacity: 1, color: {}, items: [it] }]));
+  return t[0].items[0];
+}
+// "Slice" → "Slice 2", "Slice 2" → "Slice 3": o próximo número livre entre os nomes da tela, como no Resolume
+export function uniqueName(sc, name) {
+  const base = String(name).replace(/\s+\d+$/, ''), used = new Set(sc.items.map(i => i.name));
+  for (let n = 2; ; n++) if (!used.has(base + ' ' + n)) return base + ' ' + n;
+}
+// Fazer círculo: malha bezier 4×4 cujo contorno é o círculo de diâmetro min(w, h), no mesmo centro.
+// Cada ponto vem do mapeamento elíptico do quadrado no disco; as alças, das derivadas (Hermite → Bezier).
+export function circleMesh(cx, cy, d, div = 4) {
+  const R = d / 2, n = 3 * div + 1, f = (u, v) => { const x = 2 * u - 1, y = 2 * v - 1; return [x * Math.sqrt(1 - y * y / 2), y * Math.sqrt(1 - x * x / 2)]; };
+  const e = 1e-4, fu = (u, v) => { const a = f(u + e, v), b = f(u - e, v); return [(a[0] - b[0]) / (2 * e), (a[1] - b[1]) / (2 * e)]; };
+  const fv = (u, v) => { const a = f(u, v + e), b = f(u, v - e); return [(a[0] - b[0]) / (2 * e), (a[1] - b[1]) / (2 * e)]; };
+  const fuv = (u, v) => { const a = fu(u, v + e), b = fu(u, v - e); return [(a[0] - b[0]) / (2 * e), (a[1] - b[1]) / (2 * e)]; };
+  const h = 1 / div, pts = [];
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    // âncora do pedaço e o lado da alça: 0 = na âncora, +1 = alça para frente, −1 = alça para trás
+    const ar = Math.round(r / 3) * 3, ac = Math.round(c / 3) * 3, sr = r - ar, sc = c - ac, u = ac / (n - 1), v = ar / (n - 1);
+    const p = f(u, v), du = fu(u, v), dv = fv(u, v), dd = fuv(u, v);
+    const x = p[0] + du[0] * sc * h / 3 + dv[0] * sr * h / 3 + dd[0] * sc * sr * h * h / 9;
+    const y = p[1] + du[1] * sc * h / 3 + dv[1] * sr * h / 3 + dd[1] * sc * sr * h * h / 9;
+    pts.push([cx + x * R, cy + y * R]);
+  }
+  return pts;
+}
+
 // ---------- soft edge ----------
 // Emenda em cada borda do slice: largura (fração do retângulo de entrada) e o trecho da borda onde ela vale
 // (fração ao longo da borda, 0..1 no sentido x ou y da composição). Um slice tem emenda numa borda quando outro slice
