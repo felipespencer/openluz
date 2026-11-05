@@ -21,13 +21,20 @@ export function serializeComposition(state, laser, cols) {
   return JSON.stringify({
     v: 1, name: state.name || 'Composição', cols, colNames: state.colNames || {}, settings: state.settings, master: state.master, compBypass: !!state.compBypass, speed: state.speed, compFx: state.compFx, compTransform: state.compTransform, compAutopilot: state.compAutopilot,
     layers: state.layers.map(L => ({ name: L.name, master: L.master ?? 1, volume: L.volume ?? 1, opacity: L.opacity, blend: L.blend, bypass: L.bypass, autopilot: L.autopilot, fx: L.fx, transform: L.transform, transition: L.transition, transMode: L.transMode, transOpt: L.transOpt, blendOpt: L.blendOpt, group: L.group ?? null, solo: !!L.solo, bus: L.bus || null, on: L.on, clips: L.clips.map(serializeClip) })),
-    groups: state.groups || [], xfade: state.xfade || XFADE(), deck: state.deck || 0, keymap: state.keymap || null,
+    groups: state.groups || [], xfade: state.xfade || XFADE(), deck: state.deck || 0, keymap: keymapOrNull(state.keymap),
     bpm: state.bpm ? { bpm: state.bpm.bpm, snap: state.bpm.snap, metronome: !!state.bpm.metronome, nudgePct: state.bpm.nudgePct } : null, colSnap: state.colSnap || {}, audio: state.audioSettings || AUDIO_SETTINGS(),
     // os clipes das camadas são os do deck atual; os outros decks guardam as suas linhas (uma por camada)
     decks: (state.decks || []).map((d, i) => ({ name: d.name, color: d.color || '', closed: !!d.closed, rows: i === (state.deck || 0) ? null : state.layers.map(L => (d.cells[L.id] || []).map(serializeClip)) })),
     screens: JSON.parse(M.serialize(state.screens)),
     laser: JSON.parse(serializeLaser(laser.frames, laser.settings, laser.frames.indexOf(laser.active))),
   }, semInternos);
+}
+// o mapa de teclas nasce vazio na primeira tecla (keymap.ensure); vazio e ainda não criado salvam igual, senão o retrato
+// tirado antes da tecla e o de depois ficam diferentes e o primeiro Ctrl+Z depois de abrir o programa não desfaz nada visível
+function keymapOrNull(k) {
+  if (!k || !k.presets) return null;
+  const names = Object.keys(k.presets);
+  return names.length === 1 && names[0] === 'Padrão' && k.active === 'Padrão' && !k.presets['Padrão'].length ? null : k;
 }
 // devolve { layers, screens, laser, missing } — os clipes de arquivo que não abriram ficam vazios
 // ctx.reuse(o) (opcional, usado pelo desfazer) devolve um clipe já aberto para aquele registro, em vez de abrir o arquivo de novo

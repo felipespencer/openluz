@@ -26,7 +26,8 @@ const inRow = async (label, part, n = 0) => { if (!await rowSel(label, n)) throw
 const setNum = async (label, v, n = 0) => { const c = await inRow(label, '.val', n); await click(c[0], c[1]); await key('a', 'KeyA', 65, 2); await type(String(v)); await key('Enter', 'Enter', 13); await wait(200); };
 const results = []; const check = (name, ok, info = '') => { results.push(ok); console.log((ok ? 'OK    ' : 'FALHA ') + name + (info ? '  — ' + info : '')); };
 const P = 'window.projecionista';
-const undo = async () => { await ev(`document.activeElement && document.activeElement.blur(); 1`); await key('Shift', 'ShiftLeft', 16); await wait(100); await key('z', 'KeyZ', 90, 2); await wait(300); };
+// desfazer reabre a composição; na primeira vez depois de abrir o programa pode passar de 300 ms: espera terminar
+const undo = async () => { await ev(`document.activeElement && document.activeElement.blur(); 1`); await key('Shift', 'ShiftLeft', 16); await wait(100); const n0 = await ev(`${P}.hist.redo.length`); await key('z', 'KeyZ', 90, 2); for (let i = 0; i < 30 && (await ev(`${P}.hist.busy`) || await ev(`${P}.hist.redo.length`) === n0); i++) await wait(100); await wait(200); };
 
 // preparo: diálogos fechados, grade limpa, casa (camada de baixo, coluna 1) selecionada com clique
 for (let i = 0; i < 5 && await ev(`document.querySelectorAll('.dlgOver').length`) > 0; i++) { await key('Escape', 'Escape', 27); await wait(200); }
