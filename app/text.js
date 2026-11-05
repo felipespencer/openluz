@@ -10,6 +10,7 @@
 
 export const EM = 128;              // px do em no Size 1 (largura de "Resolume" e das quebras; a tinta do H dá 93 px)
 const OUTLINE = 6;                  // px por lado no Outline Width 1, Size 1
+const GLOW_IN_OFF = 1.5, GLOW_OUT_OFF = 0.5;   // px (× Size) que a rampa perde junto da borda (medido)
 const GLOW0 = 0, GLOW = 8;          // px da rampa = 8 × valor × Size (medido; 1,5 + 7 × valor ficou pior na bancada)
 
 export const STYLES = ['Regular', 'Italic', 'Bold', 'Bold Italic', 'Black'];
@@ -182,7 +183,8 @@ export function drawText(cv, t, c, now = performance.now() / 1000) {
       const g = get(v); if (g <= 0) return; const R = (GLOW0 + GLOW * g) * s; any = true;
       const N = Math.min(48, Math.max(2, Math.ceil(R)));
       x.globalAlpha = a / N;
-      for (let k = 1; k <= N; k++) { x.lineWidth = 2 * R * k / N; for (const g of u.gs) x.strokeText(g.ch, g.x, g.y); }
+      const off = (inside ? GLOW_IN_OFF : GLOW_OUT_OFF) * s;   // a rampa do Resolume começa um pouco depois da borda
+      for (let k = 1; k <= N; k++) { const hw = R * k / N - off; if (hw <= 0) continue; x.lineWidth = 2 * hw; for (const g of u.gs) x.strokeText(g.ch, g.x, g.y); }
     });
     if (!any) return null;
     x.globalAlpha = 1; x.globalCompositeOperation = inside ? 'destination-in' : 'destination-out';
