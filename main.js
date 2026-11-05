@@ -209,7 +209,7 @@ app.whenReady().then(async () => {
     // o isolamento só na janela de controle (index.html e o que ela carrega); páginas escondidas (yt.html) embutem iframes de outros sites, e o COEP os bloquearia
     return net.fetch(pathToFileURL(file).toString()).then(r => p === '/yt.html' ? r : withIsolation(r));
   });
-  const OK = new Set(['media', 'midi', 'midiSysex', 'fullscreen', 'window-management']);
+  const OK = new Set(['media', 'midi', 'midiSysex', 'fullscreen', 'window-management', 'local-fonts']);   // local-fonts: lista de fontes do Text Block
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(OK.has(perm)));
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => OK.has(perm));
   Menu.setApplicationMenu(null);

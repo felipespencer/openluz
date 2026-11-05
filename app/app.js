@@ -150,7 +150,7 @@ async function prepareClip(li, col, fmt) {
   preparingNow.delete(c.path); render();
 }
 function putSource(li, col, id) { const c = C.sourceClip(id); if (c) putClip(li, col, c); return c; }
-function putText(li, col, text) { const c = C.textClip(text); putClip(li, col, c); return c; }
+function putText(li, col, text, animator = false) { const c = C.textClip(text, animator); putClip(li, col, c); return c; }
 async function putCamera(li, col, cam) { try { putClip(li, col, await C.cameraClip(cam.id, cam.label)); } catch (e) { toast('Câmera: ' + e.message); } }
 const dropClip = (c) => { engine.drop(c.id); if (c.player) { c.player.close(); c.player = null; } C.freeClip(c); };
 // captura de tela/janela, ou página web (pergunta o endereço)
@@ -196,7 +196,7 @@ function dropInto(li, col, d, files, ctrl) {
   if (!d) return;
   if (d.path) return putPath(li, col, d.path, d.name);
   if (d.source) return putSource(li, col, d.source);
-  if (d.text) return putText(li, col, 'TEXTO');
+  if (d.text) return putText(li, col, null, d.text === 'animator');
   if (d.lasermirror) return putClip(li, col, C.laserMirrorClip());
   if (d.camera) return putCamera(li, col, d.camera);
   if (d.capture) return putCapture(li, col, d.capture);
@@ -1477,6 +1477,7 @@ function loop() {
   loop.lastDraw = now; loop.frames = (loop.frames || 0) + 1;
   loop.total = (loop.total || 0) + 1;
   if (now - (loop.fpsAt || 0) >= 1) { if (!$('fpsBox').hidden) $('fpsBox').textContent = loop.frames + ' fps · ' + state.layers.filter(L => L.on >= 0).length + ' no ar · ' + COLS + ' colunas'; loop.frames = 0; loop.fpsAt = now; }
+  { const s = previewCell(), tn = now; for (const L of state.layers) C.tickText(liveClip(L), tn); if (s && s.clip) C.tickText(s.clip, tn); }   // Text Animator: valores animados chegando a cada pedaço com atraso
   // espelho do laser: o desenho do LaserCube vai para a projeção
   { const s = previewCell(); for (const L of state.layers) { const c = liveClip(L); for (const m of [c, s && s.clip]) if (m && m.kind === 'lasermirror' && m.paintedAt !== now) { m.paintedAt = now; paintScan(m.el.getContext('2d'), 1080, 1080, laser.scanNow(now), false); m.rev++; } } }
   engine.render(state.layers, engine.neededLayers(state.screens), now);

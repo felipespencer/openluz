@@ -155,7 +155,7 @@ module.exports = (win, app, laser) => {
         P.putSource(1,2,'testcard'); P.trigger(1,2); await S(100); const fonte=P.probe([[0.5,0.5],[0.1,0.5]]);
         P.putSource(1,4,'solidcolor'); L[1].clips[4].params.hue=0; P.trigger(1,4); await S(100); const solido=P.probe(mid)[0]; P.eject(1);
         // texto: branco no centro
-        P.eject(0); P.putText(2,5,'MMMMMMM'); P.trigger(2,5); await S(150); const grade9=P.probe([0.3,0.4,0.5,0.6,0.7].flatMap(x=>[0.45,0.5,0.55].map(y=>[x,y]))); const texto=grade9.reduce((a,b)=>b[0]+b[1]+b[2]>a[0]+a[1]+a[2]?b:a,[0,0,0]); P.eject(2);
+        P.eject(0); { const k=P.putText(2,5,'MMMMMMM'); k.text.size=1.25; (await import('./clips.js')).renderText(k); } P.trigger(2,5); await S(150); const grade9=P.probe([0.3,0.4,0.5,0.6,0.7].flatMap(x=>[0.45,0.5,0.55].map(y=>[x,y]))); const texto=grade9.reduce((a,b)=>b[0]+b[1]+b[2]>a[0]+a[1]+a[2]?b:a,[0,0,0]); P.eject(2);
         // transição: dispara o vermelho e logo depois o Test Card na mesma camada, com 1 s de transição; no meio há mistura
         L[0].transition=1; P.putSource(0,2,'solidcolor'); L[0].clips[2].params.hue=0.33; P.trigger(0,3); await S(100); P.trigger(0,2); await S(400); const meio=P.probe(mid)[0]; await S(800); const fim=P.probe(mid)[0]; L[0].transition=0; P.eject(0);
         // modos de transição do Resolume: Cut (antes de 50 % só o antigo, depois só o novo), Push Left (o novo entra pela direita e empurra o antigo para a esquerda: no meio, esquerda antigo, direita novo), to Black (no meio, preto)

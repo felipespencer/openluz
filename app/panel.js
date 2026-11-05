@@ -94,6 +94,14 @@ export function propsKit(host) {
     i.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); };
     box.appendChild(i); return K.prow(label, help, box);
   };
+  // texto de várias linhas (Enter quebra; Ctrl+Enter ou Esc sai do campo)
+  K.parea = (label, help, v, set, done) => {   // done: depois de sair do campo (o redesenho completo não pode correr a cada letra: tiraria o foco)
+    const box = el('div', 'pv'); const i = el('textarea'); i.value = v; i.className = 'txt area'; i.rows = Math.min(6, Math.max(2, String(v).split('\n').length));
+    i.onchange = () => { host.pushUndo(); set(i.value); host.c.onChange(); host.draw(); if (done) done(); };
+    i.oninput = () => { set(i.value); host.c.onChange(); host.draw(); };
+    i.onkeydown = (e) => { e.stopPropagation(); if ((e.key === 'Enter' && e.ctrlKey) || e.key === 'Escape') i.blur(); };
+    box.appendChild(i); return K.prow(label, help, box);
+  };
   K.picons = (label, help, items, cur, set) => {
     const box = el('div', 'pv icons');
     for (const [v, icon, tip] of items) { const b = el('button', 'ib' + (v === cur ? ' on' : '')); b.type = 'button'; b.innerHTML = ICON[icon] || ('<span>' + icon + '</span>'); b.title = tip || ''; b.onclick = () => { host.pushUndo(); set(v); host.c.onChange(); host.refresh(); }; box.appendChild(b); }

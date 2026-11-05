@@ -7,6 +7,7 @@ import { FramePlayer, GifPlayer, isPrepared, isAnimName } from './player.js';
 let audioEngine = null;
 export const setAudioEngine = (a) => { audioEngine = a; };
 import { cloneFx } from './effects.js';
+import { drawText, textDefaults, migrateText, ANIM_KEYS } from './text.js';
 
 let seq = 1;
 export const nextId = () => seq++;
@@ -113,20 +114,25 @@ export function sourceClip(id) {
   const c = base('source', def.name); c.source = id; c.params = {}; for (const p of def.params) c.params[p.key] = p.def;
   c.w = 1920; c.h = 1080; c.fit = 'stretch'; c.seed = Math.random() * 100; c.thumb = ''; return c;
 }
-// texto: desenhado num canvas 2D que vira textura
-export function textClip(text) {
-  const c = base('text', text || 'Texto'); c.text = { content: text || 'TEXTO', font: 'Segoe UI', size: 160, bold: true, hue: 0, sat: 0, val: 1, align: 'center', x: 0, y: 0 };
+// texto: Text Block e Text Animator (text.js), desenhado num canvas 2D que vira textura
+export function textClip(text, animator = false, saved = null) {
+  const t = saved ? migrateText(saved) : textDefaults(animator);
+  if (text != null && !saved) t.content = text;
+  const c = base('text', animator ? 'Text Animator' : 'Text Block'); c.text = t;
   c.w = 1920; c.h = 1080; c.fit = 'stretch'; c.el = document.createElement('canvas'); c.el.width = 1920; c.el.height = 1080; renderText(c); return c;
 }
-export function renderText(c) {
-  const t = c.text, cv = c.el, ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, cv.width, cv.height);
-  ctx.font = (t.bold ? 'bold ' : '') + t.size + 'px "' + t.font + '", sans-serif'; ctx.textAlign = t.align; ctx.textBaseline = 'middle';
-  ctx.fillStyle = hsvCss(t.hue, t.sat, t.val);
-  const lines = String(t.content).split('\n'), lh = t.size * 1.15, x = t.align === 'left' ? 80 : t.align === 'right' ? cv.width - 80 : cv.width / 2;
-  lines.forEach((ln, i) => ctx.fillText(ln, x + t.x * cv.width / 2, cv.height / 2 - t.y * cv.height / 2 + (i - (lines.length - 1) / 2) * lh));
-  c.rev = (c.rev || 0) + 1; c.name = (t.content || 'Texto').split('\n')[0].slice(0, 24);
-  c.thumb = cv.toDataURL('image/png');
+// redesenha; thumb = false no redesenho de cada quadro do Animator (a miniatura é cara)
+export function renderText(c, now, thumb = true) {
+  c.textPending = drawText(c.el, c.text, c, now);
+  c.rev = (c.rev || 0) + 1;
+  if (thumb) { c.name = (c.text.content || 'Texto').split('\n')[0].slice(0, 24) || (c.text.animator ? 'Text Animator' : 'Text Block'); c.thumb = c.el.toDataURL('image/png'); }
+}
+// o Animator precisa de redesenho enquanto um valor animado está chegando aos pedaços (atraso de Delay)
+export function tickText(c, now) {
+  if (!c || c.kind !== 'text' || !c.text.animator || !c.text.animated) return;
+  const h = c.animHist, cur = h && h[h.length - 1];
+  const changed = !cur || Object.keys(ANIM_KEYS).some(k => (c.text[k] ?? ANIM_KEYS[k]) !== cur.v[k]);
+  if (changed || c.textPending) renderText(c, now, false);
 }
 export function hsvCss(h, s, v) {
   const i = Math.floor(h * 6), f = h * 6 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
@@ -210,7 +216,7 @@ export function cloneClip(c) {
   else if (c.kind === 'video') { const v = document.createElement('video'); v.muted = true; v.loop = false; v.playsInline = true; v.preload = 'auto'; v.src = c.url; v.playbackRate = c.speed; n.el = v; if (c.player) { n.player = new FramePlayer(c.path, c.player.desktop, c.url); n.player.config = c.player.config; n.player.samples = c.player.samples; n.player.allIntra = c.player.allIntra; Object.assign(n.player, { w: c.player.w, h: c.player.h, duration: c.player.duration, fps: c.player.fps, codec: c.player.codec }); n.player.newDecoder(); n.player.ready = true; n.player.audio = v; n.player.want(); } }
   n.tr = { ...c.tr }; n.audio = { ...c.audio };
   if (c.kind === 'source') { n.params = { ...c.params }; n.seed = Math.random() * 100; }
-  if (c.kind === 'text') { n.text = { ...c.text }; n.el = document.createElement('canvas'); n.el.width = 1920; n.el.height = 1080; renderText(n); }
+  if (c.kind === 'text') { n.text = { ...c.text }; n.animHist = null; n.el = document.createElement('canvas'); n.el.width = 1920; n.el.height = 1080; renderText(n); }
   if (c.kind === 'camera' || c.kind === 'capture') { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = c.stream; v.play().catch(() => { }); n.el = v; if (c.cap) { n.cap = { ...c.cap }; if (c.cap.key) webUse.set(c.cap.key, (webUse.get(c.cap.key) || 0) + 1); } }
   if (c.kind === 'lasermirror') { n.el = document.createElement('canvas'); n.el.width = n.el.height = 1080; }
   n.ap = { ...c.ap }; n.panim = JSON.parse(JSON.stringify(c.panim || {})); n.afx = (c.afx || []).map(f => ({ ...f, params: { ...f.params } })); n.srcNode = n.gainNode = n.panNode = null; n.afxNodes = [];
@@ -304,7 +310,7 @@ export async function deserializeClip(o, ctx) {
   try {
     if (o.kind === 'video' || o.kind === 'image') { if (!o.path) return null; c = await clipFromPath(o.path, o.name); }
     else if (o.kind === 'source') c = sourceClip(o.source);
-    else if (o.kind === 'text') c = textClip(o.text && o.text.content);
+    else if (o.kind === 'text') c = textClip(null, !!(o.text && o.text.animator), o.text || {});
     else if (o.kind === 'camera') { c = await cameraClip(o.deviceId, o.name); }
     else if (o.kind === 'capture') {
       let url = o.cap && o.cap.url, yt = o.cap && o.cap.youtube;
@@ -320,7 +326,7 @@ export async function deserializeClip(o, ctx) {
 // põe num clipe vivo o que foi salvo dele (nome, ajuste, efeitos, transporte, parâmetros…): ao abrir a composição e ao desfazer
 export function applyClipProps(c, o) {
   if (o.kind === 'source' && c.params) Object.assign(c.params, o.params || {});
-  if (o.kind === 'text' && c.text) { Object.assign(c.text, o.text || {}); renderText(c); }
+  if (o.kind === 'text' && c.text) { c.text = migrateText({ ...(o.text || {}) }); c.animHist = null; renderText(c); }
   c.name = o.name || c.name; c.fit = o.fit || c.fit; c.speed = o.speed || 1; c.panim = JSON.parse(JSON.stringify(o.panim || {})); c.afx = (o.afx || []).map(f => ({ ...f, params: { ...f.params } })); c.fx = (o.fx || []).map(f => cloneFx(f)); c.transform = Object.assign(IDENT_TR(), o.transform || {}); c.ap = Object.assign({ mode: 'layer', l: 0, c: 0, dur: 'clip', secs: 5 }, o.ap || {});
   if (o.tr) Object.assign(c.tr, o.tr, { playing: true }); if (!c.tr.out) c.tr.out = c.dur; Object.assign(c.audio, o.audio || {}); c.blend = o.blend || ''; c.opacity = o.opacity ?? 1; c.trig = o.trig || 'normal'; c.ignoreColumn = !!o.ignoreColumn;
   return c;

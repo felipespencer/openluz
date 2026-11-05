@@ -13,7 +13,7 @@ GL_RGBA = 0x1908
 NOME = 'Arena - Screen 1'
 
 
-def rajada(segundos, pular=0, nome=NOME, maximo=600):
+def rajada(segundos, pular=0, nome=NOME, maximo=3000):
     with SpoutGL.SpoutReceiver() as r:
         r.createOpenGL()
         if nome not in (r.getSenderList() or []):

@@ -10,11 +10,13 @@ import { AUTOPILOT } from './composition.js';
 import { SHAPES, BEATS, ANIM } from './beat.js';
 import { AUDIO_FX, audioFxById, BANDS } from './audio.js';
 import { isPrepared } from './player.js';
+import { STYLES, RANGES, ORDERS, listFonts } from './text.js';
 
 const $ = (id) => document.getElementById(id);
 const fmtT = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
 const fmtT1 = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + (s % 60).toFixed(1).padStart(4, '0'); };
-const FONTS = ['Segoe UI', 'Arial', 'Impact', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Trebuchet MS', 'Comic Sans MS', 'Bahnschrift'];
+let fontsCache = null;   // fontes do Windows (text.js listFonts), lidas uma vez
+const STYLE_PT = { Regular: 'Regular', Italic: 'Itálico', Bold: 'Negrito', 'Bold Italic': 'Negrito itálico', Black: 'Black' };
 
 export class Panels {
   // ctx: { state, engine, laser, toast, renderGrid(), selectedClip(), drag(), trigger(li,col), removeLayer(li), applySpeed(), openLaser(frame) }
@@ -281,18 +283,47 @@ export class Panels {
       P.appendChild(this.phead(def.name, def.name + '|' + def.desc));
       for (const p of def.params) this.paramRows(P, clip, p, def.name + ' · ' + p.label + '|' + def.desc);
     } else if (clip.kind === 'text') {
-      const t = clip.text, up = () => { renderText(clip); this.ctx.renderGrid(); };
-      P.appendChild(this.phead('Texto', 'Texto|O texto desenhado na composição.'));
-      P.appendChild(this.ptext('Conteúdo', 'Conteúdo|O texto. Use | para quebrar linha.', t.content.replace(/\n/g, '|'), v => { t.content = v.replace(/\|/g, '\n'); up(); }));
-      P.appendChild(this.pselect('Fonte', 'Fonte|Fontes do Windows.', FONTS.map(f => [f, f]), t.font, v => { t.font = v; up(); }));
-      P.appendChild(this.pnum('Tamanho', 'Tamanho|Altura da letra em pixels.', t.size, { min: 10, max: 600, step: 2, unit: ' px', bar: true, reset: 160 }, v => { t.size = v; up(); }));
-      P.appendChild(this.pcheck('Negrito', '', t.bold, v => { t.bold = v; up(); }));
-      P.appendChild(this.pseg('Alinhar', '', [['left', 'Esq.'], ['center', 'Centro'], ['right', 'Dir.']], t.align, v => { t.align = v; up(); }));
-      P.appendChild(this.pnum('Matiz', 'Matiz|Cor da letra.', Math.round(t.hue * 360), { min: 0, max: 360, step: 1, unit: '°', bar: true, reset: 0 }, v => { t.hue = v / 360; up(); }));
-      P.appendChild(this.pnum('Saturação', '', Math.round(t.sat * 100), { min: 0, max: 100, step: 1, unit: ' %', bar: true, reset: 0 }, v => { t.sat = v / 100; up(); }));
-      P.appendChild(this.pnum('Brilho', '', Math.round(t.val * 100), { min: 0, max: 100, step: 1, unit: ' %', bar: true, reset: 100 }, v => { t.val = v / 100; up(); }));
-      P.appendChild(this.pnum('X', '', Math.round(t.x * 100), { min: -100, max: 100, step: 1, bar: true, reset: 0 }, v => { t.x = v / 100; up(); }));
-      P.appendChild(this.pnum('Y', '', Math.round(t.y * 100), { min: -100, max: 100, step: 1, bar: true, reset: 0 }, v => { t.y = v / 100; up(); }));
+      const t = clip.text, up = () => { renderText(clip); this.ctx.renderGrid(); }, A = t.animator, nm = A ? 'Text Animator' : 'Text Block';
+      const H = (rname, txt) => nm + ' · ' + rname + '|' + txt;
+      const num = (label, rname, help, key, o) => P.appendChild(this.pnum(label, H(rname, help), t[key], { bar: true, ...o }, v => { t[key] = v; up(); }));
+      const deg = (label, rname, help, key) => P.appendChild(this.pnum(label, H(rname, help), Math.round(t[key] * 1800 / Math.PI) / 10, { min: -180, max: 180, step: 1, dec: 1, unit: '°', bar: true, reset: 0 }, v => { t[key] = v * Math.PI / 180; up(); }));
+      P.appendChild(this.phead(nm, nm + '|' + (A ? 'Cada letra, palavra ou linha recebe os valores animados com um atraso (Delay): mude um valor animado, ou ponha um LFO nele, e os pedaços seguem um depois do outro.' : 'Texto escrito com as fontes do Windows, como o Text Block do Resolume.')));
+      P.appendChild(this.parea('Texto', H('Text', 'O texto. Enter quebra a linha.'), t.content, v => { t.content = v; renderText(clip); }, () => this.ctx.renderGrid()));
+      const fonts = fontsCache || [t.font]; if (!fontsCache) listFonts().then(f => { fontsCache = f; this.render(); });
+      P.appendChild(this.pselect('Fonte', H('Font', 'Fontes instaladas no Windows.'), (fonts.includes(t.font) ? fonts : [t.font, ...fonts]).map(f => [f, f]), t.font, v => { t.font = v; up(); }));
+      P.appendChild(this.pselect('Estilo', H('Style', 'Regular, itálico, negrito, negrito itálico ou Black (a versão mais grossa da fonte).'), STYLES.map(x => [x, STYLE_PT[x]]), t.style, v => { t.style = v; up(); }));
+      P.appendChild(this.pcolor('Cor', H('Color', 'Cor e alfa da letra.'), t.color, v => { t.color = v; up(); }, true));
+      num('Tamanho', 'Size', 'Tamanho da letra: 1 = um H de 93 px numa composição 1080.', 'size', { min: 0.5, max: 10, step: 0.01, dec: 2, reset: 1 });
+      P.appendChild(this.pseg('Alinhar', H('Alignment', 'Alinhamento das linhas' + (A ? ' dentro do bloco (o bloco fica no meio).' : ' dentro da largura da linha.')), [['left', 'Esq.'], ['center', 'Centro'], ['right', 'Dir.']], t.align, v => { t.align = v; up(); }));
+      P.appendChild(this.pseg('Vertical', H('Alignment Vertically', 'Bloco em cima, no meio ou embaixo da tela.'), [['top', 'Cima'], ['center', 'Meio'], ['bottom', 'Baixo']], t.valign, v => { t.valign = v; up(); }));
+      if (!A) num('Largura da linha', 'Line Width', 'Largura em px em que o texto quebra por palavra; a caixa fica centrada na tela.', 'lineWidth', { min: 10, max: 32768, step: 10, unit: ' px', bar: false, reset: 1920 });
+      num('Posição X', 'Position X', 'Desloca o texto em px.', 'x', { min: -1920, max: 1920, step: 1, unit: ' px', reset: 0 });
+      num('Posição Y', 'Position Y', 'Desloca o texto em px (positivo desce).', 'y', { min: -1080, max: 1080, step: 1, unit: ' px', reset: 0 });
+      if (!A) deg('Rotação', 'Rotation', 'Gira o bloco em volta do centro dele (positivo, horário).', 'rotation');
+      if (!A) num('Escala', 'Scale', 'Aumenta tudo em volta do centro da tela.', 'scale', { min: 0, max: 10, step: 0.01, dec: 2, reset: 1 });
+      num('Espaço X', 'Spacing X', 'Espaço a mais entre as letras (px no Tamanho 1).', 'spacingX', { min: -20, max: 200, step: 1, reset: 0 });
+      num('Espaço Y', 'Spacing Y', 'Espaço a mais entre as linhas, em % da altura da linha.', 'spacingY', { min: -100, max: 200, step: 1, unit: ' %', reset: 0 });
+      P.appendChild(this.pcolor('Cor do contorno', H('Outline Color', 'Cor do contorno e do brilho.'), t.outlineColor, v => { t.outlineColor = v; up(); }, true));
+      num('Contorno', 'Outline Width', 'Faixa em volta da borda da letra (1 = 6 px de cada lado no Tamanho 1).', 'outlineWidth', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
+      num('Brilho dentro', 'Glow In', 'Brilho na cor do contorno, da borda para dentro.', 'glowIn', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
+      num('Brilho fora', 'Glow Out', 'Brilho na cor do contorno, da borda para fora.', 'glowOut', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
+      if (A) {
+        P.appendChild(this.phead('Animação', 'Animação|Os valores daqui chegam a cada pedaço com um atraso de Delay vezes a posição dele na ordem.'));
+        P.appendChild(this.pcheck('Animado', H('Animated', 'Liga os valores animados.'), t.animated, v => { t.animated = v; clip.animHist = null; up(); }));
+        P.appendChild(this.pselect('Pedaços', H('Range', 'O que se move junto: tudo, cada linha, cada palavra ou cada letra.'), RANGES, t.range, v => { t.range = v; up(); }));
+        P.appendChild(this.pselect('Ordem', H('Order', 'Quem recebe o valor primeiro.'), ORDERS, t.order, v => { t.order = v; up(); }));
+        num('Atraso', 'Delay', 'Tempo entre um pedaço e o seguinte.', 'delay', { min: 0, max: 2000, step: 10, unit: ' ms', reset: 100 });
+        num('Opacidade', 'Opacity', 'Alfa de cada pedaço.', 'aOpacity', { min: 0, max: 1, step: 0.01, dec: 2, reset: 1 });
+        num('Escala', 'Scale', 'Escala de cada pedaço, em volta do centro dele.', 'aScale', { min: 0, max: 10, step: 0.01, dec: 2, reset: 1 });
+        num('Posição X', 'Animated Position X', 'Desloca cada pedaço em px.', 'aX', { min: -1920, max: 1920, step: 1, unit: ' px', reset: 0 });
+        num('Posição Y', 'Animated Position Y', 'Desloca cada pedaço em px (positivo desce).', 'aY', { min: -1080, max: 1080, step: 1, unit: ' px', reset: 0 });
+        deg('Rotação', 'Rotation', 'Gira cada pedaço em volta do centro dele.', 'aRot');
+        num('Âncora X', 'Anchor X', 'Tira o centro do giro e da escala do meio do pedaço (px).', 'anchorX', { min: -1920, max: 1920, step: 1, unit: ' px', reset: 0 });
+        num('Âncora Y', 'Anchor Y', 'Tira o centro do giro e da escala do meio do pedaço (px).', 'anchorY', { min: -1080, max: 1080, step: 1, unit: ' px', reset: 0 });
+        num('Contorno', 'Animated Outline Width', 'Soma ao contorno de cada pedaço.', 'aOutline', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
+        num('Brilho dentro', 'Animated Glow In', 'Soma ao brilho de dentro de cada pedaço.', 'aGlowIn', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
+        num('Brilho fora', 'Animated Glow Out', 'Soma ao brilho de fora de cada pedaço.', 'aGlowOut', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
+      }
     } else if (clip.kind === 'camera') P.appendChild(this.prow('Câmera', '', el('span', 'pinfo', clip.name + ' · ' + clip.w + ' × ' + clip.h)));
     else if (clip.kind === 'capture') {
       if (clip.cap.url) P.appendChild(this.ptext('Endereço', 'Endereço|A página que o navegador escondido mostra. Mudar aqui abre outra página no mesmo clipe.', clip.cap.url, v => { if (v && v !== clip.cap.url) { captureNavigate(clip, v); this.ctx.renderGrid(); } }));

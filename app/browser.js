@@ -143,7 +143,8 @@ export class Browser {
       list.appendChild(r);
     };
     for (const s of [...SOURCES].sort((a, b) => a.name.localeCompare(b.name))) if (this.match(s.name)) mk(s.name, s.desc, { source: s.id });
-    if (this.match('Text Block')) mk('Text Block', 'Texto escrito com as fontes do Windows.', { text: true });
+    if (this.match('Text Animator')) mk('Text Animator', 'Texto em que cada letra, palavra ou linha recebe os valores animados com um atraso: mude um valor animado (ou ligue um LFO nele) e os pedaços seguem um depois do outro.', { text: 'animator' });
+    if (this.match('Text Block')) mk('Text Block', 'Texto escrito com as fontes do Windows: tamanho, largura da linha, espaçamento, contorno e brilho como no Resolume.', { text: 'block' });
     if (this.match('Laser')) mk('Laser (espelho)', 'O que o LaserCube está desenhando aparece na projeção, no mesmo lugar.', { lasermirror: true });
     list.appendChild(el('div', 'grp', 'DISPOSITIVOS DE CAPTURA'));
     try { if (!this.cameras.length) this.cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); } catch { }
