@@ -28,12 +28,12 @@ Phases: 1 of 8 complete
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Automape | 5 | In progress (3/5) | - |
-| 2 | Efeitos do Resolume | TBD | In progress (3 fechados) | - |
+| 2 | Efeitos do Resolume | TBD | In progress (4 fechados) | - |
 | 3 | Celular e plugins | TBD | Not started | - |
 | 4 | Provas no equipamento (laser e APC40) | TBD | Not started | - |
 | 5 | Versão web | TBD | Not started | - |
 | 6 | Versão Android | TBD | Not started | - |
-| 7 | Saída avançada | 1/1 | ✅ Complete | 2026-11-03 |
+| 7 | Saída avançada | 1/2 | In progress (07-02 planejado) | - |
 | 8 | Webcam virtual | 1/1 | ✅ Complete | 2026-11-02 |
 
 ## Phase Details
@@ -83,7 +83,7 @@ imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarca
 - [x] 02-01: bancada lado a lado (REST do Resolume + CDP do OpenLume + captura + diferença por pixel), fichas de controles pela API, e o 1º lote igualado: Delay RGB, Trails, Threshold — fechado em 2026-10-30; de quebra Background Removal, Shape Mask, YouTube e celular (SUMMARY)
 - [x] 02-02: Acuarela, Tilt Shift e CRT — fechado em 2026-11-02 com a beta.44; presets do CRT e outras diferenças abertas no SUMMARY
 - [x] 02-03: grade de clipes igual à do Resolume (miniatura no ar, nome na Prévia, ▶/■ de coluna, verde-água) — fechado em 2026-11-03 com a beta.47
-- [ ] 02-04: camadas e decks como no Resolume (maquete aprovada em 2026-11-03)
+- [x] 02-04: camadas e decks como no Resolume — fechado em 2026-11-05 com a beta.49
 - [ ] 02-05 em diante: os outros 14 do Resolume 7.28 (Strokes, Grid Cloner, Slice Delay, SearchLight, WarpSpeed, LUT, Text Block, Text Animator, seis Depth) e o resto da lista de igualar
 
 ### Phase 3: Celular e plugins
@@ -159,7 +159,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 
 **Plans:**
 - [x] 07-01: Soft Edge por degradê e seleção na sobreposição (registro do entregue + alças na aba Saída) — ok do Felipe em 2026-11-03
-- Pedido novo de Saída avançada abre o 07-02
+- [ ] 07-02: botão direito com o mesmo menu do Resolume 7.28 (pedido de 2026-11-05)
 
 ### Phase 8: Webcam virtual
 
