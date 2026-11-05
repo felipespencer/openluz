@@ -33,7 +33,7 @@ Phases: 1 of 8 complete
 | 4 | Provas no equipamento (laser e APC40) | TBD | Not started | - |
 | 5 | Versão web | TBD | Not started | - |
 | 6 | Versão Android | TBD | Not started | - |
-| 7 | Saída avançada | 1/2 | In progress (07-02 planejado) | - |
+| 7 | Saída avançada | 2/2 | Complete | 2026-11-05 |
 | 8 | Webcam virtual | 1/1 | ✅ Complete | 2026-11-02 |
 
 ## Phase Details
@@ -159,7 +159,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 
 **Plans:**
 - [x] 07-01: Soft Edge por degradê e seleção na sobreposição (registro do entregue + alças na aba Saída) — ok do Felipe em 2026-11-03
-- [ ] 07-02: botão direito com o mesmo menu do Resolume 7.28 (pedido de 2026-11-05)
+- [x] 07-02: botão direito com o mesmo menu do Resolume 7.28 (pedido de 2026-11-05)
 
 ### Phase 8: Webcam virtual
 
