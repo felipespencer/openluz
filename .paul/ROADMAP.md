@@ -84,7 +84,8 @@ imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarca
 - [x] 02-02: Acuarela, Tilt Shift e CRT — fechado em 2026-11-02 com a beta.44; presets do CRT e outras diferenças abertas no SUMMARY
 - [x] 02-03: grade de clipes igual à do Resolume (miniatura no ar, nome na Prévia, ▶/■ de coluna, verde-água) — fechado em 2026-11-03 com a beta.47
 - [x] 02-04: camadas e decks como no Resolume — fechado em 2026-11-05 com a beta.49
-- [ ] 02-05 em diante: os outros 14 do Resolume 7.28 (Strokes, Grid Cloner, Slice Delay, SearchLight, WarpSpeed, LUT, Text Block, Text Animator, seis Depth) e o resto da lista de igualar
+- [x] 02-05: Text Block e Text Animator iguais ao Resolume — fechado em 2026-11-05 com a beta.51
+- [ ] 02-06 em diante: Texto com IA; os outros 12 do Resolume 7.28 (Strokes, Grid Cloner, Slice Delay, SearchLight, WarpSpeed, LUT, seis Depth) e o resto da lista de igualar
 
 ### Phase 3: Celular e plugins
 
