@@ -18,17 +18,15 @@ phases = 7
 number = 2
 name = "Efeitos do Resolume"
 status = "in_progress"
-plans_completed = 3
+plans_completed = 4
 
 [loop]
-position = "APPLY"
-plan = "02-04"
-plan_path = "phases/02-efeitos-do-resolume/02-04-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 8
+total_plans = 9
 total_phases = 0
-last_activity = "2026-11-05T01:50:00-03:00"
+last_activity = "2026-11-05T02:10:00-03:00"
