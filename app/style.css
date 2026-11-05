@@ -520,3 +520,12 @@ input[type=range].sa{ height:14px; } input[type=range].sa::-webkit-slider-runnab
 .browser.keys .kinsp select{ height:20px; background:#2b2b2b; color:#e6e6e6; border:0; border-radius:2px; padding:0 6px; font:inherit; max-width:170px; } .browser.keys .kinsp select:disabled{ opacity:.7; }
 .browser.keys .kmode{ display:flex; align-items:center; gap:10px; } .browser.keys .kpiano{ display:flex; align-items:center; gap:4px; color:#cfcfcf; }
 .browser.keys .khelp{ padding:6px 10px 8px; background:#1a1a1a; border-top:1px solid #000; } .browser.keys .khelp h4{ margin:0 0 2px; font-size:12px; font-weight:600; color:#e6e6e6; } .browser.keys .khelp p{ margin:0; color:#aaa; font-size:11px; }
+/* ✦ Montar com IA (painel do texto) e Configuração › IA */
+.rprops .iabox{ border-left:3px solid #ff8a2b; background:#231a12; margin:2px 0 6px; }
+.rprops .iabox .phead{ color:#ffb36b; }
+.rprops .iafun{ display:flex; flex-wrap:wrap; gap:3px; padding:2px 0; } .rprops .iafun button{ height:20px; padding:0 6px; border:0; border-radius:2px; font:inherit; font-size:11px; background:#3a3a3a; color:var(--rt); cursor:pointer; } .rprops .iafun button.on{ background:#ff8a2b; color:#111; }
+.rprops .prow:has(.iafun){ height:auto; }
+.rprops .iabox button.iago{ background:#ff8a2b; color:#111; font-weight:700; margin:4px 6px; width:calc(100% - 12px); } .rprops .iabox button.iago:disabled{ opacity:.6; }
+.rprops .iainfo{ display:flex; justify-content:space-between; gap:6px; padding:0 6px 4px; font-size:11px; color:#bbb; } .rprops .ialink{ color:#ffb36b; cursor:pointer; text-decoration:underline; white-space:nowrap; }
+.rprops .iaver{ display:flex; gap:4px; padding:0 6px 6px; } .rprops .iav{ flex:1; min-width:0; padding:2px; border:2px solid transparent; background:#111; border-radius:2px; cursor:pointer; color:var(--rt); font:inherit; font-size:10px; } .rprops .iav.on{ border-color:#ff8a2b; } .rprops .iav canvas{ width:100%; display:block; } .rprops .iav span{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dlg .iasrv{ display:grid; grid-template-columns:auto auto 1fr; gap:2px 8px; align-items:baseline; padding:6px 8px; margin:2px 0; border:1px solid #333; border-radius:3px; cursor:pointer; } .dlg .iasrv.on{ border-color:#ff8a2b; background:#231a12; } .dlg .iasrv .iadesc{ grid-column:1 / -1; font-size:11px; color:#aaa; } .dlg .iapreco{ font-size:10px; padding:0 5px; border-radius:2px; background:#333; } .dlg .iapreco.grátis{ background:#1f4d2f; } .dlg .iapreco.pago{ background:#5a3a1a; } .dlg .iamsg{ color:#ffb36b; }

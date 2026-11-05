@@ -20,6 +20,7 @@
     "files": [
       "main.js",
       "lasercube.js",
+      "ia-main.js",
       "app/**/*",
       "package.json",
       "!node_modules/onnxruntime-node/bin/napi-v6/{darwin,linux}/**",
@@ -75,6 +76,7 @@
     "electron-builder": "^25.1.8"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.5.0",
     "koffi": "^3.3.6",
     "mp4box": "^2.4.1",
     "onnxruntime-node": "^1.31.1",

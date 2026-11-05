@@ -1208,6 +1208,46 @@ function settingsDialog() {
     buttons: [{ label: 'Cancelar' }, { label: 'OK', primary: true, fn: () => { state.name = s.name; applySettings(s); render(); } }],
   });
 }
+// Configuração › IA (Texto com IA): serviço, chave de cada um (guardada pelo Windows no processo principal) e Testar
+const IA_SERVICOS = [
+  ['gemini', 'Google Gemini', 'grátis', 'Cota grátis com conta Google. Chave em aistudio.google.com.'],
+  ['groq', 'Groq', 'grátis', 'Modelos abertos, rápidos, com cota grátis. Chave em console.groq.com.'],
+  ['ollama', 'Ollama (no próprio PC)', 'local', 'Sem internet e sem chave. Precisa do Ollama instalado e de um modelo baixado; mais lento.'],
+  ['claude', 'Claude (Anthropic)', 'pago', 'A melhor diagramação. Chave paga da API em console.anthropic.com.'],
+];
+async function iaDialog(depois) {
+  if (!D || !D.ia) { toast('A IA só funciona no programa instalado no Windows'); return; }
+  let cfg = await D.ia.config(); const st = { servico: cfg.servico || 'gemini', chave: '', msg: '', modelos: null };
+  openDialog({
+    title: 'Configuração › IA', width: 560,
+    build: (body, K, redo) => {
+      body.appendChild(el('p', 'dtext', 'O botão ✦ Montar com IA do Text Block e do Text Animator usa o serviço escolhido aqui. Cada serviço com a sua própria chave.'));
+      body.appendChild(K.phead('Serviço'));
+      for (const [id, nome, preco, desc] of IA_SERVICOS) {
+        const r = el('label', 'iasrv' + (st.servico === id ? ' on' : '')); r.dataset.srv = id;
+        r.append(el('b', '', nome), el('span', 'iapreco ' + preco, preco), el('span', 'iadesc', desc + (cfg.temChave[id] ? ' · chave guardada' : '') + (cfg.modelos[id] ? ' · modelo ' + cfg.modelos[id] : '')));
+        r.onclick = () => { st.servico = id; st.chave = ''; st.msg = ''; st.modelos = null; redo(); };
+        body.appendChild(r);
+      }
+      if (st.servico !== 'ollama') {
+        const row = K.ptext('Chave', 'Chave|Fica só neste PC, guardada pelo Windows; não vai junto quando a composição é salva ou compartilhada.', st.chave, v => { st.chave = v; });
+        const inp = row.querySelector('input'); inp.type = 'password'; inp.placeholder = cfg.temChave[st.servico] ? '•••••• guardada (cole outra para trocar)' : 'cole a chave aqui';
+        body.appendChild(row);
+      }
+      const bt = K.pbutton('Testar', 'Testar|Guarda a chave e pergunta ao serviço quais modelos ele tem.', async () => {
+        st.msg = 'testando…'; redo();
+        if (st.chave) cfg = await D.ia.salvar({ para: st.servico, chave: st.chave });
+        const r = await D.ia.testar(st.servico); st.chave = '';
+        cfg = await D.ia.config();
+        st.msg = r.ok ? 'Respondeu. Modelo: ' + r.modelo : 'Não deu: ' + r.erro; st.modelos = r.ok ? r.modelos : null; redo();
+      });
+      bt.dataset.k = 'testar'; body.appendChild(bt);
+      if (st.msg) { const m = el('p', 'dtext iamsg', st.msg); m.dataset.k = 'msg'; body.appendChild(m); }
+      if (st.modelos && st.modelos.length > 1) body.appendChild(K.pselect('Modelo', 'Modelo|O modelo do serviço que monta o texto.', st.modelos.map(x => [x, x]), cfg.modelos[st.servico], async v => { cfg = await D.ia.salvar({ para: st.servico, modelo: v }); }));
+    },
+    buttons: [{ label: 'Cancelar' }, { label: 'OK', primary: true, fn: async () => { if (st.chave) await D.ia.salvar({ para: st.servico, chave: st.chave }); await D.ia.salvar({ servico: st.servico }); if (depois) depois(); } }],
+  });
+}
 function preferencesDialog() {
   const p = { recDir: recorder.c.dir || '', showFps: !$('fpsBox').hidden, nudgePct: state.bpm.nudgePct, hwDecode: !window.__projSoftDecode };
   openDialog({
@@ -1239,6 +1279,7 @@ const panels = new Panels({
   prepare: (fmt) => { const s = selectedCell(); if (s) prepareClip(state.layers.indexOf(s.L), s.idx, fmt); }, preparing: (c) => preparingNow.has(c.path) ? preparingNow.get(c.path) : null,
   openLaser: (f) => { laser.sel = f; laser.show(); },
   selectedGroup, setLayerGroup, newGroup, removeGroup, addLayerToGroup, fadeTo, renderDecks, audio,
+  iaDialog: (depois) => iaDialog(depois), selectedCell, putClip, markUndo, bpm: () => state.bpm.bpm, cols: () => COLS,
 });
 // Depois de gravar: a gravação vira um clipe na primeira casa vazia da camada selecionada, como no Resolume
 async function recordingToClip(path, name, file) {
@@ -1328,7 +1369,8 @@ function selectLayer(li) { state.selLayer = li; state.selGroup = state.layers[li
 const keymap = new KeyMap({ state, trigger, eject, triggerColumn, selectedClip, selectLayer, C, render, toast, browser, textBox: (t, l, v) => askText(t, l, v), editorOpen: () => ao.open || laser.open });
 const menuDefs = () => [
   { label: 'OpenLume', items: () => [
-    { label: 'Preferências…', key: 'Ctrl+,', fn: preferencesDialog }, '-',
+    { label: 'Preferências…', key: 'Ctrl+,', fn: preferencesDialog },
+    { label: 'IA (Texto com IA)…', fn: () => iaDialog() }, '-',
     { label: 'Abrir o registro de travamentos', disabled: !D, fn: () => D.log.show() }, '-',
     { label: 'Sobre', fn: aboutDialog }, '-',
     { label: 'Sair', key: 'Ctrl+Q', fn: () => window.close() }] },
@@ -1520,7 +1562,7 @@ async function alternarWebcam() {
 // (os valores também mudam por código, sem evento: por isso a conferência periódica)
 function aquaSliders() { const sync = () => { for (const r of document.querySelectorAll('input[type=range]')) { const mn = +r.min || 0, mx = r.max === '' ? 100 : +r.max, p = mx > mn ? Math.max(0, Math.min(1, (+r.value - mn) / (mx - mn))) * 100 : 0, v = p.toFixed(1) + '%'; if (r.style.getPropertyValue('--p') !== v) r.style.setProperty('--p', v); } }; addEventListener('input', sync, true); setInterval(sync, 120); sync(); }
 aquaSliders();
-window.projecionista = { webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
+window.projecionista = { iaDialog, webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
   probe: (pts) => engine.probe(state.layers, pts),
   probeScreen: (sc, pts) => engine.probeScreen(sc, state.layers, state.screens, pts),
   serialize: () => serializeComposition(state, laser, COLS), load: loadComposition, reset: resetComposition,

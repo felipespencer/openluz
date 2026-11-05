@@ -8,6 +8,7 @@ let audioEngine = null;
 export const setAudioEngine = (a) => { audioEngine = a; };
 import { cloneFx } from './effects.js';
 import { drawText, textDefaults, migrateText, ANIM_KEYS } from './text.js';
+import { animValue } from './beat.js';
 
 let seq = 1;
 export const nextId = () => seq++;
@@ -122,14 +123,24 @@ export function textClip(text, animator = false, saved = null) {
   c.w = 1920; c.h = 1080; c.fit = 'stretch'; c.el = document.createElement('canvas'); c.el.width = 1920; c.el.height = 1080; renderText(c); return c;
 }
 // redesenha; thumb = false no redesenho de cada quadro do Animator (a miniatura é cara)
+// valores do texto com ♪ (animação na batida, como nos parâmetros das fontes): o desenho usa o valor da batida, o salvo fica
+function textNow(c) {
+  const P = c.panim; if (!P || !clock) return c.text;
+  let t = null;
+  for (const k in P) { const a = P[k]; if (a && a.shape && typeof c.text[k] === 'number') { t = t || { ...c.text }; t[k] = animValue(a, clock); } }
+  return t || c.text;
+}
+const hasBeatAnim = (c) => !!c.panim && Object.keys(c.panim).some(k => c.panim[k] && c.panim[k].shape && typeof c.text[k] === 'number');
 export function renderText(c, now, thumb = true) {
-  c.textPending = drawText(c.el, c.text, c, now);
+  c.textPending = drawText(c.el, textNow(c), c, now);
   c.rev = (c.rev || 0) + 1;
   if (thumb) { c.name = (c.text.content || 'Texto').split('\n')[0].slice(0, 24) || (c.text.animator ? 'Text Animator' : 'Text Block'); c.thumb = c.el.toDataURL('image/png'); }
 }
 // o Animator precisa de redesenho enquanto um valor animado está chegando aos pedaços (atraso de Delay)
 export function tickText(c, now) {
-  if (!c || c.kind !== 'text' || !c.text.animator || !c.text.animated) return;
+  if (!c || c.kind !== 'text') return;
+  if (hasBeatAnim(c)) { renderText(c, now, false); return; }   // ♪: muda a cada quadro
+  if (!c.text.animator || !c.text.animated) return;
   const h = c.animHist, cur = h && h[h.length - 1];
   const changed = !cur || Object.keys(ANIM_KEYS).some(k => (c.text[k] ?? ANIM_KEYS[k]) !== cur.v[k]);
   if (changed || c.textPending) renderText(c, now, false);
@@ -216,7 +227,7 @@ export function cloneClip(c) {
   else if (c.kind === 'video') { const v = document.createElement('video'); v.muted = true; v.loop = false; v.playsInline = true; v.preload = 'auto'; v.src = c.url; v.playbackRate = c.speed; n.el = v; if (c.player) { n.player = new FramePlayer(c.path, c.player.desktop, c.url); n.player.config = c.player.config; n.player.samples = c.player.samples; n.player.allIntra = c.player.allIntra; Object.assign(n.player, { w: c.player.w, h: c.player.h, duration: c.player.duration, fps: c.player.fps, codec: c.player.codec }); n.player.newDecoder(); n.player.ready = true; n.player.audio = v; n.player.want(); } }
   n.tr = { ...c.tr }; n.audio = { ...c.audio };
   if (c.kind === 'source') { n.params = { ...c.params }; n.seed = Math.random() * 100; }
-  if (c.kind === 'text') { n.text = { ...c.text }; n.animHist = null; n.el = document.createElement('canvas'); n.el.width = 1920; n.el.height = 1080; renderText(n); }
+  if (c.kind === 'text') { n.text = JSON.parse(JSON.stringify(c.text)); n.animHist = null; n.el = document.createElement('canvas'); n.el.width = 1920; n.el.height = 1080; renderText(n); }
   if (c.kind === 'camera' || c.kind === 'capture') { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = c.stream; v.play().catch(() => { }); n.el = v; if (c.cap) { n.cap = { ...c.cap }; if (c.cap.key) webUse.set(c.cap.key, (webUse.get(c.cap.key) || 0) + 1); } }
   if (c.kind === 'lasermirror') { n.el = document.createElement('canvas'); n.el.width = n.el.height = 1080; }
   n.ap = { ...c.ap }; n.panim = JSON.parse(JSON.stringify(c.panim || {})); n.afx = (c.afx || []).map(f => ({ ...f, params: { ...f.params } })); n.srcNode = n.gainNode = n.panNode = null; n.afxNodes = [];

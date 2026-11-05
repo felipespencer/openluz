@@ -67,46 +67,49 @@ function lineHeight(t, em) {
   return lhCache.get(k) * em;
 }
 
-// ---- diagramação: letras com posição, linha, palavra e caixa de tinta ----
+// estilo de uma linha do texto: o do bloco, com o que a linha tiver de próprio (t.lines[i], vindo da IA ou do painel)
+export const LINE_KEYS = ['font', 'style', 'size', 'color', 'spacingX'];
+export function lineStyle(t, i) {
+  const o = (t.lines && t.lines[i]) || {};
+  return { font: o.font || t.font, style: o.style || t.style, size: o.size ?? t.size, color: o.color || t.color, spacingX: o.spacingX ?? t.spacingX ?? 0 };
+}
+
+// ---- diagramação: letras com posição, linha, palavra, fonte, cor e caixa de tinta ----
 export function layoutText(ctx, t, W, H) {
-  const em = EM * t.size;
-  ctx.font = fontCss(t, em);
-  const sx = (t.spacingX || 0) * t.size;
-  const mw = (s) => s ? ctx.measureText(s).width + sx * (s.length - 1) : 0;
-  // quebra: linhas do texto e, no Text Block, por palavra na largura da linha
-  const lines = [];
-  for (const raw of String(t.content ?? '').split('\n')) {
-    if (t.animator || !(t.lineWidth > 0)) { lines.push(raw); continue; }
-    const words = raw.split(' '); let cur = '';
-    for (const w of words) {
-      const tryS = cur ? cur + ' ' + w : w;
-      if (cur && mw(tryS) > t.lineWidth) { lines.push(cur); cur = w; } else cur = tryS;
-    }
-    lines.push(cur);
-  }
-  const asc = ctx.measureText('Hg').fontBoundingBoxAscent, lh = lineHeight(t, em);
-  const pitch = lh * (1 + (t.spacingY || 0) / 100);
-  const bh = pitch * (lines.length - 1) + lh;
+  // quebra: linhas do texto e, no Text Block, por palavra na largura da linha; a linha quebrada fica com o estilo da original
+  const rows = [];
+  String(t.content ?? '').split('\n').forEach((raw, ri) => {
+    const st = lineStyle(t, ri), em = EM * st.size, css = fontCss(st, em), sx = (st.spacingX || 0) * st.size;
+    ctx.font = css;
+    const mw = (x) => x ? ctx.measureText(x).width + sx * (x.length - 1) : 0;
+    const push = (text) => rows.push({ text, st, em, css, sx, w: mw(text) });
+    if (t.animator || !(t.lineWidth > 0)) { push(raw); return; }
+    let cur = '';
+    for (const w of raw.split(' ')) { const tryS = cur ? cur + ' ' + w : w; if (cur && mw(tryS) > t.lineWidth) { push(cur); cur = w; } else cur = tryS; }
+    push(cur);
+  });
+  for (const r of rows) { ctx.font = r.css; r.asc = ctx.measureText('Hg').fontBoundingBoxAscent; r.lh = lineHeight(r.st, r.em); r.pitch = r.lh * (1 + (t.spacingY || 0) / 100); }
+  const bh = rows.reduce((a, r, i) => a + (i < rows.length - 1 ? r.pitch : r.lh), 0);
   const top = t.valign === 'top' ? 0 : t.valign === 'bottom' ? H - bh : (H - bh) / 2;
-  const widths = lines.map(mw);
-  const boxW = t.animator ? Math.max(0, ...widths) : t.lineWidth, boxL = W / 2 - boxW / 2;
-  const glyphs = []; let word = 0;
-  lines.forEach((ln, li) => {
-    const lw = widths[li], x0 = boxL + (t.align === 'left' ? 0 : t.align === 'right' ? boxW - lw : (boxW - lw) / 2), base = top + asc + li * pitch;
+  const boxW = t.animator ? Math.max(0, ...rows.map(r => r.w)) : t.lineWidth, boxL = W / 2 - boxW / 2;
+  const x0Of = (r) => boxL + (t.align === 'left' ? 0 : t.align === 'right' ? boxW - r.w : (boxW - r.w) / 2);
+  const glyphs = []; let word = 0, y = top;
+  rows.forEach((r, li) => {
+    const x0 = x0Of(r), base = y + r.asc, color = cssColor(r.st.color);
+    ctx.font = r.css;
     let prevSpace = true;
-    for (let i = 0; i < ln.length; i++) {
-      const ch = ln[i];
+    for (let i = 0; i < r.text.length; i++) {
+      const ch = r.text[i];
       if (ch === ' ') { prevSpace = true; continue; }
       if (prevSpace) { word++; prevSpace = false; }
-      const x = x0 + (i ? ctx.measureText(ln.slice(0, i)).width : 0) + i * sx;
+      const x = x0 + (i ? ctx.measureText(r.text.slice(0, i)).width : 0) + i * r.sx;
       const g = ctx.measureText(ch);
-      glyphs.push({ ch, x, y: base, line: li, word, l: x - g.actualBoundingBoxLeft, r: x + g.actualBoundingBoxRight, t: base - g.actualBoundingBoxAscent, b: base + g.actualBoundingBoxDescent });
+      glyphs.push({ ch, x, y: base, line: li, word, font: r.css, color, s: r.st.size, l: x - g.actualBoundingBoxLeft, r: x + g.actualBoundingBoxRight, t: base - g.actualBoundingBoxAscent, b: base + g.actualBoundingBoxDescent });
     }
-    word++;
+    word++; y += r.pitch;
   });
-  const minX = Math.min(...lines.map((_, i) => boxL + (t.align === 'left' ? 0 : t.align === 'right' ? boxW - widths[i] : (boxW - widths[i]) / 2)));
-  const maxX = Math.max(...lines.map((_, i) => boxL + (t.align === 'left' ? 0 : t.align === 'right' ? boxW - widths[i] : (boxW - widths[i]) / 2) + widths[i]));
-  return { glyphs, em, cx: lines.length ? (minX + maxX) / 2 : W / 2, cy: top + bh / 2 };
+  const minX = Math.min(...rows.map(x0Of)), maxX = Math.max(...rows.map(r => x0Of(r) + r.w));
+  return { glyphs, cx: rows.length ? (minX + maxX) / 2 : W / 2, cy: top + bh / 2 };
 }
 
 // pedaços do Animator, na ordem em que recebem o atraso
@@ -126,8 +129,8 @@ function unitsOf(t, glyphs) {
 
 // histórico dos valores animados: cada pedaço lê o valor de (agora − i × Delay)
 const animNow = (t) => { const o = {}; for (const k in ANIM_KEYS) o[k] = t[k] ?? ANIM_KEYS[k]; return o; };
-export function animSample(c, now) {
-  const t = c.text, cur = animNow(t), h = c.animHist || (c.animHist = []);
+export function animSample(c, now, t = c.text) {
+  const cur = animNow(t), h = c.animHist || (c.animHist = []);
   const last = h[h.length - 1];
   if (!last || Object.keys(cur).some(k => cur[k] !== last.v[k])) h.push({ t: now, v: cur });
   return h;
@@ -153,7 +156,7 @@ export function drawText(cv, t, c, now = performance.now() / 1000) {
   const units = anim ? unitsOf(t, L.glyphs) : [{ gs: L.glyphs, cx: L.cx, cy: L.cy }];
   let pending = false, vals = null;
   if (anim && c) {
-    const h = animSample(c, now), d = (t.delay || 0) / 1000, span = d * units.length;
+    const h = animSample(c, now, t), d = (t.delay || 0) / 1000, span = d * units.length;
     while (h.length > 1 && h[1].t <= now - span - 1) h.shift();   // o que nenhum pedaço lê mais
     vals = units.map((_, i) => valueAt(h, now - i * d));
     pending = h.length > 1 && now - h[h.length - 1].t <= span;
@@ -169,8 +172,8 @@ export function drawText(cv, t, c, now = performance.now() / 1000) {
     if (!v) return;
     x.translate((v.aX || 0) + u.cx, (v.aY || 0) + u.cy); x.rotate(v.aRot || 0); x.scale(v.aScale, v.aScale); x.translate(v.anchorX || 0, v.anchorY || 0); x.translate(-u.cx, -u.cy);
   };
-  const font = fontCss(t, L.em), s = t.size;
-  const each = (x, fn) => units.forEach((u, i) => { const v = vals && vals[i]; const a = v ? Math.max(0, Math.min(1, v.aOpacity)) : 1; if (a <= 0) return; unitT(x, u, v); x.font = font; fn(u, v, a); });
+  // cada letra leva a fonte, a cor e o tamanho da linha dela
+  const each = (x, fn) => units.forEach((u, i) => { const v = vals && vals[i]; const a = v ? Math.max(0, Math.min(1, v.aOpacity)) : 1; if (a <= 0) return; unitT(x, u, v); fn(u, v, a); });
   const owOf = (v) => Math.max(0, (t.outlineWidth || 0) + (v ? v.aOutline || 0 : 0));
   const giOf = (v) => Math.max(0, (t.glowIn || 0) + (v ? v.aGlowIn || 0 : 0));
   const goOf = (v) => Math.max(0, (t.glowOut || 0) + (v ? v.aGlowOut || 0 : 0));
@@ -180,27 +183,28 @@ export function drawText(cv, t, c, now = performance.now() / 1000) {
     const [cvx, x] = scratch(cv, which); let any = false;
     x.globalCompositeOperation = 'lighter'; x.lineJoin = 'round'; x.strokeStyle = '#fff'; x.fillStyle = '#fff';
     each(x, (u, v, a) => {
-      const g = get(v); if (g <= 0) return; const R = (GLOW0 + GLOW * g) * s; any = true;
-      const N = Math.min(48, Math.max(2, Math.ceil(R)));
-      x.globalAlpha = a / N;
-      const off = (inside ? GLOW_IN_OFF : GLOW_OUT_OFF) * s;   // a rampa do Resolume começa um pouco depois da borda
-      for (let k = 1; k <= N; k++) { const hw = R * k / N - off; if (hw <= 0) continue; x.lineWidth = 2 * hw; for (const g of u.gs) x.strokeText(g.ch, g.x, g.y); }
+      const gv = get(v); if (gv <= 0) return; any = true;
+      for (const g of u.gs) {
+        const R = (GLOW0 + GLOW * gv) * g.s, N = Math.min(48, Math.max(2, Math.ceil(R)));
+        const off = (inside ? GLOW_IN_OFF : GLOW_OUT_OFF) * g.s;   // a rampa do Resolume começa um pouco depois da borda
+        x.globalAlpha = a / N; x.font = g.font;
+        for (let k = 1; k <= N; k++) { const hw = R * k / N - off; if (hw <= 0) continue; x.lineWidth = 2 * hw; x.strokeText(g.ch, g.x, g.y); }
+      }
     });
     if (!any) return null;
     x.globalAlpha = 1; x.globalCompositeOperation = inside ? 'destination-in' : 'destination-out';
-    each(x, (u) => { for (const g of u.gs) x.fillText(g.ch, g.x, g.y); });
+    each(x, (u) => { for (const g of u.gs) { x.font = g.font; x.fillText(g.ch, g.x, g.y); } });
     x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = oc; x.fillRect(0, 0, W, H);
     return cvx;
   };
   const gOut = ramp(0, goOf, false);
   if (gOut) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(gOut, 0, 0); }
-  ctx.fillStyle = cssColor(t.color);
-  each(ctx, (u, v, a) => { ctx.globalAlpha = a; for (const g of u.gs) ctx.fillText(g.ch, g.x, g.y); });
+  each(ctx, (u, v, a) => { ctx.globalAlpha = a; for (const g of u.gs) { ctx.font = g.font; ctx.fillStyle = g.color; ctx.fillText(g.ch, g.x, g.y); } });
   ctx.globalAlpha = 1;
   const gIn = ramp(1, giOf, true);
   if (gIn) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(gIn, 0, 0); }
   ctx.strokeStyle = oc; ctx.lineJoin = 'round';
-  each(ctx, (u, v, a) => { const w = OUTLINE * 2 * owOf(v) * s; if (w <= 0) return; ctx.globalAlpha = a; ctx.lineWidth = w; for (const g of u.gs) ctx.strokeText(g.ch, g.x, g.y); });
+  each(ctx, (u, v, a) => { const ow = owOf(v); if (ow <= 0) return; ctx.globalAlpha = a; for (const g of u.gs) { ctx.font = g.font; ctx.lineWidth = OUTLINE * 2 * ow * g.s; ctx.strokeText(g.ch, g.x, g.y); } });
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
   return pending;
 }

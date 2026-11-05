@@ -189,6 +189,7 @@ function createMain() {
   win.on('close', (e) => { if (fechando || process.env.PROJ_TEST) return; e.preventDefault(); win.webContents.send('app:closeRequested'); });
   ipcMain.handle('app:quit', () => { fechando = true; win.close(); });
   ipcMain.handle('app:info', () => ({ version: app.getVersion(), packaged: app.isPackaged }));
+  require('./ia-main.js').instalar();   // Texto com IA: pedidos e chaves no processo principal
   win.on('closed', () => app.quit());      // fechar o controle fecha as saídas junto
   win.loadURL(ORIGIN + '/index.html');
   return win;

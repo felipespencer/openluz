@@ -5,12 +5,13 @@ import { FITS } from './engine.js';
 import { MIXER_OPTS, MIXER_OPT, mixerById, mixerColor } from './mixers.js';
 import { EFFECTS, effectById, mkFx } from './effects.js';
 import { sourceById } from './sources.js';
-import { PLAY_MODES, AWAY_MODES, captureNavigate, renderText, playClip, pauseClip, seekClip, setRate, applyAudio, mediaOf, rebuildAudioFx, updateAudioFx } from './clips.js';
+import { PLAY_MODES, AWAY_MODES, captureNavigate, renderText, textClip, playClip, pauseClip, seekClip, setRate, applyAudio, mediaOf, rebuildAudioFx, updateAudioFx } from './clips.js';
 import { AUTOPILOT } from './composition.js';
 import { SHAPES, BEATS, ANIM } from './beat.js';
 import { AUDIO_FX, audioFxById, BANDS } from './audio.js';
 import { isPrepared } from './player.js';
-import { STYLES, RANGES, ORDERS, listFonts } from './text.js';
+import { STYLES, RANGES, ORDERS, listFonts, drawText } from './text.js';
+import { FUNCOES, ESTILOS, montarPedido, validarVersoes, aplicarVersao, fontesParaIA } from './ia.js';
 
 const $ = (id) => document.getElementById(id);
 const fmtT = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
@@ -270,6 +271,71 @@ export class Panels {
     if (this.tl && mediaOf(this.tl.clip) && document.body.contains(this.tl.place ? $('clipPan') : null)) { try { this.tl.place(); } catch { } }
     const AU = this.ctx.audio; if (AU && this.tab === 'comp') for (const w of $('leftPan').querySelectorAll('.meter')) w.firstChild.style.height = Math.round((AU.levels[w.dataset.band] || 0) * 100) + '%';
   }
+  // ✦ Montar com IA (plano 02-06, maquete texto-ia-mockup.html): pedido, funções, estilo, três versões; clicar troca
+  iaRows(P, clip) {
+    const D = window.projDesktop, st = clip._ia || (clip._ia = { pedido: null, funcoes: ['diagramar'], estilo: 'ia', versoes: null, escolhida: -1, status: '', servico: '' });
+    const box = el('div', 'iabox'); P.appendChild(box);
+    box.appendChild(this.phead('✦ Montar com IA', '✦ Montar com IA|Escreva do jeito que sair: a IA monta o cartaz, anima na batida, escreve a partir de um pedido e separa texto longo em clipes. Quem desenha é o OpenLume: depois dá para mexer em tudo à mão. Serviço em Configuração › IA.'));
+    box.appendChild(this.parea('Pedido', 'Pedido|O texto (ou, com Escrever, o que você quer que a IA escreva).', st.pedido ?? clip.text.content, v => { st.pedido = v; }));
+    const fr = el('div', 'iafun'); fr.dataset.help = 'O que a IA faz|Ligue uma ou mais funções.';
+    for (const [k, nome] of FUNCOES) { const b = el('button', st.funcoes.includes(k) ? 'on' : '', nome); b.type = 'button'; b.dataset.f = k; b.onclick = () => { st.funcoes = st.funcoes.includes(k) ? st.funcoes.filter(x => x !== k) : [...st.funcoes, k]; this.render(); }; fr.appendChild(b); }
+    box.appendChild(this.prow('Funções', 'O que a IA faz|Diagramar, Animar, Escrever e Separar em clipes.', fr));
+    box.appendChild(this.pselect('Estilo do cartaz', 'Estilo do cartaz|O jeito do cartaz quando a IA diagrama.', ESTILOS, st.estilo, v => { st.estilo = v; }));
+    const go = el('button', 'wide iago', st.status === 'montando' ? 'Montando…' : '✦ Montar'); go.type = 'button'; go.disabled = st.status === 'montando'; go.dataset.k = 'montar';
+    go.onclick = () => this.iaMontar(clip);
+    box.appendChild(go);
+    const info = el('div', 'iainfo');
+    info.append(el('span', '', st.erro ? st.erro : st.servico ? 'Serviço: ' + st.servico : 'Três versões por vez.'));
+    const tr = el('a', 'ialink', 'trocar serviço'); tr.onclick = () => this.ctx.iaDialog(() => this.render()); info.appendChild(tr);
+    box.appendChild(info);
+    if (st.versoes) {
+      const row = el('div', 'iaver');
+      st.versoes.forEach((v, i) => {
+        const b = el('button', 'iav' + (i === st.escolhida ? ' on' : '')); b.type = 'button'; b.dataset.v = i; b.title = v.nome + (v.animar.ligado ? ' · anima' : '') + (v.clipes.length > 1 ? ' · ' + v.clipes.length + ' clipes' : '');
+        const cv = el('canvas'); cv.width = 192; cv.height = 108; b.appendChild(cv); b.appendChild(el('span', '', v.nome));
+        try { const big = document.createElement('canvas'); big.width = 1920; big.height = 1080; const k = aplicarVersao({ text: { ...clip.text }, panim: {} }, v); drawText(big, k.text, null); const x = cv.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, 192, 108); x.drawImage(big, 0, 0, 192, 108); } catch { }
+        b.onclick = () => this.iaEscolher(clip, i);
+        row.appendChild(b);
+      });
+      box.appendChild(row);
+    }
+  }
+  async iaMontar(clip) {
+    const D = window.projDesktop, st = clip._ia;
+    if (!D || !D.ia) { this.ctx.toast('A IA só funciona no programa instalado no Windows'); return; }
+    const fontes = fontesParaIA(await listFonts());
+    const req = montarPedido({ texto: st.pedido ?? clip.text.content, funcoes: st.funcoes, estilo: st.estilo, fontes, atual: clip.text, bpm: this.ctx.bpm() });
+    if (window.__iaServico) req.servico = window.__iaServico;   // a bateria usa o serviço de mentira
+    st.status = 'montando'; st.erro = ''; this.render();
+    const r = await D.ia.pedir(req);
+    st.status = '';
+    if (!r.ok) { st.erro = 'Não deu: ' + r.erro; this.render(); if (r.semServico) this.ctx.iaDialog(() => this.render()); return; }
+    try { st.versoes = validarVersoes(r.resposta, fontes); } catch (e) { st.erro = 'Não deu: ' + e.message; this.render(); return; }
+    st.servico = (r.servico || 'teste') + (r.modelo ? ' · ' + r.modelo : '');
+    this.iaEscolher(clip, 0);
+  }
+  // aplica a versão i; com Separar em clipes, uma casa por frase, para a direita, na mesma camada (só em casa vazia ou de texto da IA)
+  iaEscolher(clip, i) {
+    const st = clip._ia, v = st.versoes && st.versoes[i]; if (!v) return;
+    this.ctx.markUndo();
+    st.escolhida = i;
+    const sep = st.funcoes.includes('separar') && v.clipes.length > 1;
+    aplicarVersao(clip, v, sep ? v.clipes[0] : null); renderText(clip);
+    if (sep) {
+      const cell = this.ctx.selectedCell(); const L = cell && cell.L, li = this.ctx.state.layers.indexOf(L);
+      if (L && cell.clip === clip) {
+        let col = cell.idx;
+        for (let k = 1; k < v.clipes.length; k++) {
+          col++; if (col >= this.ctx.cols()) break;
+          const o = L.clips[col]; if (o && !(o.kind === 'text' && o.text.ia)) break;   // não passa por cima do que não é dela
+          const n = textClip(null, false); aplicarVersao(n, v, v.clipes[k]); renderText(n); n._ia = { ...st, versoes: null };
+          this.ctx.putClip(li, col, n);
+        }
+        this.ctx.state.sel = { l: li, c: cell.idx }; this.ctx.state.selLayer = li;   // pôr as casas novas não tira a seleção da que montou
+      }
+    }
+    this.ctx.renderGrid(); this.render();
+  }
   renderClip(P, clip) {
     this.tl = null;
     P.textContent = '';
@@ -285,9 +351,24 @@ export class Panels {
     } else if (clip.kind === 'text') {
       const t = clip.text, up = () => { renderText(clip); this.ctx.renderGrid(); }, A = t.animator, nm = A ? 'Text Animator' : 'Text Block';
       const H = (rname, txt) => nm + ' · ' + rname + '|' + txt;
-      const num = (label, rname, help, key, o) => P.appendChild(this.pnum(label, H(rname, help), t[key], { bar: true, ...o }, v => { t[key] = v; up(); }));
+      // valor com ♪: anima na batida do BPM (forma, batidas, mín e máx), como os parâmetros das fontes geradas
+      const num = (label, rname, help, key, o) => {
+        const row = this.pnum(label, H(rname, help), t[key], { bar: true, ...o }, v => { t[key] = v; up(); }); P.appendChild(row);
+        if (o.noAnim) return;
+        const a = clip.panim && clip.panim[key];
+        const b = el('button', 'anb' + (a ? ' on' : ''), '♪'); b.type = 'button'; b.title = a ? 'Parar a animação na batida (volta ao valor fixo)' : 'Animar este valor na batida do BPM';
+        b.onclick = (e) => { e.stopPropagation(); clip.panim = clip.panim || {}; if (a) delete clip.panim[key]; else clip.panim[key] = ANIM({ min: o.min, max: o.max }); up(); this.render(); };
+        row.querySelector('.pv').appendChild(b);
+        if (!a) return;
+        const oo = { min: o.min, max: o.max, step: o.step, dec: o.dec, unit: o.unit, bar: true };
+        P.appendChild(this.pselect('· Forma', 'Forma|Como o valor anda a cada ciclo: as formas dos presets de animação do Resolume.', SHAPES.filter(([k]) => k !== 'fft'), a.shape, v => { a.shape = v; }));
+        P.appendChild(this.pselect('· Batidas', 'Batidas|Quantas batidas dura um ciclo da forma.', BEATS.map(x => [String(x), x < 1 ? '1/' + Math.round(1 / x) : String(x)]), String(a.beats), v => { a.beats = +v; }));
+        P.appendChild(this.pnum('· Mín', 'Mínimo|O valor no ponto mais baixo da forma.', a.min, { ...oo, reset: o.min }, v => { a.min = v; }));
+        P.appendChild(this.pnum('· Máx', 'Máximo|O valor no ponto mais alto da forma.', a.max, { ...oo, reset: o.max }, v => { a.max = v; }));
+      };
       const deg = (label, rname, help, key) => P.appendChild(this.pnum(label, H(rname, help), Math.round(t[key] * 1800 / Math.PI) / 10, { min: -180, max: 180, step: 1, dec: 1, unit: '°', bar: true, reset: 0 }, v => { t[key] = v * Math.PI / 180; up(); }));
       P.appendChild(this.phead(nm, nm + '|' + (A ? 'Cada letra, palavra ou linha recebe os valores animados com um atraso (Delay): mude um valor animado, ou ponha um LFO nele, e os pedaços seguem um depois do outro.' : 'Texto escrito com as fontes do Windows, como o Text Block do Resolume.')));
+      this.iaRows(P, clip);
       P.appendChild(this.parea('Texto', H('Text', 'O texto. Enter quebra a linha.'), t.content, v => { t.content = v; renderText(clip); }, () => this.ctx.renderGrid()));
       const fonts = fontsCache || [t.font]; if (!fontsCache) listFonts().then(f => { fontsCache = f; this.render(); });
       P.appendChild(this.pselect('Fonte', H('Font', 'Fontes instaladas no Windows.'), (fonts.includes(t.font) ? fonts : [t.font, ...fonts]).map(f => [f, f]), t.font, v => { t.font = v; up(); }));
@@ -296,7 +377,7 @@ export class Panels {
       num('Tamanho', 'Size', 'Tamanho da letra: 1 = um H de 93 px numa composição 1080.', 'size', { min: 0.5, max: 10, step: 0.01, dec: 2, reset: 1 });
       P.appendChild(this.pseg('Alinhar', H('Alignment', 'Alinhamento das linhas' + (A ? ' dentro do bloco (o bloco fica no meio).' : ' dentro da largura da linha.')), [['left', 'Esq.'], ['center', 'Centro'], ['right', 'Dir.']], t.align, v => { t.align = v; up(); }));
       P.appendChild(this.pseg('Vertical', H('Alignment Vertically', 'Bloco em cima, no meio ou embaixo da tela.'), [['top', 'Cima'], ['center', 'Meio'], ['bottom', 'Baixo']], t.valign, v => { t.valign = v; up(); }));
-      if (!A) num('Largura da linha', 'Line Width', 'Largura em px em que o texto quebra por palavra; a caixa fica centrada na tela.', 'lineWidth', { min: 10, max: 32768, step: 10, unit: ' px', bar: false, reset: 1920 });
+      if (!A) num('Largura da linha', 'Line Width', 'Largura em px em que o texto quebra por palavra; a caixa fica centrada na tela.', 'lineWidth', { min: 10, max: 32768, step: 10, unit: ' px', bar: false, reset: 1920, noAnim: true });
       num('Posição X', 'Position X', 'Desloca o texto em px.', 'x', { min: -1920, max: 1920, step: 1, unit: ' px', reset: 0 });
       num('Posição Y', 'Position Y', 'Desloca o texto em px (positivo desce).', 'y', { min: -1080, max: 1080, step: 1, unit: ' px', reset: 0 });
       if (!A) deg('Rotação', 'Rotation', 'Gira o bloco em volta do centro dele (positivo, horário).', 'rotation');
@@ -312,7 +393,7 @@ export class Panels {
         P.appendChild(this.pcheck('Animado', H('Animated', 'Liga os valores animados.'), t.animated, v => { t.animated = v; clip.animHist = null; up(); }));
         P.appendChild(this.pselect('Pedaços', H('Range', 'O que se move junto: tudo, cada linha, cada palavra ou cada letra.'), RANGES, t.range, v => { t.range = v; up(); }));
         P.appendChild(this.pselect('Ordem', H('Order', 'Quem recebe o valor primeiro.'), ORDERS, t.order, v => { t.order = v; up(); }));
-        num('Atraso', 'Delay', 'Tempo entre um pedaço e o seguinte.', 'delay', { min: 0, max: 2000, step: 10, unit: ' ms', reset: 100 });
+        num('Atraso', 'Delay', 'Tempo entre um pedaço e o seguinte.', 'delay', { min: 0, max: 2000, step: 10, unit: ' ms', reset: 100, noAnim: true });
         num('Opacidade', 'Opacity', 'Alfa de cada pedaço.', 'aOpacity', { min: 0, max: 1, step: 0.01, dec: 2, reset: 1 });
         num('Escala', 'Scale', 'Escala de cada pedaço, em volta do centro dele.', 'aScale', { min: 0, max: 10, step: 0.01, dec: 2, reset: 1 });
         num('Posição X', 'Animated Position X', 'Desloca cada pedaço em px.', 'aX', { min: -1920, max: 1920, step: 1, unit: ' px', reset: 0 });
