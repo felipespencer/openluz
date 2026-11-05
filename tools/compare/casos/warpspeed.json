@@ -1,0 +1,7 @@
+{
+  "efeito": "WarpSpeed",
+  "clip": "tools/compare/clips/prova.png",
+  "espera": 30,
+  "base": { "Vignette": 0.2, "Fade": 0.5, "Scale": 0.5, "Rotate": 0, "Center X": 0, "Center Y": 0 },
+  "casos": { "ws1": {}, "ws2": { "Vignette": 0, "Fade": 0 }, "ws3": { "Vignette": 0, "Fade": 0.8, "Scale": 0.2 }, "ws4": { "Vignette": 1 }, "ws5": { "Vignette": 0, "Rotate": 0.5 }, "ws6": { "Vignette": 0, "Center X": 0.5, "Center Y": 0.5 } }
+}

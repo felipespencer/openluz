@@ -7,6 +7,17 @@ const P = (key, label, def, min, max, step = 0.01, unit = '') => ({ key, label, 
 const HUE = (key, label, def) => P(key, label, def, 0, 1);
 // mesma forma do LIST de effects.js (não dá para importar de lá: effects.js importa este arquivo)
 const LIST = (key, label, opts, ropts, def = 0) => ({ key, label, def, opts, ropts, min: 0, max: opts.length - 1, step: 1, unit: '' });
+const COLOR = (key, label, def, alpha = false) => ({ key, label, def, color: true, alpha });
+// Grid Cloner: índice da cópia (fileira × colunas + coluna) em cada posição da ordem; a posição 0 fica por cima e sem atraso
+const gcOrdem = (C, R, order, wd, ht) => {
+  const L = [];
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+    const dx = C > 1 ? (c - (C - 1) / 2) * wd / (C - 1) : 0, dy = R > 1 ? (r - (R - 1) / 2) * ht / (R - 1) : 0;
+    L.push({ i: r * C + c, r, c, d: Math.round(Math.hypot(dx, dy) * 1e4) });
+  }
+  if (order >= 0.5) L.sort((p, q) => p.r - q.r || q.c - p.c); else L.sort((p, q) => p.d - q.d || p.r - q.r || q.c - p.c);   // empate: como no Top Right (bate com 2×2, 3×2 e 5×3; com 4 fileiras o Resolume às vezes põe a de baixo antes)
+  const out = new Float32Array(100); L.forEach((x, k) => { out[k] = x.i; }); return out;
+};
 // CRT: px por unidade do tubo (igual no shader e no sigma do bloom)
 const crtEscala = (v, w, h) => { const cu = 3 * v.gapX + 2 * v.gapS + 1, ru = 2 * (v.hs + v.gapY); return v.disp >= 0.5 ? 1 : Math.min(w / (v.cols * cu), h / (v.rows * ru)); };
 export const MORE = [
@@ -83,6 +94,89 @@ export const MORE = [
       float f = 16.0 * uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
       c.rgb *= min(1.0, 1.75 * pow(max(f, 1e-6), 0.21 * vig));
       return c; }` },
+  // SearchLight do Resolume 7.28, medido na bancada (tools/compare/sondas/perfil_luz.py, luz_anda.py; 1920×1080).
+  // Círculo de raio Size × H/2; borda suave para dentro, smoothstep de largura 0,228 × H × Blur. O centro passeia por um ruído suave
+  // (espectro de ~0,1 a 0,65 Hz com Frequency 0,77) até W/2 − raio para os lados e H/2 − raio para cima e para baixo; o caminho do Resolume
+  // não se repete, então o nosso é outro ruído com o mesmo alcance e a mesma velocidade (mediana ~860 px/s com Size 0,3).
+  { id: 'searchlight', name: 'SearchLight', desc: 'Um holofote redondo que passeia pela imagem; o resto fica escuro.',
+    params: [P('size', 'Tamanho', 0.6, 0, 1), P('blur', 'Desfoque', 0.5, 0, 1), P('freq', 'Frequência', 0.77, 0, 2), P('invert', 'Inverter', 0, 0, 1, 1)],
+    rparams: { Size: 'size', Blur: 'blur', Frequency: 'freq', Invert: 'invert' },
+    glsl: `float slN(float t, vec3 f){ return 0.87 * (0.5 * sin(t + f.x) + 0.3 * sin(1.37 * t + f.y) + 0.2 * sin(2.13 * t + f.z)); }
+    vec4 fx(vec2 uv){
+      vec2 P = vec2(uv.x, 1.0 - uv.y) * uRes; float H = uRes.y, R = size * H * 0.5, t = uTime * freq * 3.41;
+      // em Frequency 0 a luz para onde o Resolume para: (+0,0746; −0,085) × o alcance
+      vec2 c = uRes * 0.5 + max(uRes * 0.5 - R, 0.0) * (vec2(slN(t, vec3(0.3, 1.1, 2.0)) - slN(0.0, vec3(0.3, 1.1, 2.0)), slN(t * 0.93, vec3(1.7, 0.4, 2.9)) - slN(0.0, vec3(1.7, 0.4, 2.9))) + vec2(0.0746, -0.085));
+      float d = length(P - c), w = 0.2278 * H * blur;
+      float m = w > 0.5 ? 1.0 - smoothstep(R - w, R, d) : step(d, R);
+      if (invert > 0.5) m = 1.0 - m;
+      return texture(uTex, uv) * m; }` },
+  // WarpSpeed do Resolume 7.28, medido na bancada (tools/compare/sondas/raio_ws.py, troca_ws.py): 15 cópias da imagem, a n mostra o quadro de
+  // n quadros atrás na escala Scale + n × (1 − Scale) / 14 (o que é novo nasce no centro e voa para fora). Cada cópia é opaca dentro do retângulo
+  // dela (o preto também tampa) e entra por cima da mais velha com opacidade Fade + (1 − Fade) × n / 14: a mais nova, menor, fica por cima.
+  // Trocar a imagem por preto apaga o rastro em ~13 quadros, como lá. Rotate gira a cópia n por 120° × valor × (1 − n/14), no sentido horário;
+  // Center X/Y leva a cópia n por (valor × W/2, valor × H/2) × (1 − n/14), Y para baixo. Vinheta: a borda de cada cópia fica transparente,
+  // opacidade × mín(1; 1,85 × f^(2 × valor)), f = 16uv(1−u)(1−v) da cópia (tirado do perfil do branco em escala 1, que é a soma das 15).
+  { id: 'warpspeed', name: 'WarpSpeed', desc: 'Salto para a velocidade da luz: a imagem se repete do centro para fora, em rastro, como estrelas passando.',
+    params: [P('vig', 'Vinheta', 0.2, 0, 1), P('fade', 'Esmaecer', 0.5, 0, 1), P('scale', 'Escala', 0.5, 0, 1), P('rot', 'Giro', 0, -1, 1), P('cx', 'Centro X', 0, -1, 1), P('cy', 'Centro Y', 0, -1, 1)],
+    rparams: { Vignette: 'vig', Fade: 'fade', Scale: 'scale', Rotate: 'rot', 'Center X': 'cx', 'Center Y': 'cy' },
+    hist: () => ({ n: 15, s: 0.5 }),
+    glsl: `vec2 wsR(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(p.x * c + p.y * s, -p.x * s + p.y * c); }
+    vec4 fx(vec2 uv){
+      vec2 P = vec2(uv.x, 1.0 - uv.y) * uRes, c0 = uRes * 0.5;
+      vec4 acc = vec4(0.0);
+      for (int n = 14; n >= 0; n--) {   // da mais velha (maior, embaixo) para a mais nova (menor, por cima)
+        float s = scale + float(n) * (1.0 - scale) / 14.0, al = mix(fade, 1.0, float(n) / 14.0), k = 1.0 - float(n) / 14.0;
+        if (s <= 0.001) continue;
+        vec2 q = wsR(P - c0 - vec2(cx, cy) * uRes * 0.5 * k, radians(120.0 * rot) * k) / s + c0;
+        if (q.x < 0.0 || q.y < 0.0 || q.x > uRes.x || q.y > uRes.y) continue;
+        vec2 t = vec2(q.x / uRes.x, 1.0 - q.y / uRes.y);
+        vec4 c = n == 0 || uHistN < 2.0 ? texture(uTex, t) : texture(uHist, vec3(t, mod(uHistI - min(float(n), uHistN - 1.0) + uHistL, uHistL)));
+        float f = 16.0 * t.x * t.y * (1.0 - t.x) * (1.0 - t.y);   // vinheta da própria cópia: a borda dela fica transparente
+        acc = mix(acc, c, al * (vig > 0.0 ? min(1.0, 1.85 * pow(max(f, 1e-6), 2.0 * vig)) : 1.0));
+      }
+      return acc; }` },
+  // LUT do Resolume 7.28: troca cada cor pela da tabela 3D (arquivo .cube), com interpolação entre os pontos; sem arquivo, passa a imagem.
+  // A tabela vem de lut.js (f.lut: 'builtin:Nome' ou o caminho do .cube); o motor entrega em uLut (textura 3D) e uLutN (lado da tabela).
+  { id: 'lut', name: 'LUT', desc: 'Troca as cores da imagem pelas de uma tabela 3D (arquivo .cube, como os de correção de cor de cinema), ou por uma das que vêm com o OpenLume.', lut: true,
+    params: [], rfields: { 'LUT 3D': 'lut' },
+    glsl: `vec4 fx(vec2 uv){ vec4 c = texture(uTex, uv); if (uLutN < 2.0) return c;
+      vec3 u = clamp(un(c), 0.0, 1.0); return pre(texture(uLut, (u * (uLutN - 1.0) + 0.5) / uLutN).rgb, c.a); }` },
+  // Grid Cloner do Resolume 7.28, medido na bancada (tools/compare/sondas/caixas_rest.py; 1920×1080, unidade = altura H).
+  // Cópia = a imagem inteira × Input Scale, girada por 2 × Input Rotation (anti-horário). Centros: do primeiro ao último, Width × H em x e
+  // Height × H em y; Vertical Shift desce a 1ª coluna e sobe a última (± valor × H/2, linear no meio), Horizontal Shift empurra a 1ª fileira para a
+  // direita; Scale afasta os centros (não aumenta a cópia); Rotation gira a grade por 2 × valor (anti-horário, as cópias não giram); Random Shift
+  // no Resolume é sorteado de novo quando os controles mudam (às vezes igual para todas as cópias, às vezes uma por cópia, até ~0,4 × H): aqui é
+  // um sorteio fixo por cópia, de até ± 0,45 × H × valor (não dá para igualar pixel a pixel). Ordem: Top Right = a de cima à direita é a 0 e fica por cima; Center = da mais perto do
+  // centro para fora (empate como no Top Right). Delay: a cópia n mostra o quadro de n quadros atrás.
+  { id: 'gridcloner', name: 'Grid Cloner', desc: 'Repete a imagem numa grade de cópias, com giro, deslocamento e atraso de uma cópia para a outra.',
+    params: [P('cols', 'Colunas', 4, 1, 10, 1), P('rows', 'Fileiras', 4, 1, 10, 1), P('irot', 'Giro da entrada', 0, -180, 180, 0.1, '°'), P('iscale', 'Escala da entrada', 20, 0, 200, 0.1, ' %'),
+      P('width', 'Largura', 1.2, 0, 2), P('height', 'Altura', 0.7, 0, 2), P('scale', 'Escala', 100, 0, 500, 0.1, ' %'), P('rot', 'Giro', 0, -180, 180, 0.1, '°'),
+      P('vshift', 'Deslocamento vertical', 0, -1, 1), P('hshift', 'Deslocamento horizontal', 0, -1, 1), P('rshift', 'Deslocamento aleatório', 0, 0, 1),
+      LIST('order', 'Ordem', ['Centro', 'Cima à direita'], ['Center', 'Top Right'], 1), P('delay', 'Atraso', 0, 0, 1, 1), COLOR('bg', 'Fundo', '#11ff6800', true)],
+    rparams: { Columns: 'cols', Rows: 'rows', 'Input Rotation': 'irot', 'Input Scale': 'iscale', Width: 'width', Height: 'height', Scale: 'scale', Rotation: 'rot', 'Vertical Shift': 'vshift', 'Horiztonal Shift': 'hshift', 'Random Shift': 'rshift', Order: 'order', Delay: 'delay', Background: 'bg' },
+    hist: (v, w, h) => { const n = Math.round(v.cols) * Math.round(v.rows); if (v.delay < 0.5 || n < 2) return null;
+      let s = Math.min(1, Math.ceil(Math.max(0.125, v.iscale / 100) * 8) / 8); while (s > 0.125 && n * w * h * s * s * 4 > 256e6) s -= 0.125; return { n, s }; },
+    uniforms: (v) => ({ uOrd: gcOrdem(Math.round(v.cols), Math.round(v.rows), v.order, v.width, v.height) }),
+    glsl: `uniform float uOrd[100];
+    vec2 gcR(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(p.x * c + p.y * s, -p.x * s + p.y * c); }   // anti-horário na tela (y para baixo)
+    vec4 fx(vec2 uv){
+      vec2 P = vec2(uv.x, 1.0 - uv.y) * uRes; float H = uRes.y;
+      int C = int(cols + 0.5), R = int(rows + 0.5), N = C * R;
+      float si = iscale / 100.0, ai = radians(2.0 * irot), ag = radians(2.0 * rot), hc = float(C - 1) * 0.5, hr = float(R - 1) * 0.5;
+      vec4 acc = vec4(bg.rgb * bg.a, bg.a);
+      if (si <= 0.0) return acc;
+      for (int k = 99; k >= 0; k--) { if (k >= N) continue;
+        int idx = int(uOrd[k] + 0.5), c = idx % C, r = idx / C;
+        float tc = C > 1 ? (hc - float(c)) / hc : 0.0, tr = R > 1 ? (hr - float(r)) / hr : 0.0;
+        vec2 o = vec2(-tc * width * H * 0.5 + hshift * H * 0.5 * tr, -tr * height * H * 0.5 + vshift * H * 0.5 * tc) * scale / 100.0;
+        o = gcR(o, ag) + rshift * (vec2(hash(vec2(float(idx), 3.7)), hash(vec2(float(idx), 9.1))) - 0.5) * 0.9 * H;
+        vec2 q = gcR(P - uRes * 0.5 - o, -ai) / si + uRes * 0.5;
+        if (q.x < 0.0 || q.y < 0.0 || q.x > uRes.x || q.y > uRes.y) continue;
+        vec2 t = vec2(q.x / uRes.x, 1.0 - q.y / uRes.y);
+        vec4 s4 = uHistN > 0.0 ? texture(uHist, vec3(t, mod(uHistI - min(float(k), uHistN - 1.0) + uHistL, uHistL))) : texture(uTex, t);
+        acc = s4 + acc * (1.0 - s4.a);
+      }
+      return acc; }` },
   { id: 'backgroundremoval', name: 'Background Removal', desc: 'Tira o fundo e deixa só a pessoa, para webcam ou qualquer clipe: os mesmos controles, presets e modelos do Resolume 7.28. Qualidade Baixa: PP-HumanSeg 192; Média: PP-MattingV2 512; Alta: MODNet-HRNet 640 (os dois últimos rodam na placa de vídeo pelo DirectML). Dica: ponha antes do Transform.', mask: true,
     params: [P('refine', 'Refinar borda', 0.5, 0, 1), P('soft', 'Borda suave', 0.5, 0, 1), P('fill', 'Fechar buracos', 1, 0, 1, 1), P('hard', 'Máscara dura', 0, 0, 1, 1), P('specks', 'Filtrar pontinhos', 0.1, 0, 1), P('tsmooth', 'Suavidade no tempo', 0.1, 0, 1), LIST('mode', 'Modo', ['Alfa', 'Máscara'], ['Alpha', 'Mask']), P('invert', 'Inverter', 0, 0, 1, 1), LIST('quality', 'Qualidade do modelo', ['Baixa', 'Média', 'Alta'], ['Low', 'Medium', 'High'], 1)],
     rparams: { 'Refine Edge': 'refine', 'Soft Edge': 'soft', 'Fill Holes': 'fill', 'Hard Mask': 'hard', 'Filter Specks': 'specks', 'Temporal Smoothness': 'tsmooth', Mode: 'mode', Invert: 'invert', 'Model Quality': 'quality' },

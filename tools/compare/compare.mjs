@@ -57,7 +57,9 @@ async function openlume(a, valoresR) {
       params[k] = p.opts ? Math.max(0, (p.ropts || p.opts).indexOf(v)) : p.color ? String(v).slice(0, p.alpha ? 9 : 7) : +v;
     }
     for (const [k, v] of Object.entries(vo)) params[k] = isNaN(+v) ? v : +v;
-    L.fx = [{ id: def.id, params, bypass: false, anim: {} }];
+    const fx = { id: def.id, params, bypass: false, anim: {} };
+    for (const [rn, v] of Object.entries(vr)) if (def.rfields && def.rfields[rn]) fx[def.rfields[rn]] = v;   // controle que não é número (arquivo do LUT)
+    L.fx = [fx];
     P.render(); const f0 = P.frames(); while (P.frames() - f0 < ${a.espera}) await S(16);
     return { png: P.engine.canvas.toDataURL('image/png'), params, w: P.engine.canvas.width, h: P.engine.canvas.height };
   })()`;

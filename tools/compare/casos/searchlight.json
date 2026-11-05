@@ -1,0 +1,26 @@
+{
+ "efeito": "SearchLight",
+ "clip": "tools/compare/clips/branco.png",
+ "base": {
+  "Size": 0.6,
+  "Blur": 0.5,
+  "Frequency": 0,
+  "Invert": 0
+ },
+ "casos": {
+  "sl1": {},
+  "sl2": {
+   "Size": 0.3,
+   "Blur": 0
+  },
+  "sl3": {
+   "Size": 1,
+   "Blur": 1
+  },
+  "sl4": {
+   "Invert": 1,
+   "Size": 0.45,
+   "Blur": 0.25
+  }
+ }
+}

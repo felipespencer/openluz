@@ -1,0 +1,10 @@
+{
+  "efeito": "LUT",
+  "clip": "tools/compare/clips/prova-sat.png",
+  "base": {},
+  "casos": {
+    "lut1": { "LUT 3D": "C:/Program Files/Resolume Arena/luts/Aspen.cube" },
+    "lut2": { "LUT 3D": "C:/Program Files/Resolume Arena/luts/Kobosi.cube" },
+    "lut3": { "LUT 3D": "C:/Program Files/Resolume Arena/luts/F-8700-V2.cube", "__clip": "tools/compare/clips/prova.png" }
+  }
+}

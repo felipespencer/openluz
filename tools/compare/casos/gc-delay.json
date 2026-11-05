@@ -1,0 +1,7 @@
+{
+  "efeito": "Grid Cloner",
+  "clip": "tools/compare/clips/andando.mp4",
+  "base": { "Columns": 4, "Rows": 4, "Input Rotation": 0, "Rotation": 0, "Input Scale": 20, "Width": 1.2, "Height": 0.7, "Scale": 100,
+    "Vertical Shift": 0, "Horiztonal Shift": 0, "Random Shift": 0, "Order": "Top Right", "Delay": 1, "Background": "#11ff6800" },
+  "casos": { "d1": {}, "d2": { "Order": "Center" } }
+}

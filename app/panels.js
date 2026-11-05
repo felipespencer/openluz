@@ -12,6 +12,7 @@ import { AUDIO_FX, audioFxById, BANDS } from './audio.js';
 import { isPrepared } from './player.js';
 import { STYLES, RANGES, ORDERS, listFonts, drawText } from './text.js';
 import { FUNCOES, ESTILOS, montarPedido, validarVersoes, aplicarVersao, fontesParaIA } from './ia.js';
+import { BUILTIN_NAMES, putLutText } from './lut.js';
 
 const $ = (id) => document.getElementById(id);
 const fmtT = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
@@ -85,6 +86,26 @@ export class Panels {
     P.appendChild(this.pnum('· Mín', 'Mínimo|O valor no ponto mais baixo da forma.', a.min, { ...o, reset: p.min }, v => { a.min = v; }));
     P.appendChild(this.pnum('· Máx', 'Máximo|O valor no ponto mais alto da forma.', a.max, { ...o, reset: p.max }, v => { a.max = v; }));
   }
+  // efeito LUT: a tabela 3D (as do OpenLume ou um arquivo .cube do disco)
+  lutRow(P, f, def) {
+    const cur = f.lut || '', nome = (k) => k.split(/[\\/]/).pop().replace(/\.cube$/i, '');
+    const ops = [['', '— nenhuma —'], ...BUILTIN_NAMES.map(n => ['builtin:' + n, n])];
+    if (cur && !cur.startsWith('builtin:')) ops.push([cur, nome(cur) + ' (arquivo)']);
+    ops.push(['__abrir', 'Abrir arquivo .cube…']);
+    P.appendChild(this.pselect('LUT 3D', def.name + ' · LUT 3D|A tabela de cores. As do OpenLume vêm prontas; "Abrir arquivo" aceita qualquer .cube 3D (DaVinci Resolve, Premiere, sites de LUT).', ops, cur, v => {
+      if (v !== '__abrir') { f.lut = v; this.render(); return; }
+      const inp = el('input'); inp.type = 'file'; inp.accept = '.cube'; inp.style.display = 'none'; document.body.appendChild(inp);
+      inp.onchange = async () => {
+        const file = inp.files && inp.files[0]; inp.remove(); if (!file) { this.render(); return; }
+        const caminho = window.projDesktop && window.projDesktop.pathOf ? window.projDesktop.pathOf(file) : '';
+        try { putLutText(caminho || 'arquivo:' + file.name, await file.text()); f.lut = caminho || 'arquivo:' + file.name; f._lutErr = ''; }
+        catch (err) { f._lutErr = String(err.message || err); }
+        this.render();
+      };
+      inp.click();
+    }));
+    if (f._lutErr) P.appendChild(el('div', 'pnote', 'Não deu para usar o arquivo: ' + f._lutErr));
+  }
   // cadeia de efeitos: cabeçalho por efeito (nome, desvio, ✕) e os parâmetros; zona para soltar
   fxRows(P, owner, label) {
     const list = owner.fx || (owner.fx = []);
@@ -100,6 +121,7 @@ export class Panels {
       if (f.bypass) return;
       P.appendChild(this.pnum('Opacidade', def.name + ' · Opacidade|Quanto do efeito entra: 0 % é a imagem sem o efeito.', Math.round((f.opacity ?? 1) * 100), { min: 0, max: 100, step: 1, unit: ' %', bar: true, reset: 100 }, v => { f.opacity = v / 100; }));
       if (def.presets) P.appendChild(this.pselect('Preset', def.name + ' · Preset|Conjuntos de valores prontos, os mesmos do Resolume. Escolher um troca todos os controles abaixo.', [['', '—'], ...def.presets.map(x => [x.name, x.name])], f.preset || '', v => { const pr = def.presets.find(x => x.name === v); if (pr) { for (const p of def.params) f.params[p.key] = pr.params[p.key] ?? p.def; } f.preset = v; this.render(); }));
+      if (def.lut) this.lutRow(P, f, def);
       for (const p of def.params) this.paramRows(P, f, p, def.name + ' · ' + p.label + '|' + def.desc);
     });
     const dz = el('div', 'dropzone', list.length ? 'Solte outro efeito aqui' : 'Solte um efeito aqui'); dz.dataset.help = 'Soltar efeito|Arraste do painel Efeitos.';

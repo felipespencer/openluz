@@ -16,6 +16,7 @@ import { effectById, EFFECT_HELPERS } from './effects.js';
 import { sourceById } from './sources.js';
 import { FS_MIX, mixerCode, normMixer, hexRgb, hexRgba, MIXER_OPT, mixerColor } from './mixers.js';
 import { animValue } from './beat.js';
+import { lutOf } from './lut.js';
 
 // camada/clipe: quad com ajuste, posição, escala e giro
 const VS_LAYER = `#version 300 es
@@ -270,8 +271,8 @@ export class Engine {
     if (!pr) {
       // Opacidade do efeito (como no Resolume, todo efeito tem): mistura o resultado com o que entrou
       // efeito com { ring: true } (Delay RGB): recebe três quadros mais antigos da própria entrada, um por canal
-      const fs = FX_HEAD + 'uniform float uFxOp;\n' + (def.ring ? 'uniform sampler2D uDelR; uniform sampler2D uDelG; uniform sampler2D uDelB;\n' : '') + (def.stage ? 'uniform sampler2D uMid;\n' : '') + def.params.map(uDecl).join('\n') + '\n' + EFFECT_HELPERS + def.glsl + '\nvoid main(){ vec4 r = fx(v); o = uFxOp >= 1.0 ? r : mix(texture(uTex, v), r, uFxOp); }';
-      pr = this.program(VS_QUAD, fs, ['uTex', 'uPrev', 'uMid', 'uRes', 'uTime', 'uFxOp', ...(def.ring ? ['uDelR', 'uDelG', 'uDelB'] : []), ...def.params.map(p => p.key)]); this.fxProg.set(def.id, pr);
+      const fs = FX_HEAD + 'uniform float uFxOp;\n' + (def.ring ? 'uniform sampler2D uDelR; uniform sampler2D uDelG; uniform sampler2D uDelB;\n' : '') + (def.stage ? 'uniform sampler2D uMid;\n' : '') + (def.hist ? 'uniform highp sampler2DArray uHist; uniform float uHistI; uniform float uHistN; uniform float uHistL;\n' : '') + (def.lut ? 'uniform highp sampler3D uLut; uniform float uLutN;\n' : '') + def.params.map(uDecl).join('\n') + '\n' + EFFECT_HELPERS + def.glsl + '\nvoid main(){ vec4 r = fx(v); o = uFxOp >= 1.0 ? r : mix(texture(uTex, v), r, uFxOp); }';
+      pr = this.program(VS_QUAD, fs, ['uTex', 'uPrev', 'uMid', 'uRes', 'uTime', 'uFxOp', ...(def.ring ? ['uDelR', 'uDelG', 'uDelB'] : []), ...(def.hist ? ['uHist', 'uHistI', 'uHistN', 'uHistL'] : []), ...(def.lut ? ['uLut', 'uLutN'] : []), ...def.params.map(p => p.key)]); this.fxProg.set(def.id, pr);
       // efeito com { stage }: um primeiro passe gera uma imagem intermediária (uMid), que o { gauss } desfoca para o uPrev (CRT: a máscara de fósforo e o bloom dela)
       if (def.stage) pr.stage = this.program(VS_QUAD, FX_HEAD + def.params.map(uDecl).join('\n') + '\n' + EFFECT_HELPERS + 'uniform float uPass;\n' + def.stage + '\nvoid main(){ o = fx(v); }', ['uTex', 'uPrev', 'uPass', 'uRes', 'uTime', ...def.params.map(p => p.key)]);
     }
@@ -291,6 +292,52 @@ void main(){ float sg = max(uSigma, 0.01); int R = int(ceil(sg * (uCos > 0.5 ? 1
     gl.uniform1f(P.u.uSigma, sigmaY); gl.bindFramebuffer(gl.FRAMEBUFFER, G[1].fb); gl.bindTexture(gl.TEXTURE_2D, G[0].t); gl.uniform2f(P.u.uDir, 0, 1 / h); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     return G[1].t;
   }
+  // fila dos últimos quadros da entrada de um efeito com { hist: (valores, w, h) => { n, s } | null } (Grid Cloner com Delay):
+  // n quadros numa textura em camadas, em s × o tamanho (cópia pequena não precisa do quadro inteiro). Recomeça quando o clipe troca.
+  histOf(f, def, src, w, h, key) {
+    const gl = this.gl, H = def.hist(Object.fromEntries(def.params.map(p => [p.key, this.paramValue(f, p)])), w, h);
+    let m = this.fxMem.get(f);
+    if (!H || H.n < 2) { if (m && m.arr) { gl.deleteTexture(m.arr); gl.deleteFramebuffer(m.fb); this.fxMem.delete(f); } return null; }
+    const hw = Math.max(1, Math.round(w * H.s)), hh = Math.max(1, Math.round(h * H.s));
+    if (!m || m.hw !== hw || m.hh !== hh || m.n !== H.n) {
+      if (m && m.arr) { gl.deleteTexture(m.arr); gl.deleteFramebuffer(m.fb); }
+      const arr = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D_ARRAY, arr); gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, hw, hh, H.n);
+      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D_ARRAY, k, v);
+      m = { arr, fb: gl.createFramebuffer(), hw, hh, n: H.n, i: -1, cnt: 0, key }; this.fxMem.set(f, m);
+    }
+    if (m.key !== key) { m.key = key; m.cnt = 0; }
+    m.i = (m.i + 1) % m.n; m.cnt = Math.min(m.cnt + 1, m.n);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, m.fb); gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, m.arr, 0, m.i);
+    this.copyInto(src, m.hw, m.hh, false); gl.disable(gl.BLEND);
+    return m;
+  }
+  // a textura 3D da LUT de um efeito LUT (lut.js): refeita quando a LUT muda
+  lutTex(f) {
+    const L = lutOf(f), gl = this.gl;
+    if (!this.lutMem) this.lutMem = new WeakMap();
+    let m = this.lutMem.get(f);
+    if (!L) return null;
+    if (!m || m.lut !== L) {
+      if (m) gl.deleteTexture(m.t);
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_3D, t);
+      // textura 3D com FLIP_Y ou PREMULTIPLY ligado dá INVALID_OPERATION calado (o motor liga os dois para vídeo e imagem)
+      const fy = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL), pm = gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA16F, L.n, L.n, L.n, 0, gl.RGBA, gl.FLOAT, L.data);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, fy); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, pm);
+      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_3D, k, v);
+      m = { lut: L, t, n: L.n }; this.lutMem.set(f, m);
+    }
+    return m;
+  }
+  lutVazio() {
+    if (!this._lutVazio) { const gl = this.gl; this._lutVazio = gl.createTexture(); gl.bindTexture(gl.TEXTURE_3D, this._lutVazio); gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA8, 1, 1, 1); }
+    return this._lutVazio;
+  }
+  histVazio() {
+    if (!this._histVazio) { const gl = this.gl, arr = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D_ARRAY, arr); gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, 1, 1, 1); this._histVazio = { arr, i: 0, cnt: 0, n: 1 }; }
+    return this._histVazio;
+  }
   // aplica uma cadeia de efeitos a uma textura w×h; devolve a textura resultante (ou a própria).
   // key: identidade do clipe de onde vem a textura (a fila do Delay RGB recomeça quando o clipe troca)
   applyChain(tex, w, h, chain, key) {
@@ -300,7 +347,7 @@ void main(){ float sg = max(uSigma, 0.01); int R = int(ceil(sg * (uCos > 0.5 ? 1
     let src = tex, i = 0;
     for (const f of live) {
       const def = effectById(f.id), pr = this.fxProgram(def);
-      let dst, prev = this.white, ring = null, midTex = null, stage2 = null;
+      let dst, prev = this.white, ring = null, midTex = null, stage2 = null, hist = null;
       if (def.feedback) {   // a saída anterior entra em uPrev; desenha na outra textura do par
         let m = this.fxMem.get(f);
         if (!m || m.w !== w || m.h !== h) { if (m) { for (const q of [m.a, m.b]) { gl.deleteFramebuffer(q.fb); gl.deleteTexture(q.t); } } m = { a: this.fbo(w, h), b: this.fbo(w, h), i: 0, w, h }; this.fxMem.set(f, m); }
@@ -316,6 +363,7 @@ void main(){ float sg = max(uSigma, 0.01); int R = int(ceil(sg * (uCos > 0.5 ? 1
           const pick = d => m.ring[((m.i - Math.min(d, m.n - 1)) % R + R) % R].t;   // sem quadro tão antigo ainda, vale o mais antigo que há
           ring = del.map(pick);
         }
+        if (def.hist) hist = this.histOf(f, def, src, w, h, key);
         if (def.stage) {
           const S = pr.stage; let T = this.stageFbo, T2 = this.stageFbo2;
           if (!T || T.w !== w || T.h !== h) { if (T) for (const q of [T, T2]) { gl.deleteFramebuffer(q.fb); gl.deleteTexture(q.t); } T = this.stageFbo = this.fbo(w, h); T2 = this.stageFbo2 = this.fbo(w, h); }
@@ -341,11 +389,17 @@ void main(){ float sg = max(uSigma, 0.01); int R = int(ceil(sg * (uCos > 0.5 ? 1
       gl.useProgram(pr.p);
       if (ring) for (let k = 0; k < 3; k++) { gl.activeTexture(gl.TEXTURE2 + k); gl.bindTexture(gl.TEXTURE_2D, ring[k]); gl.uniform1i(pr.u[['uDelR', 'uDelG', 'uDelB'][k]], 2 + k); }
       if (midTex) { gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, midTex); gl.uniform1i(pr.u.uMid, 2); }
+      if (def.lut) { const T = this.lutTex(f); gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_3D, T ? T.t : this.lutVazio()); gl.uniform1i(pr.u.uLut, 6); gl.uniform1f(pr.u.uLutN, T ? T.n : 0); }
+      if (def.hist) { const H = hist || this.histVazio(); gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D_ARRAY, H.arr); gl.uniform1i(pr.u.uHist, 5); gl.uniform1f(pr.u.uHistI, H.i); gl.uniform1f(pr.u.uHistN, hist ? H.cnt : 0); gl.uniform1f(pr.u.uHistL, H.n); }
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, prev); gl.uniform1i(pr.u.uPrev, 1);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src); gl.uniform1i(pr.u.uTex, 0);
       gl.uniform2f(pr.u.uRes, w, h); gl.uniform1f(pr.u.uTime, this.time);
       gl.uniform1f(pr.u.uFxOp, f.opacity ?? 1);
       for (const p of def.params) this.setParam(pr, p, this.paramValue(f, p));
+      if (def.uniforms) {   // listas de números que o efeito calcula em JS (Grid Cloner: a ordem das cópias)
+        const U = def.uniforms(Object.fromEntries(def.params.map(p => [p.key, this.paramValue(f, p)])), w, h); pr.ux = pr.ux || {};
+        for (const k in U) { if (!(k in pr.ux)) pr.ux[k] = gl.getUniformLocation(pr.p, k); if (pr.ux[k]) gl.uniform1fv(pr.ux[k], U[k]); }
+      }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       src = dst.t; i++;
     }

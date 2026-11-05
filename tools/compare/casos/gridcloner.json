@@ -1,0 +1,17 @@
+{
+  "efeito": "Grid Cloner",
+  "clip": "tools/compare/clips/prova.png",
+  "base": { "Columns": 4, "Rows": 4, "Input Rotation": 0, "Rotation": 0, "Input Scale": 20, "Width": 1.2, "Height": 0.7, "Scale": 100,
+    "Vertical Shift": 0, "Horiztonal Shift": 0, "Random Shift": 0, "Order": "Top Right", "Delay": 0, "Background": "#11ff6800" },
+  "casos": {
+    "gc1": {},
+    "gc2": { "Input Rotation": 10, "Rotation": 15 },
+    "gc3": { "Vertical Shift": 0.4, "Horiztonal Shift": -0.3, "Scale": 150 },
+    "gc4": { "Random Shift": 0.6, "Columns": 3, "Rows": 5, "Order": "Center" },
+    "gc5": { "Input Scale": 60, "Background": "#3366ccff", "Width": 0.5 },
+    "gc6": { "Columns": 10, "Rows": 10, "Input Scale": 8, "Width": 1.7, "Height": 0.95 },
+    "gc7": { "Vertical Shift": 0.5, "Rotation": 30, "Random Shift": 0.3 },
+    "gc8": { "Columns": 1, "Rows": 1, "Input Scale": 150, "Input Rotation": -40 },
+    "gc9": { "Width": 0.3, "Height": 0.1, "Input Scale": 30, "Columns": 3, "Rows": 2, "Order": "Center" }
+  }
+}
