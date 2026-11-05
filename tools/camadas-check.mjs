@@ -104,6 +104,8 @@ check('o deck aberto fica verde-água', await ev(`getComputedStyle(document.quer
 await click('#decks button:nth-child(1)');
 check('voltar ao primeiro deck traz os clipes', await ev(`${P}.state.deck === 0 && !!${P}.state.layers[${li}].clips[0]`));
 await ev(`(() => { const p = ${P}; while (p.state.decks.length > 1) p.removeDeck(p.state.decks.length - 1); return 1; })()`);
+// deixa a grade como achou: nada no ar, camadas sem bus e com opacidade cheia (o ui-check espera a saída vazia)
+await ev(`(() => { const p = ${P}; p.state.layers.forEach((L, i) => { for (let c = 0; c < 8; c++) if (L.clips[c]) p.clearCell(i, c); p.eject(i); L.bus = null; L.opacity = 1; L.bypass = false; L.solo = false; }); p.render(); return 1; })()`);
 
 const ok = results.filter(Boolean).length;
 console.log(`\n${results.length} verificações, ${results.length - ok} falha(s) — ${ok === results.length ? 'APROVADO' : 'REPROVADO'}`);
