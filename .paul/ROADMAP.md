@@ -86,8 +86,9 @@ imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarca
 - [x] 02-04: camadas e decks como no Resolume — fechado em 2026-11-05 com a beta.49
 - [x] 02-05: Text Block e Text Animator iguais ao Resolume — fechado em 2026-11-05 com a beta.51
 - [x] 02-06: Texto com IA (✦ Montar com IA; Gemini, Groq, Ollama, Claude) — fechado em 2026-11-05 com a beta.52
-- [ ] 02-07: Grid Cloner, SearchLight, WarpSpeed, LUT
-- [ ] 02-08 em diante: os outros do Resolume 7.28 (Strokes, Grid Cloner, Slice Delay, SearchLight, WarpSpeed, LUT, seis Depth) e o resto da lista de igualar
+- [x] 02-07: Grid Cloner, SearchLight, WarpSpeed, LUT — fechado em 2026-11-06 com a beta.53
+- [ ] 02-08: Slice Delay e Strokes
+- [ ] 02-09 em diante: os seis Depth (modelos de profundidade, licença antes) e o resto da lista de igualar
 
 ### Phase 3: Celular e plugins
 
