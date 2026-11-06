@@ -187,7 +187,9 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
   3 a 5 camadas de vídeo no máximo, poucos efeitos, segurar um PNG e um vídeo pequeno, só 2 ou 3 Ctrl+Z.
   Forma proposta (falta o ok do Felipe): **modo Leve dentro do mesmo programa** e do mesmo instalador, ligado sozinho
   com 4 GB ou menos (ou à mão), sem carregar IA, recorte, profundidade, efeitos com fila de quadros e webcam virtual;
-  composições abrem nos dois modos. Medir RAM e CPU num PC de 4 GB de verdade antes de escrever.
+  composições abrem nos dois modos. Medir aqui quanto cada parte gasta (memória do processo não depende do total
+  do PC); o teste num PC de 4 GB de verdade fica com um amigo do Felipe, que topou testar: a beta do modo Leve deve
+  gravar sozinha um relatório (memória, quadros por segundo, travadas) para ele mandar de volta.
 
 ---
 *Roadmap created: 2026-10-21*
