@@ -41,7 +41,7 @@ medida contra o Resolume na bancada.**
 | Métrica | Valor |
 |---------|-------|
 | Início / fim | 2026-11-05 a 2026-11-06 |
-| Ok do Felipe | "Continua" (2026-11-06), sem ver: checkpoint testado por mim na beta.53 instalada, como no 02-06 |
+| Ok do Felipe | "Continua" e depois "Aprova lá aquele" (2026-11-06); checkpoint testado por mim na beta.53 instalada |
 | Tarefas | 2 auto + 1 checkpoint |
 | Beta | 0.2.0-beta.53 (commit d9242d0) |
 
@@ -64,6 +64,6 @@ medida contra o Resolume na bancada.**
 
 ## Fica para depois
 
-- O Felipe ver os quatro efeitos (principalmente Grid Cloner com Atraso num vídeo e o WarpSpeed).
+- O Felipe aprovou sem ver na tela: conferir no uso o Grid Cloner com Atraso num vídeo e o WarpSpeed.
 - Ordem Centro com 4 fileiras ainda difere um pouco (média ~3,7) no empate.
 - Lote seguinte: Strokes, Slice Delay e os seis Depth.
