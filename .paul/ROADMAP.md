@@ -182,6 +182,11 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
   projetor na Saída avançada (a homografia atual só serve para parede plana), calibrada por foto como no
   Automape; (3) soft-edge nas sobreposições. O Resolume não faz domo sozinho (usa Blendy Dome, VIOSO); seria
   recurso só nosso, como o Automape. Entra como fase quando ele pedir.
+- **OpenLume Leve, para computador velho** (pedido de 2026-11-06, "botasse só depois no plano, não precisa fazer agora"):
+  versão ultra leve para máquinas com 2 a 4 GB de RAM. 3 a 5 camadas de vídeo no máximo, poucos efeitos, segurar
+  um PNG e um vídeo pequeno, só 2 ou 3 Ctrl+Z. Tudo pensado para gastar o mínimo de memória e caber no menor
+  computador possível. A definir quando virar fase: se é um modo do mesmo programa (limites e efeitos pesados
+  desligados) ou um pacote separado; medir RAM e CPU num PC fraco de verdade antes de escrever.
 
 ---
 *Roadmap created: 2026-10-21*
