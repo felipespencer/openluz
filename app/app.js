@@ -20,6 +20,7 @@ import { mkFx, cloneFx } from './effects.js';
 import { AUTOPILOT, GROUP, XFADE, serializeComposition, deserializeComposition, SETTINGS } from './composition.js';
 import { Menubar, openDialog, askText, confirmBox, installShortcuts, shortcutsDialog } from './menus.js';
 import { KeyMap } from './keymap.js';
+import { EditorTexto } from './text-editor.js';
 import { Automape } from './automape.js';
 import { WebcamOut } from './webcam.js';
 import { initSplitters } from './splitters.js';
@@ -196,6 +197,8 @@ function dropInto(li, col, d, files, ctrl) {
   if (!d) return;
   if (d.path) return putPath(li, col, d.path, d.name);
   if (d.source) return putSource(li, col, d.source);
+  if (d.text === 'cartaz') return putText(li, col, null, 'cartaz');
+  if (d.text === 'ia') { const c = C.textClip(null, false); c.text.iaFonte = true; putClip(li, col, c); return c; }   // Text Block com o ✦ Montar com IA
   if (d.text) return putText(li, col, null, d.text === 'animator');
   if (d.lasermirror) return putClip(li, col, C.laserMirrorClip());
   if (d.camera) return putCamera(li, col, d.camera);
@@ -746,6 +749,7 @@ function render() {
         cell.draggable = true;
         cell.ondragstart = (e) => { drag = { l: li, c }; e.dataTransfer.effectAllowed = 'copyMove'; e.dataTransfer.setData('text/plain', 'clip'); };
         cell.ondragend = () => { drag = null; };
+        if (clip.kind === 'text' && clip.text && clip.text.cartaz) cell.ondblclick = (e) => { e.stopPropagation(); textEditor.abrir(clip); };   // Texto: dois cliques abrem o editor
         cell.oncontextmenu = (e) => { e.preventDefault(); state.selLayer = li; state.sel = { l: li, c }; render(); menubar.context(clipMenuItems(), e.clientX, e.clientY); };
       } else {
         cell.append(el('div', 'th'), el('div', 'nm', ' '));
@@ -1282,7 +1286,7 @@ const panels = new Panels({
   prepare: (fmt) => { const s = selectedCell(); if (s) prepareClip(state.layers.indexOf(s.L), s.idx, fmt); }, preparing: (c) => preparingNow.has(c.path) ? preparingNow.get(c.path) : null,
   openLaser: (f) => { laser.sel = f; laser.show(); },
   selectedGroup, setLayerGroup, newGroup, removeGroup, addLayerToGroup, fadeTo, renderDecks, audio,
-  iaDialog: (depois) => iaDialog(depois), selectedCell, putClip, markUndo, bpm: () => state.bpm.bpm, cols: () => COLS,
+  iaDialog: (depois) => iaDialog(depois), editarTexto: (c) => textEditor.abrir(c), selectedCell, putClip, markUndo, bpm: () => state.bpm.bpm, cols: () => COLS,
 });
 // Depois de gravar: a gravação vira um clipe na primeira casa vazia da camada selecionada, como no Resolume
 async function recordingToClip(path, name, file) {
@@ -1369,7 +1373,7 @@ const clipMenuItems = () => { const s = selectedCell(), k = s ? s.clip : null, i
     { label: 'Instantâneo do clipe (PNG)', disabled: !k, fn: () => snapshot('clip') }]; };
 // Atalhos de teclado mapeáveis (modo Edit Keyboard do Resolume): ver keymap.js
 function selectLayer(li) { state.selLayer = li; state.selGroup = state.layers[li].group; panels.tab = 'layer'; render(); }
-const keymap = new KeyMap({ state, trigger, eject, triggerColumn, selectedClip, selectLayer, C, render, toast, browser, textBox: (t, l, v) => askText(t, l, v), editorOpen: () => ao.open || laser.open });
+const keymap = new KeyMap({ state, trigger, eject, triggerColumn, selectedClip, selectLayer, C, render, toast, browser, textBox: (t, l, v) => askText(t, l, v), editorOpen: () => ao.open || laser.open || textEditor.open });
 const menuDefs = () => [
   { label: 'OpenLume', items: () => [
     { label: 'Preferências…', key: 'Ctrl+,', fn: preferencesDialog },
@@ -1474,6 +1478,8 @@ const menuDefs = () => [
     ...[['files', 'Arquivos'], ['comps', 'Composições'], ['fx', 'Efeitos'], ['src', 'Fontes'], ['rec', 'Gravar']].map(([t, n]) => ({ label: n, check: browser.tab === t, fn: () => browser.setTab(t) }))] },
 ];
 const menubar = new Menubar($('menubar'), menuDefs);
+// ✎ Editar texto (plano 09-01): Aplicar troca o texto do clipe de uma vez (um Ctrl+Z volta tudo)
+const textEditor = new EditorTexto({ clock: () => state.bpm, aplicar: (c, t) => { markUndo(); c.text = t; C.renderText(c); render(); } });
 const SHORTCUTS = [
   { combo: 'Ctrl+Z', keys: 'Ctrl+Z', what: 'Desfazer (a composição toda; Saída avançada, Laser e Automape desfazem o deles)', when: () => !ao.open && !laser.open, fn: undoComp },
   { combo: 'Ctrl+Y', keys: 'Ctrl+Y', what: 'Refazer', when: () => !ao.open && !laser.open, fn: redoComp },
@@ -1565,7 +1571,7 @@ async function alternarWebcam() {
 // (os valores também mudam por código, sem evento: por isso a conferência periódica)
 function aquaSliders() { const sync = () => { for (const r of document.querySelectorAll('input[type=range]')) { const mn = +r.min || 0, mx = r.max === '' ? 100 : +r.max, p = mx > mn ? Math.max(0, Math.min(1, (+r.value - mn) / (mx - mn))) * 100 : 0, v = p.toFixed(1) + '%'; if (r.style.getPropertyValue('--p') !== v) r.style.setProperty('--p', v); } }; addEventListener('input', sync, true); setInterval(sync, 120); sync(); }
 aquaSliders();
-window.projecionista = { iaDialog, webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
+window.projecionista = { iaDialog, get textEditor() { return textEditor; }, webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
   probe: (pts) => engine.probe(state.layers, pts),
   probeScreen: (sc, pts) => engine.probeScreen(sc, state.layers, state.screens, pts),
   serialize: () => serializeComposition(state, laser, COLS), load: loadComposition, reset: resetComposition,

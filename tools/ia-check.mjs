@@ -31,12 +31,12 @@ await limpar();
 const cell = (c) => `#grid .cell[data-layer="${L1}"][data-col="${c}"]`;
 const clipAt = (c, expr) => ev(`(() => { const k = ${P}.state.layers[${L1}].clips[${c}]; return k ? (${expr}) : null; })()`);
 
-// 1. Text Block na casa e a parte laranja no painel
+// 1. Texto com IA (fonte própria, plano 09-01) na casa e a parte laranja no painel
 for (let i = 0; i < 4 && await ev(`document.querySelector('#browserTabs .on').dataset.tab`) !== 'src'; i++) { await clickOn('#browserTabs [data-tab=src]'); await wait(300); }
 await clickOn(cell(0) + ' .nm');
-{ const c = await center('#browserPan .item.src', 'Text Block'); await dbl(c[0], c[1]); }
+{ const c = await center('#browserPan .item.src', 'Texto com IA'); await dbl(c[0], c[1]); }
 await clickOn(cell(0) + ' .nm'); await wait(300);
-check('o painel do Text Block tem ✦ Montar com IA', await ev(`!!document.querySelector('#clipPan .iabox') && [...document.querySelectorAll('#clipPan .iafun button')].map(b => b.textContent).join('|') === 'Diagramar|Animar|Escrever|Separar em clipes'`));
+check('o painel do Texto com IA tem ✦ Montar com IA', await ev(`!!document.querySelector('#clipPan .iabox') && [...document.querySelectorAll('#clipPan .iafun button')].map(b => b.textContent).join('|') === 'Diagramar|Animar|Escrever|Separar em clipes'`));
 
 // 2. sem serviço configurado, Montar abre a Configuração › IA (só quando este PC ainda não tem serviço)
 const temServico = await ev(`window.projDesktop.ia.config().then(c => !!c.servico)`);

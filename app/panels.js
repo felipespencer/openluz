@@ -13,6 +13,7 @@ import { isPrepared } from './player.js';
 import { STYLES, RANGES, ORDERS, listFonts, drawText } from './text.js';
 import { FUNCOES, ESTILOS, montarPedido, validarVersoes, aplicarVersao, fontesParaIA } from './ia.js';
 import { PRESETS, versaoDoPreset } from './text-presets.js';
+import { ehCartaz, textoDe, FUNDOS } from './cartaz.js';
 import { BUILTIN_NAMES, putLutText } from './lut.js';
 
 const $ = (id) => document.getElementById(id);
@@ -323,6 +324,19 @@ export class Panels {
       box.appendChild(row);
     }
   }
+  // clipe "Texto" (cartaz com caixas, plano 09-01): o editor faz o trabalho; aqui só o botão, as caixas e o fundo
+  cartazRows(P, clip) {
+    const t = clip.text, up = () => { renderText(clip); this.ctx.renderGrid(); };
+    P.appendChild(this.phead('Texto', 'Texto|Cartaz no jeito do Canva: várias caixas, cor e fonte por pedaço, efeitos e animação na batida. Tudo se mexe no editor.'));
+    const b = el('button', 'wide edbt', '✎ Editar texto'); b.type = 'button'; b.dataset.k = 'editar'; b.dataset.help = 'Editar texto|Abre o editor: mova, aumente e gire as caixas na tela, escreva com dois cliques, escolha estilos, fontes, efeitos e animação. Dois cliques no clipe também abrem.';
+    b.onclick = () => this.ctx.editarTexto(clip); P.appendChild(b);
+    P.appendChild(this.phead('Caixas', 'Caixas|As caixas de texto deste clipe; a de baixo fica na frente.'));
+    for (const k of t.caixas || []) {
+      const r = el('div', 'cartaz-cx'); const s = el('span', '', (textoDe(k).split('\n')[0] || '(vazia)').slice(0, 40)); s.style.cssText = `font-family:"${k.f}";color:${k.c}`;
+      r.append(s, el('small', '', (k.fx && k.fx.tipo !== 'nenhum' ? k.fx.tipo : '') + (k.an && k.an.tipo !== 'nenhuma' ? ' ♪' : ''))); r.ondblclick = () => this.ctx.editarTexto(clip); P.appendChild(r);
+    }
+    P.appendChild(this.pselect('Fundo', 'Fundo|Transparente deixa ver as camadas de baixo.', FUNDOS, t.fundo || 'none', v => { this.ctx.markUndo(); t.fundo = v; up(); }));
+  }
   // Estilos prontos (maquete presets-texto-mockup.html): um clique quebra o texto e aplica fonte, cor, tamanho e animação
   presetRows(P, clip) {
     const t = clip.text, row = el('div', 'presets'); row.dataset.help = 'Estilos prontos|Um clique monta o cartaz no estilo: a palavra forte fica grande, o resto vira apoio. Depois dá para mexer em tudo à mão; Ctrl+Z volta.';
@@ -391,6 +405,8 @@ export class Panels {
       const def = sourceById(clip.source);
       P.appendChild(this.phead(def.name, def.name + '|' + def.desc));
       for (const p of def.params) this.paramRows(P, clip, p, def.name + ' · ' + p.label + '|' + def.desc);
+    } else if (clip.kind === 'text' && ehCartaz(clip.text)) {
+      this.cartazRows(P, clip);
     } else if (clip.kind === 'text') {
       const t = clip.text, up = () => { renderText(clip); this.ctx.renderGrid(); }, A = t.animator, nm = A ? 'Text Animator' : 'Text Block';
       const H = (rname, txt) => nm + ' · ' + rname + '|' + txt;
@@ -411,7 +427,7 @@ export class Panels {
       };
       const deg = (label, rname, help, key) => P.appendChild(this.pnum(label, H(rname, help), Math.round(t[key] * 1800 / Math.PI) / 10, { min: -180, max: 180, step: 1, dec: 1, unit: '°', bar: true, reset: 0 }, v => { t[key] = v * Math.PI / 180; up(); }));
       P.appendChild(this.phead(nm, nm + '|' + (A ? 'Cada letra, palavra ou linha recebe os valores animados com um atraso (Delay): mude um valor animado, ou ponha um LFO nele, e os pedaços seguem um depois do outro.' : 'Texto escrito com as fontes do Windows, como o Text Block do Resolume.')));
-      this.iaRows(P, clip);
+      if (t.iaFonte || t.ia) this.iaRows(P, clip);   // a fonte "Texto com IA" (e o texto que a IA já montou nas composições antigas)
       this.presetRows(P, clip);
       P.appendChild(this.parea('Texto', H('Text', 'O texto. Enter quebra a linha.'), t.content, v => { t.content = v; renderText(clip); }, () => this.ctx.renderGrid()));
       const fonts = fontsCache || [t.font]; if (!fontsCache) listFonts().then(f => { fontsCache = f; this.render(); });

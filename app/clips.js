@@ -9,6 +9,7 @@ export const setAudioEngine = (a) => { audioEngine = a; };
 import { cloneFx } from './effects.js';
 import { drawText, textDefaults, migrateText, ANIM_KEYS } from './text.js';
 import { animValue } from './beat.js';
+import { desenharCartaz, cartazPadrao, ehCartaz, animada, textoDe } from './cartaz.js';
 
 let seq = 1;
 export const nextId = () => seq++;
@@ -117,9 +118,11 @@ export function sourceClip(id) {
 }
 // texto: Text Block e Text Animator (text.js), desenhado num canvas 2D que vira textura
 export function textClip(text, animator = false, saved = null) {
-  const t = saved ? migrateText(saved) : textDefaults(animator);
-  if (text != null && !saved) t.content = text;
-  const c = base('text', animator ? 'Text Animator' : 'Text Block'); c.text = t;
+  // animator: false = Text Block, true = Text Animator, 'cartaz' = Texto (editor no jeito do Canva, cartaz.js)
+  const cartaz = animator === 'cartaz' || ehCartaz(saved);
+  const t = cartaz ? (saved ? JSON.parse(JSON.stringify(saved)) : cartazPadrao(text ?? 'Texto')) : saved ? migrateText(saved) : textDefaults(animator);
+  if (text != null && !saved && !cartaz) t.content = text;
+  const c = base('text', cartaz ? 'Texto' : animator ? 'Text Animator' : 'Text Block'); c.text = t;
   c.w = 1920; c.h = 1080; c.fit = 'stretch'; c.el = document.createElement('canvas'); c.el.width = 1920; c.el.height = 1080; renderText(c); return c;
 }
 // redesenha; thumb = false no redesenho de cada quadro do Animator (a miniatura é cara)
@@ -132,13 +135,17 @@ function textNow(c) {
 }
 const hasBeatAnim = (c) => !!c.panim && Object.keys(c.panim).some(k => c.panim[k] && c.panim[k].shape && typeof c.text[k] === 'number');
 export function renderText(c, now, thumb = true) {
-  c.textPending = drawText(c.el, textNow(c), c, now);
+  if (ehCartaz(c.text)) {
+    c.textPending = desenharCartaz(c.el, c.text, clock, now ?? performance.now() / 1000);
+    c.text.content = (c.text.caixas || []).map(textoDe).join('\n');   // o nome do clipe e a busca usam o texto das caixas
+  } else c.textPending = drawText(c.el, textNow(c), c, now);
   c.rev = (c.rev || 0) + 1;
-  if (thumb) { c.name = (c.text.content || 'Texto').split('\n')[0].slice(0, 24) || (c.text.animator ? 'Text Animator' : 'Text Block'); c.thumb = c.el.toDataURL('image/png'); }
+  if (thumb) { c.name = (c.text.content || 'Texto').split('\n')[0].slice(0, 24) || (ehCartaz(c.text) ? 'Texto' : c.text.animator ? 'Text Animator' : 'Text Block'); c.thumb = c.el.toDataURL('image/png'); }
 }
 // o Animator precisa de redesenho enquanto um valor animado está chegando aos pedaços (atraso de Delay)
 export function tickText(c, now) {
   if (!c || c.kind !== 'text') return;
+  if (ehCartaz(c.text)) { if (animada(c.text)) renderText(c, now, false); return; }   // Texto com animação na batida: todo quadro
   if (hasBeatAnim(c)) { renderText(c, now, false); return; }   // ♪: muda a cada quadro
   if (!c.text.animator || !c.text.animated) return;
   const h = c.animHist, cur = h && h[h.length - 1];
@@ -321,7 +328,7 @@ export async function deserializeClip(o, ctx) {
   try {
     if (o.kind === 'video' || o.kind === 'image') { if (!o.path) return null; c = await clipFromPath(o.path, o.name); }
     else if (o.kind === 'source') c = sourceClip(o.source);
-    else if (o.kind === 'text') c = textClip(null, !!(o.text && o.text.animator), o.text || {});
+    else if (o.kind === 'text') c = textClip(null, ehCartaz(o.text) ? 'cartaz' : !!(o.text && o.text.animator), o.text || {});
     else if (o.kind === 'camera') { c = await cameraClip(o.deviceId, o.name); }
     else if (o.kind === 'capture') {
       let url = o.cap && o.cap.url, yt = o.cap && o.cap.youtube;
@@ -337,7 +344,7 @@ export async function deserializeClip(o, ctx) {
 // põe num clipe vivo o que foi salvo dele (nome, ajuste, efeitos, transporte, parâmetros…): ao abrir a composição e ao desfazer
 export function applyClipProps(c, o) {
   if (o.kind === 'source' && c.params) Object.assign(c.params, o.params || {});
-  if (o.kind === 'text' && c.text) { c.text = migrateText({ ...(o.text || {}) }); c.animHist = null; renderText(c); }
+  if (o.kind === 'text' && c.text) { c.text = ehCartaz(o.text) ? JSON.parse(JSON.stringify(o.text)) : migrateText({ ...(o.text || {}) }); c.animHist = null; renderText(c); }
   c.name = o.name || c.name; c.fit = o.fit || c.fit; c.speed = o.speed || 1; c.panim = JSON.parse(JSON.stringify(o.panim || {})); c.afx = (o.afx || []).map(f => ({ ...f, params: { ...f.params } })); c.fx = (o.fx || []).map(f => cloneFx(f)); c.transform = Object.assign(IDENT_TR(), o.transform || {}); c.ap = Object.assign({ mode: 'layer', l: 0, c: 0, dur: 'clip', secs: 5 }, o.ap || {});
   if (o.tr) Object.assign(c.tr, o.tr, { playing: true }); if (!c.tr.out) c.tr.out = c.dur; Object.assign(c.audio, o.audio || {}); c.blend = o.blend || ''; c.opacity = o.opacity ?? 1; c.trig = o.trig || 'normal'; c.ignoreColumn = !!o.ignoreColumn;
   return c;
