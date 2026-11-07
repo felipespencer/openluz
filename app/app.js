@@ -1225,7 +1225,10 @@ async function iaDialog(depois) {
       body.appendChild(K.phead('Serviço'));
       for (const [id, nome, preco, desc] of IA_SERVICOS) {
         const r = el('label', 'iasrv' + (st.servico === id ? ' on' : '')); r.dataset.srv = id;
-        r.append(el('b', '', nome), el('span', 'iapreco ' + preco, preco), el('span', 'iadesc', desc + (cfg.temChave[id] ? ' · chave guardada' : '') + (cfg.modelos[id] ? ' · modelo ' + cfg.modelos[id] : '')));
+        const link = el('a', 'ialink', id === 'ollama' ? 'Baixar o Ollama ↗' : 'Pegar a chave ↗'); link.href = '#'; link.dataset.site = id;
+        link.title = 'Abre no navegador a página do ' + nome + (id === 'ollama' ? ' para baixar o programa' : ' onde se cria a chave');
+        link.onclick = (e) => { e.preventDefault(); e.stopPropagation(); D.ia.site(id); };
+        r.append(el('b', '', nome), el('span', 'iapreco ' + preco, preco), link, el('span', 'iadesc', desc + (cfg.temChave[id] ? ' · chave guardada' : '') + (cfg.modelos[id] ? ' · modelo ' + cfg.modelos[id] : '')));
         r.onclick = () => { st.servico = id; st.chave = ''; st.msg = ''; st.modelos = null; redo(); };
         body.appendChild(r);
       }

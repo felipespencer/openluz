@@ -2,13 +2,20 @@
 // Serviços: Google Gemini (cota grátis), Groq (cota grátis), Ollama (no próprio PC, sem chave), Claude (Anthropic, pago).
 // As chaves ficam em userData/ia.json cifradas pelo Windows (safeStorage). A página manda { system, user, schema } e
 // recebe o objeto JSON da resposta (ou { erro }). O modelo de cada serviço vem da lista do próprio serviço.
-const { app, safeStorage, ipcMain } = require('electron');
+const { app, safeStorage, ipcMain, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 
 const SERVICOS = ['gemini', 'groq', 'ollama', 'claude'];
 const CLAUDE_MODELO = 'claude-opus-5-5';
+// Onde pegar a chave de cada serviço (o Ollama não tem chave: é a página de baixar). Lista fixa: a página só manda o nome.
+const SITES = {
+  gemini: 'https://aistudio.google.com/apikey',
+  groq: 'https://console.groq.com/keys',
+  claude: 'https://console.anthropic.com/settings/keys',
+  ollama: 'https://ollama.com/download',
+};
 const FILE = () => path.join(app.getPath('userData'), 'ia.json');
 function ler() { try { return JSON.parse(fs.readFileSync(FILE(), 'utf8')); } catch { return { servico: '', modelos: {}, chaves: {} }; } }
 function gravar(c) { fs.writeFileSync(FILE(), JSON.stringify(c, null, 1)); }
@@ -153,6 +160,7 @@ function instalar() {
     }
     gravar(c); return publica(c);
   });
+  ipcMain.handle('ia:site', (_e, s) => { if (!SITES[s]) return false; shell.openExternal(SITES[s]); return true; });
   // Testar: lista os modelos do serviço e guarda o padrão se ainda não houver
   ipcMain.handle('ia:testar', async (_e, s) => {
     const c = ler();

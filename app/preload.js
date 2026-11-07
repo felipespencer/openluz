@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('projDesktop', {
   quit: () => ipcRenderer.invoke('app:quit'),
   info: () => ipcRenderer.invoke('app:info'),
   // Texto com IA (ia-main.js): a chave fica no processo principal; a página só pede e recebe o JSON
-  ia: { config: () => ipcRenderer.invoke('ia:config'), salvar: (o) => ipcRenderer.invoke('ia:salvar', o), testar: (s) => ipcRenderer.invoke('ia:testar', s), pedir: (r) => ipcRenderer.invoke('ia:pedir', r) },
+  ia: { config: () => ipcRenderer.invoke('ia:config'), salvar: (o) => ipcRenderer.invoke('ia:salvar', o), testar: (s) => ipcRenderer.invoke('ia:testar', s), pedir: (r) => ipcRenderer.invoke('ia:pedir', r), site: (s) => ipcRenderer.invoke('ia:site', s) },
   localPort: () => ipcRenderer.invoke('local:port'),
   // celular como fonte: endereço para o celular abrir, ofertas WebRTC que chegam e a resposta
   phone: { info: () => ipcRenderer.invoke('phone:info'), onOffer: (fn) => ipcRenderer.on('phone:offer', (_e, o) => fn(o)), answer: (id, sdp, erro) => ipcRenderer.invoke('phone:answer', id, sdp, erro) },
