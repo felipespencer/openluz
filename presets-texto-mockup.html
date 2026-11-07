@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estilos de texto</title>
+<style>
+  :root { --bg:#1b1b1b; --pan:#242424; --tx:#ddd; --mut:#8a8a8a; --aqua:#7fd6c2; --lar:#ff8a2b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--tx); font:13px "Segoe UI", system-ui, sans-serif; }
+  header { padding:14px 18px 6px; }
+  header h1 { margin:0 0 4px; font-size:15px; font-weight:600; }
+  header p { margin:0; color:var(--mut); max-width:900px; line-height:1.45; }
+  .barra { display:flex; gap:8px; align-items:center; padding:10px 18px; flex-wrap:wrap; }
+  .barra input { flex:1; min-width:240px; background:#111; border:1px solid #3a3a3a; color:#eee; padding:6px 8px; border-radius:3px; font:inherit; }
+  .barra label { color:var(--mut); }
+  .grade { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:12px; padding:8px 18px 24px; }
+  .card { background:var(--pan); border:1px solid #333; border-radius:4px; overflow:hidden; cursor:pointer; }
+  .card.on { border-color:var(--lar); }
+  .tela { aspect-ratio:16/9; background:#000; position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:center; padding:4% 5%; }
+  .tela .l { display:block; line-height:1.02; white-space:nowrap; }
+  .info { padding:8px 10px 10px; }
+  .info b { font-size:13px; }
+  .info span:not(.tag) { display:block; color:var(--mut); font-size:11.5px; margin-top:3px; line-height:1.4; }
+  .tag { display:inline-block; font-size:10px; padding:0 5px; border-radius:2px; background:#333; color:#ccc; margin-left:6px; vertical-align:1px; }
+  .tag.anim { background:#1f4d44; color:#bff3e6; }
+  .painel { margin:0 18px 24px; background:var(--pan); border:1px solid #333; border-radius:4px; padding:12px 14px; }
+  .painel h2 { margin:0 0 8px; font-size:13px; }
+  .painel .lista { display:flex; flex-wrap:wrap; gap:6px; }
+  .painel .lista div { padding:5px 10px; border:1px solid #3a3a3a; border-radius:3px; background:#1d1d1d; }
+  .painel .lista div.on { border-color:var(--lar); background:#231a12; }
+  .painel p { color:var(--mut); margin:10px 0 0; line-height:1.45; }
+  @keyframes pulso { 0%,100% { transform:scale(1); } 12% { transform:scale(1.12); } }
+  @keyframes pisca { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+  @keyframes sobe { 0% { transform:translateY(40%); opacity:0; } 30%,100% { transform:none; opacity:1; } }
+  .w { display:inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Estilos prontos para o Text Block — maquete</h1>
+  <p>Cada estilo usa só o que o Text Block do OpenLume já desenha: fonte, cor e tamanho por linha, espaço entre letras, contorno,
+  brilho e animação na batida (Text Animator). O estilo também quebra o texto: o que é mais importante fica grande. Clique num
+  cartão para ver como fica no painel. Troque o texto aqui em cima para testar.</p>
+</header>
+<div class="barra"><label>Texto</label><input id="txt" value="somos todos contra as BETS"></div>
+<div class="grade" id="grade"></div>
+<div class="painel">
+  <h2>No painel do clipe de texto (abaixo de “✦ Montar com IA”)</h2>
+  <div class="lista" id="lista"></div>
+  <p>Um clique aplica o estilo no clipe; dá para mexer em tudo à mão depois, e Ctrl+Z volta. O ✦ Montar com IA passa a partir
+  destes estilos: a IA escolhe qual combina, quebra as linhas e escolhe as cores, em vez de começar do Arial branco.</p>
+</div>
+<script>
+// cada estilo: como quebrar o texto, e a aparência do "destaque" (a palavra mais forte) e do "apoio" (o resto)
+const ESTILOS = [
+  { nome: 'Lambe-lambe', desc: 'Cartaz de rua: tudo em caixa alta, letra preta grossa, amarelo e branco.', quebra: 'destaque-fim',
+    apoio: { f: "'Archivo Black','Archivo Preto',Impact", c: '#ffffff', t: .9, caixa: 1, esp: -.01 },
+    dest: { f: "'Archivo Black','Archivo Preto',Impact", c: '#ffd400', t: 3.2, caixa: 1, esp: -.03 } },
+  { nome: 'Neon', desc: 'Letra fina com brilho forte em volta, ciano e magenta. Pisca devagar na batida.', quebra: 'destaque-fim', anim: 'pisca',
+    apoio: { f: "Michroma,'Segoe UI'", c: '#7ff6ff', t: .8, caixa: 1, esp: .12, brilho: '#00e5ff' },
+    dest: { f: "'Bricolage Grotesque',Rubik", c: '#ff4fd8', t: 2.8, caixa: 1, esp: .02, brilho: '#ff2bd0', peso: 800 } },
+  { nome: 'Protesto', desc: 'Palavras de ordem: uma por linha, branco com o destaque em vermelho e contorno.', quebra: 'palavras',
+    apoio: { f: "'Ground Preto','Ground Black',Anybody,Impact", c: '#ffffff', t: 1.5, caixa: 1, esp: 0 },
+    dest: { f: "'Ground Preto','Ground Black',Anybody,Impact", c: '#ff2a2a', t: 2.6, caixa: 1, esp: 0, contorno: '#ffffff' } },
+  { nome: 'Festa', desc: 'Passion One rosa e amarelo; cada palavra pula na batida.', quebra: 'destaque-fim', anim: 'pulso',
+    apoio: { f: "'Passion One',Impact", c: '#ffe14d', t: 1.3, caixa: 0, esp: 0 },
+    dest: { f: "'Passion One',Impact", c: '#ff3c9e', t: 3.4, caixa: 1, esp: 0 } },
+  { nome: 'Elegante', desc: 'Serifa itálica dourada e linha de apoio pequena bem espaçada.', quebra: 'destaque-fim',
+    apoio: { f: "'EB Garamond',Georgia", c: '#e8d6b0', t: .7, caixa: 1, esp: .35 },
+    dest: { f: "'EB Garamond',Georgia", c: '#e8c27a', t: 3, caixa: 0, esp: 0, it: 1 } },
+  { nome: 'Letreiro', desc: 'Slab grossa laranja com contorno claro, como fachada de bar.', quebra: 'destaque-fim',
+    apoio: { f: "'Alfa Slab One',Rockwell,Georgia", c: '#fff3df', t: 1, caixa: 1, esp: .02 },
+    dest: { f: "'Alfa Slab One',Rockwell,Georgia", c: '#ff7a1a', t: 3, caixa: 1, esp: .01, contorno: '#fff3df' } },
+  { nome: 'Cordel', desc: 'Xilogravura: fonte de cordel em creme sobre o preto.', quebra: 'meio',
+    apoio: { f: "Xilosa,Cratense,'Alfa Slab One'", c: '#f3e6c4', t: 1.6, caixa: 1, esp: .02 },
+    dest: { f: "Xilosa,Cratense,'Alfa Slab One'", c: '#f3e6c4', t: 2.6, caixa: 1, esp: .02 } },
+  { nome: 'Manuscrito', desc: 'Grande escrito à mão, com uma linha pequena de apoio.', quebra: 'destaque-fim',
+    apoio: { f: "Rubik,'Segoe UI'", c: '#ffffff', t: .75, caixa: 1, esp: .25 },
+    dest: { f: "Yesteryear,'Segoe Script','Ink Free'", c: '#ffd9a8', t: 3.4, caixa: 0, esp: 0 } },
+  { nome: 'Tecno', desc: 'Largo e espaçado, brilho suave; as letras entram uma depois da outra.', quebra: 'linhas-iguais', anim: 'sobe',
+    apoio: { f: "Michroma,'Segoe UI'", c: '#e6f7ff', t: 1.05, caixa: 1, esp: .22, brilho: '#5fb8ff' },
+    dest: { f: "Michroma,'Segoe UI'", c: '#ffffff', t: 1.6, caixa: 1, esp: .22, brilho: '#5fb8ff' } },
+];
+
+// quebra do texto: "destaque-fim" põe a última palavra (ou a mais longa em maiúsculas) grande;
+// "palavras" uma palavra por linha; "meio" duas linhas; "linhas-iguais" linhas de tamanho parecido
+function quebrar(txt, modo) {
+  const w = txt.trim().split(/\s+/).filter(Boolean); if (!w.length) return [];
+  let iD = w.length - 1; const caps = w.findIndex(x => x.length > 2 && x === x.toUpperCase() && /[A-ZÀ-Ú]/.test(x)); if (caps >= 0) iD = caps;
+  if (modo === 'palavras') return w.map((x, i) => ({ s: x, d: i === iD }));
+  if (modo === 'meio') { const m = Math.ceil(w.length / 2); return [{ s: w.slice(0, m).join(' '), d: false }, { s: w.slice(m).join(' '), d: true }]; }
+  if (modo === 'linhas-iguais') { const n = w.length > 4 ? 3 : 2, k = Math.ceil(w.length / n), out = []; for (let i = 0; i < w.length; i += k) out.push({ s: w.slice(i, i + k).join(' '), d: false }); out[out.length - 1].d = true; return out; }
+  const antes = w.slice(0, iD).join(' '), depois = w.slice(iD + 1).join(' '), out = [];
+  if (antes) out.push({ s: antes, d: false }); out.push({ s: w[iD], d: true }); if (depois) out.push({ s: depois, d: false });
+  return out;
+}
+
+function desenhar(card, e, txt) {
+  const tela = card.querySelector('.tela'); tela.innerHTML = '';
+  const W = tela.clientWidth || 380, u = W / 1920 * 93 / 0.72;   // 1 de tamanho = 93 px de maiúscula numa tela de 1920
+  const linhas = quebrar(txt, e.quebra);
+  linhas.forEach((ln, i) => {
+    const s = ln.d ? e.dest : e.apoio, el = document.createElement('span'); el.className = 'l';
+    let t = s.caixa ? ln.s.toUpperCase() : ln.s;
+    el.style.fontFamily = s.f; el.style.fontSize = (s.t * u) + 'px'; el.style.color = s.c; el.style.letterSpacing = (s.esp || 0) + 'em';
+    el.style.fontWeight = s.peso || (/Garamond|Yesteryear|Michroma|Xilosa/.test(s.f) ? 400 : 900); if (s.it) el.style.fontStyle = 'italic';
+    if (s.brilho) el.style.textShadow = `0 0 ${u * .25}px ${s.brilho}, 0 0 ${u * .6}px ${s.brilho}, 0 0 ${u * 1.1}px ${s.brilho}`;
+    if (s.contorno) el.style.webkitTextStroke = Math.max(1, u * .06) + 'px ' + s.contorno;
+    if (e.anim) {
+      el.innerHTML = ''; const parts = e.anim === 'sobe' ? [...t] : t.split(' ');
+      parts.forEach((p, k) => { const w = document.createElement('span'); w.className = 'w'; w.textContent = e.anim === 'sobe' ? (p === ' ' ? ' ' : p) : p; w.style.animation = `${e.anim} ${e.anim === 'sobe' ? 2 : e.anim === 'pisca' ? 2 : .5}s ${e.anim === 'sobe' ? (i * 8 + k) * .06 : k * .12}s infinite`; el.appendChild(w); if (e.anim !== 'sobe' && k < parts.length - 1) el.appendChild(document.createTextNode(' ')); });
+    } else el.textContent = t;
+    tela.appendChild(el);
+  });
+  // encaixe: se passar da tela, diminui tudo junto
+  requestAnimationFrame(() => {
+    const H = tela.clientHeight; let k = 1;
+    for (const el of tela.children) k = Math.min(k, (W * 0.9) / el.scrollWidth);
+    const alt = [...tela.children].reduce((a, el) => a + el.offsetHeight, 0); k = Math.min(k, (H * 0.9) / alt);
+    if (k < 1) for (const el of tela.children) el.style.fontSize = parseFloat(el.style.fontSize) * k + 'px';
+  });
+  tela.style.alignItems = 'center'; tela.style.textAlign = 'center';
+}
+
+const grade = document.getElementById('grade'), lista = document.getElementById('lista'), inp = document.getElementById('txt');
+let sel = 0;
+ESTILOS.forEach((e, i) => {
+  const c = document.createElement('div'); c.className = 'card' + (i === sel ? ' on' : '');
+  c.innerHTML = `<div class="tela"></div><div class="info"><b>${e.nome}</b>${e.anim ? '<span class="tag anim">anima na batida</span>' : ''}<span>${e.desc}</span></div>`;
+  c.onclick = () => { sel = i; render(); }; grade.appendChild(c);
+  const b = document.createElement('div'); b.textContent = e.nome; b.onclick = () => { sel = i; render(); }; lista.appendChild(b);
+});
+function render() {
+  [...grade.children].forEach((c, i) => { c.classList.toggle('on', i === sel); desenhar(c, ESTILOS[i], inp.value); });
+  [...lista.children].forEach((b, i) => b.classList.toggle('on', i === sel));
+}
+inp.oninput = render; window.onresize = render; document.fonts.ready.then(render); render();
+</script>
+</body>
+</html>

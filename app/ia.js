@@ -3,6 +3,7 @@
 // O pedido vai pelo processo principal (ia-main.js), onde fica a chave.
 import { STYLES, textDefaults, fontCss, EM, layoutText } from './text.js';
 import { SHAPES, BEATS } from './beat.js';
+import { PRESETS, presetsParaIA } from './text-presets.js';
 
 export const FUNCOES = [['diagramar', 'Diagramar'], ['animar', 'Animar'], ['escrever', 'Escrever'], ['separar', 'Separar em clipes']];
 export const ESTILOS = [['rua', 'Cartaz de rua'], ['limpo', 'Limpo'], ['mao', 'Escrito à mão'], ['ia', 'A IA escolhe']];
@@ -25,7 +26,11 @@ export const SCHEMA = { type: 'object', additionalProperties: false, required: [
 // fontes que a IA pode usar: as instaladas, filtradas para as que servem para cartaz (sem símbolos nem asiáticas)
 export function fontesParaIA(todas) {
   const fora = /emoji|symbol|wingding|webdings|marlett|mdl2|fluent|icons|math|mingliu|simsun|gothic|yahei|jhenghei|malgun|yu |batang|gulim|nirmala|ebrima|gadugi|javanese|myanmar|mongolian|himalaya|tai le|tai lue|phagspa|yi baiti|sylfaen|leelawadee|kufi|naskh|arabic|hebrew|david|miriam|nachlieli|frank ru|amiri|scheherazade|alef|lao|armenian|georgian|lisu|cambria math|opensymbol|zwadobe|historic/i;
-  return todas.filter(f => !fora.test(f)).slice(0, 80);
+  const boas = todas.filter(f => !fora.test(f));
+  // as fontes dos estilos prontos vão na frente (a IA tende a ficar nas primeiras da lista; em ordem alfabética, era o Arial)
+  const deEstilo = new Set(PRESETS.flatMap(p => [...p.dest.f, ...p.apoio.f]).map(f => f.toLowerCase()));
+  const frente = boas.filter(f => deEstilo.has(f.toLowerCase())), resto = boas.filter(f => !deEstilo.has(f.toLowerCase()) && !/^arial$/i.test(f));
+  return [...frente, ...resto, ...boas.filter(f => /^arial$/i.test(f))].slice(0, 80);
 }
 
 export function montarPedido({ texto, funcoes, estilo, fontes, atual, bpm }) {
@@ -41,7 +46,11 @@ export function montarPedido({ texto, funcoes, estilo, fontes, atual, bpm }) {
     'contorno vai de 0 a 1 (0 = sem contorno); brilhoFora de 0 a 1; corContorno é a cor dos dois.',
     'animar: quando ligado, cada pedaço (all, lines, words, chars) recebe a animação com atraso (ms) um depois do outro, na ordem (front, back, random). valor é o que anima:',
     'aOpacity (de 0 a 1), aScale (de 0 a 3), aY ou aX (px, de -1080 a 1080), aRot (radianos). forma é o desenho da animação na batida (' + FORMAS.join(', ') + '), batidas é quanto dura um ciclo (' + BEATS.join(', ') + '); o valor vai de "de" até "ate". O BPM agora é ' + bpm + '.',
-    'Devolva exatamente 3 versões diferentes entre si, cada uma com um nome curto (uma ou duas palavras, em português).',
+    'Bom cartaz: uma palavra ou linha de destaque bem maior (2,5 a 3,5) e o apoio pequeno (0,7 a 1,3); no máximo duas fontes e duas ou três cores por versão; caixa alta no que é título; contraste de peso (Black com Regular).',
+    'Evite Arial, Calibri, Segoe UI e Times: prefira as fontes do começo da lista, que são de cartaz.',
+    'Estes são os estilos prontos do programa; parta de um deles em cada versão (um diferente em cada uma) e adapte ao texto:',
+    presetsParaIA(),
+    'Devolva exatamente 3 versões diferentes entre si, cada uma com um nome curto (uma ou duas palavras, em português; pode ser o nome do estilo de partida).',
   ].join('\n');
   const regras = [];
   regras.push(f.has('escrever') ? '- ESCREVER: o texto abaixo é um pedido; escreva você o texto do cartaz (curto, em português, a não ser que o pedido diga outra língua).' : '- Não reescreva: use as palavras do texto abaixo (pode quebrar em linhas, mudar maiúsculas e tirar pontuação).');

@@ -525,6 +525,8 @@ input[type=range].sa{ height:14px; } input[type=range].sa::-webkit-slider-runnab
 .rprops .iabox .phead{ color:#ffb36b; }
 .rprops .iafun{ display:flex; flex-wrap:wrap; gap:3px; padding:2px 0; } .rprops .iafun button{ height:20px; padding:0 6px; border:0; border-radius:2px; font:inherit; font-size:11px; background:#3a3a3a; color:var(--rt); cursor:pointer; } .rprops .iafun button.on{ background:#ff8a2b; color:#111; }
 .rprops .prow:has(.iafun){ height:auto; }
+.rprops .presets{ display:flex; flex-wrap:wrap; gap:3px; padding:3px 0; } .rprops .presets button{ height:20px; padding:0 7px; border:0; border-radius:2px; font:inherit; font-size:11px; background:#3a3a3a; color:var(--rt); cursor:pointer; } .rprops .presets button:hover{ background:#4a4a4a; } .rprops .presets button.on{ background:#7fd6c2; color:#111; }
+.rprops .prow:has(.presets){ height:auto; }
 .rprops .iabox button.iago{ background:#ff8a2b; color:#111; font-weight:700; margin:4px 6px; width:calc(100% - 12px); } .rprops .iabox button.iago:disabled{ opacity:.6; }
 .rprops .iainfo{ display:flex; justify-content:space-between; gap:6px; padding:0 6px 4px; font-size:11px; color:#bbb; } .rprops .ialink{ color:#ffb36b; cursor:pointer; text-decoration:underline; white-space:nowrap; }
 .rprops .iaver{ display:flex; gap:4px; padding:0 6px 6px; } .rprops .iav{ flex:1; min-width:0; padding:2px; border:2px solid transparent; background:#111; border-radius:2px; cursor:pointer; color:var(--rt); font:inherit; font-size:10px; } .rprops .iav.on{ border-color:#ff8a2b; } .rprops .iav canvas{ width:100%; display:block; } .rprops .iav span{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

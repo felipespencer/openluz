@@ -12,6 +12,7 @@ import { AUDIO_FX, audioFxById, BANDS } from './audio.js';
 import { isPrepared } from './player.js';
 import { STYLES, RANGES, ORDERS, listFonts, drawText } from './text.js';
 import { FUNCOES, ESTILOS, montarPedido, validarVersoes, aplicarVersao, fontesParaIA } from './ia.js';
+import { PRESETS, versaoDoPreset } from './text-presets.js';
 import { BUILTIN_NAMES, putLutText } from './lut.js';
 
 const $ = (id) => document.getElementById(id);
@@ -322,6 +323,26 @@ export class Panels {
       box.appendChild(row);
     }
   }
+  // Estilos prontos (maquete presets-texto-mockup.html): um clique quebra o texto e aplica fonte, cor, tamanho e animação
+  presetRows(P, clip) {
+    const t = clip.text, row = el('div', 'presets'); row.dataset.help = 'Estilos prontos|Um clique monta o cartaz no estilo: a palavra forte fica grande, o resto vira apoio. Depois dá para mexer em tudo à mão; Ctrl+Z volta.';
+    for (const p of PRESETS) {
+      const b = el('button', t.preset === p.id ? 'on' : '', p.nome); b.type = 'button'; b.dataset.preset = p.id; b.title = p.desc + (p.anim ? ' (anima na batida)' : '');
+      b.onclick = () => this.aplicarPreset(clip, p); row.appendChild(b);
+    }
+    P.appendChild(this.prow('Estilo pronto', 'Estilos prontos|Lambe-lambe, Neon, Protesto, Festa, Elegante, Letreiro, Cordel, Manuscrito e Tecno.', row));
+  }
+  async aplicarPreset(clip, p) {
+    const t = clip.text, bruto = t.presetSaida === t.content && t.presetFonte != null ? t.presetFonte : t.content;   // trocar de estilo volta ao texto como foi escrito
+    const v = versaoDoPreset(p, bruto, await listFonts());
+    if (!v.linhas.length) { this.ctx.toast('Escreva o texto primeiro'); return; }
+    this.ctx.markUndo();
+    // estilo que anima transforma o Text Block em Text Animator; o próximo estilo sem animação devolve o Text Block
+    const eraBloco = t.preset ? !!t.presetEraBloco : !t.animator;
+    if (!p.anim && eraBloco) t.animator = false;
+    aplicarVersao(clip, v); Object.assign(clip.text, { preset: p.id, presetFonte: bruto, presetSaida: clip.text.content, presetEraBloco: eraBloco }); renderText(clip);
+    this.ctx.renderGrid(); this.render();
+  }
   async iaMontar(clip) {
     const D = window.projDesktop, st = clip._ia;
     if (!D || !D.ia) { this.ctx.toast('A IA só funciona no programa instalado no Windows'); return; }
@@ -391,6 +412,7 @@ export class Panels {
       const deg = (label, rname, help, key) => P.appendChild(this.pnum(label, H(rname, help), Math.round(t[key] * 1800 / Math.PI) / 10, { min: -180, max: 180, step: 1, dec: 1, unit: '°', bar: true, reset: 0 }, v => { t[key] = v * Math.PI / 180; up(); }));
       P.appendChild(this.phead(nm, nm + '|' + (A ? 'Cada letra, palavra ou linha recebe os valores animados com um atraso (Delay): mude um valor animado, ou ponha um LFO nele, e os pedaços seguem um depois do outro.' : 'Texto escrito com as fontes do Windows, como o Text Block do Resolume.')));
       this.iaRows(P, clip);
+      this.presetRows(P, clip);
       P.appendChild(this.parea('Texto', H('Text', 'O texto. Enter quebra a linha.'), t.content, v => { t.content = v; renderText(clip); }, () => this.ctx.renderGrid()));
       const fonts = fontsCache || [t.font]; if (!fontsCache) listFonts().then(f => { fontsCache = f; this.render(); });
       P.appendChild(this.pselect('Fonte', H('Font', 'Fontes instaladas no Windows.'), (fonts.includes(t.font) ? fonts : [t.font, ...fonts]).map(f => [f, f]), t.font, v => { t.font = v; up(); }));
