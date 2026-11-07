@@ -35,6 +35,7 @@ Phases: 1 of 8 complete
 | 6 | Versão Android | TBD | Not started | - |
 | 7 | Saída avançada | 2/2 | Complete | 2026-11-05 |
 | 8 | Webcam virtual | 1/1 | ✅ Complete | 2026-11-02 |
+| 9 | Editor de texto | 0/1 | Planned | - |
 
 ## Phase Details
 
@@ -173,6 +174,16 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 
 **Plans:**
 - [x] 08-01: Saída › Webcam virtual, peça nativa no instalador, avisos e testes — fechado em 2026-11-02 com a beta.46; conferido no Meet pelo Felipe
+
+### Phase 9: Editor de texto
+
+**Goal:** clipe de texto bonito sem esforço: ✎ Editar texto no jeito do Canva (várias caixas, estilo por pedaço, efeitos, animação na
+batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor-texto-mockup.html` aprovada. Recurso só do OpenLume.
+**Depends on:** nada (usa o Text Block do 02-05, os estilos prontos da beta.55 e a IA do 02-06)
+
+**Plans:**
+- [ ] 09-01: editor com várias caixas, efeitos e animação; fontes separadas
+- [ ] 09-02: IA generativa como fonte própria (a planejar)
 
 ## Ideias para um marco futuro
 

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor de texto</title>
+<style>
+  :root { --bg:#151515; --pan:#1f1f1f; --pan2:#262626; --ln:#333; --tx:#ddd; --mut:#8b8b8b; --aqua:#7fd6c2; --lar:#ff8a2b; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:#0c0c0c; color:var(--tx); font:12px "Segoe UI", system-ui, sans-serif; display:flex; flex-direction:column; }
+  button { font:inherit; color:inherit; }
+  /* fundo: o OpenLume escurecido atrás */
+  .app { position:absolute; inset:0; background:repeating-linear-gradient(90deg,#1b1b1b 0 150px,#202020 150px 152px); opacity:.35; }
+  .nota { position:relative; z-index:2; padding:8px 14px; color:var(--mut); background:#0c0c0c; border-bottom:1px solid #222; }
+  .nota b { color:#eee; }
+  .ed { position:relative; z-index:2; flex:1; margin:10px 14px 14px; background:var(--bg); border:1px solid var(--ln); border-radius:5px; display:grid;
+        grid-template-columns:270px 1fr 210px; grid-template-rows:38px 44px 1fr 40px; min-height:0; }
+  .tit { grid-column:1/-1; display:flex; align-items:center; gap:10px; padding:0 12px; border-bottom:1px solid var(--ln); }
+  .tit b { font-size:13px; } .tit .sp { flex:1; } .tit .mut { color:var(--mut); }
+  /* barra de cima, como a do Canva */
+  .tool { grid-column:2/4; display:flex; align-items:center; gap:4px; padding:0 8px; border-bottom:1px solid var(--ln); background:var(--pan); overflow-x:auto; }
+  .tool .g { display:flex; align-items:center; gap:2px; padding-right:6px; margin-right:4px; border-right:1px solid var(--ln); height:28px; }
+  .tool select, .tool input[type=number] { background:#111; border:1px solid #3a3a3a; color:#eee; height:26px; border-radius:3px; font:inherit; }
+  .tool select { width:150px; } .tool input[type=number] { width:46px; text-align:center; }
+  .tb { height:26px; min-width:26px; padding:0 6px; border:0; border-radius:3px; background:transparent; cursor:pointer; }
+  .tb:hover { background:#333; } .tb.on { background:#3d3020; color:var(--lar); }
+  .cor { width:26px; height:26px; border-radius:3px; border:1px solid #555; cursor:pointer; position:relative; }
+  .cor input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  /* painel da esquerda */
+  .lado { grid-row:2/4; border-right:1px solid var(--ln); display:flex; flex-direction:column; min-height:0; background:var(--pan); }
+  .abas { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--ln); }
+  .abas button { border:0; background:transparent; padding:9px 0; cursor:pointer; color:var(--mut); border-bottom:2px solid transparent; }
+  .abas button.on { color:#fff; border-bottom-color:var(--lar); }
+  .cont { flex:1; overflow:auto; padding:10px; }
+  .cont h4 { margin:12px 0 6px; font-size:11px; color:var(--mut); font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+  .cont h4:first-child { margin-top:0; }
+  .add { display:block; width:100%; text-align:left; border:1px solid #3a3a3a; background:#1a1a1a; border-radius:4px; padding:8px 10px; margin-bottom:5px; cursor:pointer; }
+  .add:hover { border-color:#666; }
+  .estilos { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .est { aspect-ratio:16/9; background:#000; border:1px solid #333; border-radius:3px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; line-height:1; text-align:center; }
+  .est:hover { border-color:var(--lar); }
+  .fonte { padding:7px 8px; border-radius:3px; cursor:pointer; font-size:17px; white-space:nowrap; overflow:hidden; }
+  .fonte:hover { background:#2c2c2c; } .fonte.on { background:#3d3020; }
+  .busca { width:100%; background:#111; border:1px solid #3a3a3a; color:#eee; padding:6px 8px; border-radius:3px; margin-bottom:8px; font:inherit; }
+  .efx { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .ef { border:1px solid #333; border-radius:4px; background:#111; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; }
+  .ef:hover { border-color:#666; } .ef.on { border-color:var(--lar); }
+  .ef .a { font:900 26px "Archivo Black", Impact, sans-serif; } .ef span { font-size:10.5px; color:var(--mut); }
+  .ctl { display:grid; grid-template-columns:78px 1fr 36px; gap:6px; align-items:center; margin:6px 0; }
+  .ctl input[type=range] { width:100%; accent-color:var(--lar); }
+  .ctl output { color:var(--mut); text-align:right; }
+  .anims { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .an { border:1px solid #333; border-radius:4px; background:#111; padding:10px 6px; text-align:center; cursor:pointer; }
+  .an:hover { border-color:#666; } .an.on { border-color:var(--lar); }
+  .an i { display:block; font-style:normal; font:800 18px "Passion One", Impact, sans-serif; margin-bottom:4px; }
+  /* palco 16:9 */
+  .palco { grid-column:2; grid-row:3; display:flex; align-items:center; justify-content:center; padding:16px; min-height:0; min-width:0; background:#101010; }
+  .tela { position:relative; aspect-ratio:16/9; width:100%; max-height:100%; background:#000; outline:1px solid #2a2a2a; overflow:hidden; container-type:inline-size; }
+  .caixa { position:absolute; cursor:move; white-space:pre; line-height:1.05; transform-origin:center; padding:.05em .1em; }
+  .caixa:focus { outline:none; }
+  .caixa.sel { outline:1.5px solid var(--aqua); outline-offset:4px; }
+  .caixa .h { position:absolute; width:10px; height:10px; background:#fff; border:1.5px solid var(--aqua); border-radius:50%; display:none; }
+  .caixa.sel .h { display:block; }
+  .h.tl { left:-10px; top:-10px; } .h.tr { right:-10px; top:-10px; } .h.bl { left:-10px; bottom:-10px; } .h.br { right:-10px; bottom:-10px; cursor:nwse-resize; }
+  .h.rot { left:calc(50% - 6px); top:-34px; cursor:grab; background:var(--aqua); }
+  .caixa [contenteditable] { outline:none; }
+  .guia { position:absolute; background:#ff3c9e; pointer-events:none; display:none; }
+  .guia.v { width:1px; top:0; bottom:0; left:50%; } .guia.hz { height:1px; left:0; right:0; top:50%; }
+  /* direita: caixas e posição */
+  .dir { grid-column:3; grid-row:3; border-left:1px solid var(--ln); background:var(--pan); padding:10px; overflow:auto; }
+  .dir h4 { margin:0 0 6px; font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; }
+  .cx { display:flex; align-items:center; gap:6px; padding:6px; border-radius:3px; cursor:pointer; white-space:nowrap; overflow:hidden; }
+  .cx:hover { background:#2c2c2c; } .cx.on { background:#1d3a35; }
+  .cx small { color:var(--mut); margin-left:auto; }
+  .rod { grid-column:1/-1; border-top:1px solid var(--ln); display:flex; align-items:center; gap:8px; padding:0 12px; }
+  .rod .sp { flex:1; } .rod .mut { color:var(--mut); }
+  .bt { height:28px; padding:0 14px; border:0; border-radius:3px; background:#3a3a3a; cursor:pointer; }
+  .bt.pri { background:var(--aqua); color:#111; font-weight:700; }
+  /* efeitos (no programa: desenhados pelo motor; aqui em CSS só para mostrar) */
+  .fx-sombra { text-shadow: .06em .06em 0 rgba(0,0,0,.0), .08em .08em .12em rgba(0,0,0,.9); }
+  @keyframes pulso { 0%,100% { transform:scale(1); } 10% { transform:scale(1.1); } }
+  @keyframes sobe { 0% { transform:translateY(.6em); opacity:0; } 35%,100% { transform:none; opacity:1; } }
+  @keyframes digita { 0% { clip-path:inset(0 100% 0 0); } 60%,100% { clip-path:inset(0 0 0 0); } }
+  @keyframes pisca { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+  @keyframes treme { 0%,100% { transform:translate(0,0); } 25% { transform:translate(-.03em,.02em); } 50% { transform:translate(.03em,-.02em); } 75% { transform:translate(-.02em,-.03em); } }
+</style>
+</head>
+<body>
+<div class="app"></div>
+<div class="nota"><b>Maquete do editor de texto</b> — abre pelo botão <b>✎ Editar texto</b> do Text Block (ou dois cliques no clipe). Clique num texto para selecionar, dois cliques para escrever,
+arraste para mover, a bolinha de baixo à direita aumenta, a de cima gira. Selecione um pedaço do texto e mude a cor ou a fonte só dele. Tudo aqui funciona de mentira, só para você sentir.</div>
+
+<div class="ed" id="ed">
+  <div class="tit"><b>✎ Editar texto</b><span class="mut">Camada 3 · Coluna 3 · Text Block</span><span class="sp"></span><span class="mut">Ctrl+Z desfaz · Esc fecha</span></div>
+
+  <div class="lado">
+    <div class="abas" id="abas"><button data-a="estilos" class="on">Estilos</button><button data-a="fontes">Fontes</button><button data-a="efeitos">Efeitos</button><button data-a="animar">Animar</button></div>
+    <div class="cont" id="cont"></div>
+  </div>
+
+  <div class="tool" id="tool">
+    <div class="g"><select id="fFonte"></select></div>
+    <div class="g"><button class="tb" data-c="menos">−</button><input type="number" id="fTam" min="8" max="400"><button class="tb" data-c="mais">+</button></div>
+    <div class="g"><div class="cor" id="corBox" title="Cor (do pedaço selecionado ou da caixa)"><input type="color" id="fCor"></div></div>
+    <div class="g"><button class="tb" data-c="b" title="Negrito"><b>B</b></button><button class="tb" data-c="i" title="Itálico"><i>I</i></button><button class="tb" data-c="u" title="Sublinhado"><u>U</u></button><button class="tb" data-c="s" title="Riscado"><s>S</s></button><button class="tb" data-c="caixa" title="Maiúsculas">aA</button></div>
+    <div class="g"><button class="tb" data-c="esq" title="Alinhar à esquerda">⯇</button><button class="tb" data-c="centro" title="Centralizar">≡</button><button class="tb" data-c="dir" title="Alinhar à direita">⯈</button></div>
+    <div class="g" title="Espaço entre letras e entre linhas"><span class="mut" style="color:var(--mut)">↔</span><input type="number" id="fLetra" step="1" min="-10" max="80"><span class="mut" style="color:var(--mut)">↕</span><input type="number" id="fLinha" step="5" min="60" max="200"></div>
+    <div class="g"><button class="tb" data-c="efeitos">Efeitos</button><button class="tb" data-c="animar">Animar</button></div>
+    <div class="g" style="border:0"><button class="tb" data-c="frente" title="Trazer para a frente">⬒</button><button class="tb" data-c="dup" title="Duplicar">⧉</button><button class="tb" data-c="apaga" title="Apagar caixa">🗑</button></div>
+  </div>
+
+  <div class="palco"><div class="tela" id="tela"><div class="guia v" id="gv"></div><div class="guia hz" id="gh"></div></div></div>
+
+  <div class="dir">
+    <h4>Caixas de texto</h4>
+    <div id="lista"></div>
+    <h4 style="margin-top:14px">Posição</h4>
+    <div class="ctl"><span>X</span><input type="range" id="pX" min="0" max="100"><output id="oX"></output></div>
+    <div class="ctl"><span>Y</span><input type="range" id="pY" min="0" max="100"><output id="oY"></output></div>
+    <div class="ctl"><span>Giro</span><input type="range" id="pR" min="-180" max="180"><output id="oR"></output></div>
+    <div class="ctl"><span>Opacidade</span><input type="range" id="pO" min="0" max="100"><output id="oO"></output></div>
+    <h4 style="margin-top:14px">Fundo do clipe</h4>
+    <div class="ctl"><span>Fundo</span><select id="fundo" style="grid-column:2/4;background:#111;color:#eee;border:1px solid #3a3a3a;height:24px"><option value="none">Transparente</option><option value="#000">Preto</option><option value="lin">Degradê</option><option value="#1a0b2e">Roxo escuro</option></select></div>
+  </div>
+
+  <div class="rod"><button class="bt" id="addT">+ Título</button><button class="bt" id="addS">+ Subtítulo</button><button class="bt" id="addC">+ Texto</button><span class="sp"></span><span class="mut">Fica tudo dentro do mesmo clipe de texto e dá para animar cada caixa na batida.</span><button class="bt">Cancelar</button><button class="bt pri">Aplicar no clipe</button></div>
+</div>
+
+<script>
+const FONTES = ['Archivo Black', 'Passion One', 'Michroma', 'Alfa Slab One', 'Bricolage Grotesque', 'Anybody', 'Rubik', 'EB Garamond', 'Yesteryear', 'Xilosa', 'Cratense', 'Black Ground', 'Impact', 'Bahnschrift', 'Georgia', 'Segoe Script', 'Arial'];
+const EFEITOS = [
+  ['nenhum', 'Nenhum'], ['sombra', 'Sombra'], ['elevar', 'Elevar'], ['vazado', 'Vazado'], ['contorno', 'Contorno'], ['fundo', 'Fundo'],
+  ['neon', 'Neon'], ['eco', 'Eco'], ['glitch', 'Glitch'], ['recorte', 'Recorte'], ['degrade', 'Degradê'], ['curva', 'Curva']];
+const ANIMS = [['nenhuma', 'Nenhuma', 'parado'], ['surgir', 'Surgir', 'aparece aos poucos'], ['subir', 'Subir', 'letra por letra de baixo'], ['digitar', 'Máquina de escrever', 'uma letra de cada vez'],
+  ['pulso', 'Pulso', 'pula na batida'], ['piscar', 'Piscar', 'liga e desliga na batida'], ['tremer', 'Tremer', 'nervoso, sem parar'], ['bloco', 'Bloco', 'uma faixa passa e revela']];
+const ESTILOS = [
+  { n: 'Lambe-lambe', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'Archivo Black', s: 4.2, c: '#ffffff', y: 34 }, { t: 'BETS', f: 'Archivo Black', s: 15, c: '#ffd400', y: 60 }] },
+  { n: 'Neon', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'Michroma', s: 3.6, c: '#7ff6ff', y: 34, fx: 'neon', fxc: '#00e5ff', ls: 8 }, { t: 'BETS', f: 'Bricolage Grotesque', s: 13, c: '#ff4fd8', y: 60, fx: 'neon', fxc: '#ff2bd0', an: 'piscar' }] },
+  { n: 'Protesto', cx: [{ t: 'SOMOS\nTODOS CONTRA', f: 'Black Ground', s: 6, c: '#ffffff', y: 34 }, { t: 'BETS', f: 'Black Ground', s: 12, c: '#ff2a2a', y: 70, fx: 'fundo', fxc: '#ffffff' }] },
+  { n: 'Festa', cx: [{ t: 'somos todos contra as', f: 'Passion One', s: 6, c: '#ffe14d', y: 32 }, { t: 'BETS', f: 'Passion One', s: 15, c: '#ff3c9e', y: 60, fx: 'elevar', an: 'pulso' }] },
+  { n: 'Elegante', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'EB Garamond', s: 3, c: '#e8d6b0', y: 36, ls: 22 }, { t: 'BETS', f: 'EB Garamond', s: 14, c: '#e8c27a', y: 60, it: 1 }] },
+  { n: 'Letreiro', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'Alfa Slab One', s: 4.4, c: '#fff3df', y: 34 }, { t: 'BETS', f: 'Alfa Slab One', s: 14, c: '#ff7a1a', y: 60, fx: 'contorno', fxc: '#fff3df' }] },
+  { n: 'Vazado', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'Anybody', s: 4, c: '#ffffff', y: 34 }, { t: 'BETS', f: 'Anybody', s: 16, c: '#ffffff', y: 60, fx: 'vazado' }] },
+  { n: 'Glitch', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'Rubik', s: 4, c: '#ffffff', y: 34 }, { t: 'BETS', f: 'Rubik', s: 15, c: '#ffffff', y: 60, fx: 'glitch', an: 'tremer' }] },
+  { n: 'Eco', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'Bahnschrift', s: 4, c: '#ffffff', y: 32 }, { t: 'BETS', f: 'Archivo Black', s: 14, c: '#ffffff', y: 60, fx: 'eco', fxc: '#ff3c9e' }] },
+  { n: 'Degradê', cx: [{ t: 'SOMOS TODOS CONTRA AS', f: 'Michroma', s: 3.4, c: '#ffffff', y: 34, ls: 10 }, { t: 'BETS', f: 'Archivo Black', s: 15, c: '#ffffff', y: 60, fx: 'degrade' }] },
+];
+
+let caixas = [], sel = -1, aba = 'estilos', fundo = 'none';
+const tela = document.getElementById('tela');
+const nova = (o) => ({ t: 'Texto', f: 'Rubik', s: 5, c: '#ffffff', x: 50, y: 50, r: 0, o: 100, fx: 'nenhum', fxc: '#ff3c9e', fxk: 50, an: 'nenhuma', b: 0, it: 0, u: 0, st: 0, ls: 0, lh: 105, al: 'center', ...o });
+
+// efeito Canva -> CSS (no programa, cada um vira passo de desenho do motor)
+function fxCss(k, el) {
+  const em = 1, c = k.fxc, f = k.fxk / 50;
+  el.style.textShadow = ''; el.style.webkitTextStroke = ''; el.style.background = ''; el.style.webkitBackgroundClip = ''; el.style.color = k.c; el.style.padding = '.05em .1em'; el.style.borderRadius = '';
+  if (k.fx === 'sombra') el.style.textShadow = `${.05 * f}em ${.05 * f}em ${.1 * f}em rgba(0,0,0,.85)`;
+  if (k.fx === 'elevar') el.style.textShadow = `0 ${.04 * f}em ${.25 * f}em rgba(0,0,0,.9)`;
+  if (k.fx === 'vazado') { el.style.color = 'transparent'; el.style.webkitTextStroke = `${.03 * f}em ${k.c}`; }
+  if (k.fx === 'contorno') el.style.webkitTextStroke = `${.035 * f}em ${c}`;
+  if (k.fx === 'fundo') { el.style.background = c; el.style.padding = '.02em .18em'; el.style.borderRadius = '.08em'; }
+  if (k.fx === 'neon') el.style.textShadow = `0 0 ${.08 * f}em ${c}, 0 0 ${.2 * f}em ${c}, 0 0 ${.45 * f}em ${c}`;
+  if (k.fx === 'eco') el.style.textShadow = [1, 2, 3].map(i => `${i * .05 * f}em ${i * .05 * f}em 0 ${c}${['cc', '88', '44'][i - 1]}`).join(',');
+  if (k.fx === 'glitch') el.style.textShadow = `${-.04 * f}em 0 0 #00e5ff, ${.04 * f}em 0 0 #ff2bd0`;
+  if (k.fx === 'recorte') el.style.textShadow = `${.05 * f}em ${.05 * f}em 0 ${c}`;
+  if (k.fx === 'degrade') { el.style.background = `linear-gradient(90deg, #ffd400, #ff3c9e 50%, #7f5bff)`; el.style.webkitBackgroundClip = 'text'; el.style.color = 'transparent'; }
+}
+function animCss(k, el) {
+  const m = { pulso: 'pulso .5s infinite', piscar: 'pisca 1s infinite', tremer: 'treme .15s infinite', subir: 'sobe 2s infinite', surgir: 'pisca 3s infinite', digitar: 'digita 3s steps(12) infinite', bloco: 'digita 2s infinite' };
+  el.style.animation = m[k.an] || '';
+}
+
+function desenhar() {
+  tela.querySelectorAll('.caixa').forEach(e => e.remove());
+  tela.style.background = fundo === 'lin' ? 'linear-gradient(135deg,#1a0b2e,#3a0b2a 60%,#000)' : fundo === 'none' ? 'repeating-conic-gradient(#0d0d0d 0 25%, #000 0 50%) 0 0/24px 24px' : fundo;
+  caixas.forEach((k, i) => {
+    const d = document.createElement('div'); d.className = 'caixa' + (i === sel ? ' sel' : '');
+    d.style.left = k.x + '%'; d.style.top = k.y + '%'; d.style.transform = `translate(-50%,-50%) rotate(${k.r}deg)`; d.style.opacity = k.o / 100;
+    const t = document.createElement('div'); t.className = 'txt'; t.innerHTML = k.html || esc(k.t); t.contentEditable = 'false';
+    t.style.fontFamily = `"${k.f}", Impact, sans-serif`; t.style.fontSize = k.s + 'cqw'; t.style.fontWeight = k.b || /Archivo|Ground|Passion|Alfa|Impact/.test(k.f) ? 900 : 400;
+    t.style.fontStyle = k.it ? 'italic' : ''; t.style.textDecoration = [k.u && 'underline', k.st && 'line-through'].filter(Boolean).join(' ');
+    t.style.letterSpacing = (k.ls / 100) + 'em'; t.style.lineHeight = k.lh / 100; t.style.textAlign = k.al;
+    if (k.caixa) t.style.textTransform = 'uppercase';
+    fxCss(k, t); animCss(k, t);
+    d.appendChild(t);
+    for (const h of ['tl', 'tr', 'bl', 'br', 'rot']) { const e = document.createElement('div'); e.className = 'h ' + h; e.dataset.h = h; d.appendChild(e); }
+    d.onpointerdown = (e) => arrastar(e, i, d);
+    d.ondblclick = () => { t.contentEditable = 'true'; t.focus(); document.execCommand('selectAll'); t.oninput = () => { k.html = t.innerHTML; k.t = t.innerText; lista(); }; };
+    tela.appendChild(d);
+  });
+  lista(); barra(); lado();
+}
+const esc = (s) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])).replace(/\n/g, '<br>');
+
+function arrastar(e, i, d) {
+  if (e.target.isContentEditable) return;
+  sel = i; const k = caixas[i]; const R = tela.getBoundingClientRect(); const h = e.target.dataset.h;
+  const x0 = e.clientX, y0 = e.clientY, kx = k.x, ky = k.y, ks = k.s, kr = k.r;
+  const cx = R.left + k.x / 100 * R.width, cy = R.top + k.y / 100 * R.height;
+  document.querySelectorAll('.caixa').forEach((c, j) => c.classList.toggle('sel', j === i)); barra(); lista(); lado();
+  const gv = document.getElementById('gv'), gh = document.getElementById('gh');
+  const mv = (ev) => {
+    if (h === 'br' || h === 'tl' || h === 'tr' || h === 'bl') { const d0 = Math.hypot(x0 - cx, y0 - cy), d1 = Math.hypot(ev.clientX - cx, ev.clientY - cy); k.s = Math.max(1, ks * d1 / d0); }
+    else if (h === 'rot') { k.r = Math.round(Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90); if (Math.abs(k.r) < 4) k.r = 0; }
+    else {
+      k.x = kx + (ev.clientX - x0) / R.width * 100; k.y = ky + (ev.clientY - y0) / R.height * 100;
+      const sx = Math.abs(k.x - 50) < 1.2, sy = Math.abs(k.y - 50) < 1.2; if (sx) k.x = 50; if (sy) k.y = 50; gv.style.display = sx ? 'block' : 'none'; gh.style.display = sy ? 'block' : 'none';
+    }
+    const c = tela.querySelectorAll('.caixa')[i]; c.style.left = k.x + '%'; c.style.top = k.y + '%'; c.style.transform = `translate(-50%,-50%) rotate(${k.r}deg)`; c.firstChild.style.fontSize = k.s + 'cqw';
+    barra();
+  };
+  const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); gv.style.display = gh.style.display = 'none'; };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up);
+}
+
+function lista() {
+  const L = document.getElementById('lista'); L.innerHTML = '';
+  caixas.forEach((k, i) => { const r = document.createElement('div'); r.className = 'cx' + (i === sel ? ' on' : ''); r.innerHTML = `<span style="font-family:'${k.f}';color:${k.c}">${esc((k.t || '').split('\n')[0]).slice(0, 22)}</span><small>${k.fx !== 'nenhum' ? k.fx : ''}${k.an !== 'nenhuma' ? ' ♪' : ''}</small>`; r.onclick = () => { sel = i; desenhar(); }; L.appendChild(r); });
+  const k = caixas[sel];
+  for (const [id, key, f] of [['pX', 'x', v => Math.round(v) + '%'], ['pY', 'y', v => Math.round(v) + '%'], ['pR', 'r', v => v + '°'], ['pO', 'o', v => v + '%']]) {
+    const inp = document.getElementById(id), out = document.getElementById('o' + id[1]); inp.disabled = !k; if (!k) continue;
+    inp.value = k[key]; out.textContent = f(k[key]); inp.oninput = () => { k[key] = +inp.value; desenhar(); };
+  }
+}
+function barra() {
+  const k = caixas[sel]; const ff = document.getElementById('fFonte');
+  if (!ff.options.length) FONTES.forEach(f => { const o = document.createElement('option'); o.textContent = f; o.style.fontFamily = f; ff.appendChild(o); });
+  if (!k) return;
+  ff.value = k.f; document.getElementById('fTam').value = Math.round(k.s * 19.2); document.getElementById('fCor').value = k.c; document.getElementById('corBox').style.background = k.c;
+  document.getElementById('fLetra').value = k.ls; document.getElementById('fLinha').value = k.lh;
+  document.querySelectorAll('.tool .tb').forEach(b => { const c = b.dataset.c; b.classList.toggle('on', (c === 'b' && k.b) || (c === 'i' && k.it) || (c === 'u' && k.u) || (c === 's' && k.st) || (c === 'caixa' && k.caixa) || (c === 'esq' && k.al === 'left') || (c === 'centro' && k.al === 'center') || (c === 'dir' && k.al === 'right')); });
+}
+document.getElementById('fFonte').onchange = (e) => { const k = caixas[sel]; if (!k) return; if (pedaco(`font-family:'${e.target.value}'`)) return; k.f = e.target.value; desenhar(); };
+document.getElementById('fTam').onchange = (e) => { const k = caixas[sel]; if (k) { k.s = +e.target.value / 19.2; desenhar(); } };
+document.getElementById('fCor').oninput = (e) => { const k = caixas[sel]; if (!k) return; if (pedaco(`color:${e.target.value}`)) return; k.c = e.target.value; desenhar(); };
+document.getElementById('fLetra').onchange = (e) => { const k = caixas[sel]; if (k) { k.ls = +e.target.value; desenhar(); } };
+document.getElementById('fLinha').onchange = (e) => { const k = caixas[sel]; if (k) { k.lh = +e.target.value; desenhar(); } };
+// pedaço selecionado dentro de uma caixa em edição: a cor/fonte vale só para ele (como no Canva)
+function pedaco(css) {
+  const s = getSelection(); if (!s.rangeCount || s.isCollapsed) return false;
+  const el = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement).closest('.txt'); if (!el || !el.isContentEditable) return false;
+  const sp = document.createElement('span'); sp.style.cssText = css; try { s.getRangeAt(0).surroundContents(sp); } catch { return false; }
+  const k = caixas[sel]; k.html = el.innerHTML; return true;
+}
+document.getElementById('tool').onclick = (e) => {
+  const b = e.target.closest('.tb'); if (!b) return; const k = caixas[sel], c = b.dataset.c;
+  if (c === 'efeitos' || c === 'animar') { aba = c; lado(); return; }
+  if (!k) return;
+  if (c === 'mais') k.s *= 1.1; if (c === 'menos') k.s /= 1.1;
+  if (c === 'b') k.b = !k.b; if (c === 'i') k.it = !k.it; if (c === 'u') k.u = !k.u; if (c === 's') k.st = !k.st; if (c === 'caixa') k.caixa = !k.caixa;
+  if (c === 'esq') k.al = 'left'; if (c === 'centro') k.al = 'center'; if (c === 'dir') k.al = 'right';
+  if (c === 'dup') { caixas.push({ ...k, x: k.x + 3, y: k.y + 3 }); sel = caixas.length - 1; }
+  if (c === 'apaga') { caixas.splice(sel, 1); sel = -1; }
+  if (c === 'frente') { caixas.push(caixas.splice(sel, 1)[0]); sel = caixas.length - 1; }
+  desenhar();
+};
+
+function lado() {
+  document.querySelectorAll('#abas button').forEach(b => b.classList.toggle('on', b.dataset.a === aba));
+  const C = document.getElementById('cont'), k = caixas[sel]; C.innerHTML = '';
+  if (aba === 'estilos') {
+    C.insertAdjacentHTML('beforeend', '<h4>Adicionar texto</h4>');
+    for (const [n, o] of [['Título', { t: 'TÍTULO', f: 'Archivo Black', s: 10 }], ['Subtítulo', { t: 'Subtítulo', f: 'Rubik', s: 5 }], ['Texto', { t: 'Um texto pequeno', f: 'Rubik', s: 3 }]]) {
+      const b = document.createElement('button'); b.className = 'add'; b.innerHTML = `<span style="font-family:'${o.f}';font-size:${n === 'Título' ? 20 : n === 'Subtítulo' ? 15 : 12}px;font-weight:${n === 'Título' ? 900 : 400}">Adicionar ${n.toLowerCase()}</span>`;
+      b.onclick = () => { caixas.push(nova(o)); sel = caixas.length - 1; desenhar(); }; C.appendChild(b);
+    }
+    C.insertAdjacentHTML('beforeend', '<h4>Estilos prontos</h4>');
+    const g = document.createElement('div'); g.className = 'estilos'; C.appendChild(g);
+    ESTILOS.forEach(e => {
+      const d = document.createElement('div'); d.className = 'est'; d.title = e.n;
+      e.cx.forEach(x => { const s = document.createElement('div'); s.textContent = x.t.replace('\n', ' '); s.style.cssText = `font-family:'${x.f}';color:${x.c};font-size:${x.s * 1.15}px;font-weight:900;${x.it ? 'font-style:italic;' : ''}`; fxCss({ ...nova(x), fxk: 50 }, s); d.appendChild(s); });
+      d.onclick = () => { caixas = e.cx.map(x => nova({ ...x })); sel = caixas.length - 1; desenhar(); }; g.appendChild(d);
+    });
+  }
+  if (aba === 'fontes') {
+    const i = document.createElement('input'); i.className = 'busca'; i.placeholder = 'Buscar fonte'; C.appendChild(i);
+    const L = document.createElement('div'); C.appendChild(L);
+    const pinta = () => { L.innerHTML = ''; C.insertAdjacentHTML; FONTES.filter(f => f.toLowerCase().includes(i.value.toLowerCase())).forEach(f => { const d = document.createElement('div'); d.className = 'fonte' + (k && k.f === f ? ' on' : ''); d.textContent = f; d.style.fontFamily = `'${f}'`; d.onclick = () => { if (!k) return; k.f = f; desenhar(); }; L.appendChild(d); }); };
+    i.oninput = pinta; pinta();
+    C.insertAdjacentHTML('beforeend', '<h4>Combinações</h4><div style="color:var(--mut);line-height:1.5">Archivo Black + Rubik · Alfa Slab One + Michroma · EB Garamond + Bahnschrift · Passion One + Rubik · Yesteryear + Michroma</div>');
+  }
+  if (aba === 'efeitos') {
+    if (!k) { C.textContent = 'Selecione uma caixa de texto.'; return; }
+    const g = document.createElement('div'); g.className = 'efx'; C.appendChild(g);
+    EFEITOS.forEach(([id, n]) => { const d = document.createElement('div'); d.className = 'ef' + (k.fx === id ? ' on' : ''); const a = document.createElement('div'); a.className = 'a'; a.textContent = 'Ag'; fxCss({ ...nova({ fx: id, fxc: '#ff3c9e', c: '#ffffff' }) }, a); d.appendChild(a); d.insertAdjacentHTML('beforeend', `<span>${n}</span>`); d.onclick = () => { k.fx = id; desenhar(); }; g.appendChild(d); });
+    if (k.fx !== 'nenhum') {
+      C.insertAdjacentHTML('beforeend', `<h4>Ajuste</h4><div class="ctl"><span>Força</span><input type="range" min="0" max="100" value="${k.fxk}" id="fxk"><output>${k.fxk}</output></div><div class="ctl"><span>Cor</span><input type="color" value="${k.fxc}" id="fxc"><span></span></div>`);
+      document.getElementById('fxk').oninput = (e) => { k.fxk = +e.target.value; desenhar(); };
+      document.getElementById('fxc').oninput = (e) => { k.fxc = e.target.value; desenhar(); };
+    }
+  }
+  if (aba === 'animar') {
+    if (!k) { C.textContent = 'Selecione uma caixa de texto.'; return; }
+    const g = document.createElement('div'); g.className = 'anims'; C.appendChild(g);
+    ANIMS.forEach(([id, n, d]) => { const b = document.createElement('div'); b.className = 'an' + (k.an === id ? ' on' : ''); b.innerHTML = `<i>${n}</i><span style="color:var(--mut);font-size:10.5px">${d}</span>`; b.onclick = () => { k.an = id; desenhar(); }; g.appendChild(b); });
+    C.insertAdjacentHTML('beforeend', `<h4>Ritmo</h4><div class="ctl"><span>Batidas</span><select style="grid-column:2/4;background:#111;color:#eee;border:1px solid #3a3a3a;height:24px"><option>1/4</option><option>1/2</option><option selected>1</option><option>2</option><option>4</option><option>8</option></select></div>
+      <div class="ctl"><span>Por</span><select style="grid-column:2/4;background:#111;color:#eee;border:1px solid #3a3a3a;height:24px"><option>Letra</option><option selected>Palavra</option><option>Linha</option><option>Caixa inteira</option></select></div>
+      <div style="color:var(--mut);margin-top:8px;line-height:1.45">Segue o BPM do OpenLume, como o ♪ dos controles.</div>`);
+  }
+}
+document.getElementById('abas').onclick = (e) => { if (e.target.dataset.a) { aba = e.target.dataset.a; lado(); } };
+document.getElementById('fundo').onchange = (e) => { fundo = e.target.value; desenhar(); };
+document.getElementById('addT').onclick = () => { caixas.push(nova({ t: 'TÍTULO', f: 'Archivo Black', s: 10 })); sel = caixas.length - 1; desenhar(); };
+document.getElementById('addS').onclick = () => { caixas.push(nova({ t: 'Subtítulo', f: 'Rubik', s: 5, y: 70 })); sel = caixas.length - 1; desenhar(); };
+document.getElementById('addC').onclick = () => { caixas.push(nova({ t: 'Um texto pequeno', f: 'Rubik', s: 3, y: 80 })); sel = caixas.length - 1; desenhar(); };
+tela.onpointerdown = (e) => { if (e.target === tela) { sel = -1; desenhar(); } };
+
+caixas = ESTILOS[0].cx.map(x => nova({ ...x })); sel = 1;
+document.fonts.ready.then(desenhar); desenhar();
+</script>
+</body>
+</html>
