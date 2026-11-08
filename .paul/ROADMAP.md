@@ -184,7 +184,7 @@ batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor
 
 **Plans:**
 - [ ] 09-01: editor com várias caixas, efeitos e animação; fontes separadas
-- [ ] 09-02: IA generativa como fonte própria (a planejar)
+- [ ] 09-02: fonte ✦ IA generativa (imagens por pedido; maquete ia-generativa-mockup.html aprovada)
 
 ### Phase 10: Modelos 3D
 

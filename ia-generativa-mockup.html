@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA generativa</title>
+<style>
+  :root { --bg:#151515; --pan:#1f1f1f; --ln:#333; --tx:#ddd; --mut:#8b8b8b; --aqua:#7fd6c2; --lar:#ff8a2b; --roxo:#b48cff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#0c0c0c; color:var(--tx); font:12px "Segoe UI", system-ui, sans-serif; }
+  .nota { padding:8px 14px; color:var(--mut); border-bottom:1px solid #222; line-height:1.45; } .nota b { color:#eee; }
+  .app { display:grid; grid-template-columns:1fr 360px; grid-template-rows:auto 1fr; gap:10px; padding:10px 14px; height:calc(100vh - 54px); min-height:640px; }
+  .grade { grid-column:1; background:var(--pan); border:1px solid var(--ln); border-radius:4px; padding:8px; }
+  .grade h3, .fontes h3, .painel h3 { margin:0 0 6px; font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; }
+  .cells { display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; }
+  .cell { aspect-ratio:16/9; background:#111; border:1px solid #2a2a2a; border-radius:2px; position:relative; overflow:hidden; }
+  .cell.on { border-color:var(--aqua); } .cell.gerando { border-color:var(--roxo); }
+  .cell img, .cell canvas { width:100%; height:100%; object-fit:cover; display:block; }
+  .cell .nm { position:absolute; left:0; right:0; bottom:0; font-size:10px; background:rgba(0,0,0,.6); padding:1px 4px; white-space:nowrap; overflow:hidden; }
+  .cell .bar { position:absolute; left:0; bottom:0; height:3px; background:var(--roxo); transition:width .2s; }
+  .fontes { grid-column:2; grid-row:1 / 3; background:var(--pan); border:1px solid var(--ln); border-radius:4px; padding:8px; overflow:auto; }
+  .grp { font-size:10.5px; color:var(--aqua); font-weight:700; letter-spacing:.06em; margin:10px 0 4px; }
+  .it { padding:5px 8px; border-radius:3px; cursor:grab; } .it:hover { background:#2c2c2c; } .it.novo { background:#2a2140; color:#e3d4ff; } .it.novo:hover { background:#36295a; }
+  .it small { color:var(--mut); margin-left:6px; }
+  .painel { grid-column:1; background:var(--pan); border:1px solid var(--ln); border-radius:4px; padding:10px 12px; overflow:auto; }
+  .ph { font-weight:700; color:#e3d4ff; border-left:3px solid var(--roxo); padding:4px 8px; background:#221a33; margin:0 -12px 8px; }
+  .row { display:grid; grid-template-columns:120px 1fr; gap:8px; align-items:start; margin:6px 0; }
+  .row > span { color:var(--mut); padding-top:5px; }
+  textarea, select, input[type=text] { width:100%; background:#111; border:1px solid #3a3a3a; color:#eee; border-radius:3px; padding:6px 8px; font:inherit; }
+  textarea { min-height:64px; resize:vertical; }
+  .seg { display:flex; flex-wrap:wrap; gap:3px; } .seg button { height:24px; padding:0 9px; border:0; border-radius:2px; background:#3a3a3a; color:#ddd; cursor:pointer; font:inherit; }
+  .seg button.on { background:var(--roxo); color:#111; font-weight:600; }
+  .go { width:100%; height:34px; border:0; border-radius:3px; background:var(--roxo); color:#111; font-weight:700; font-size:13px; cursor:pointer; margin:8px 0 4px; }
+  .info { display:flex; justify-content:space-between; color:var(--mut); }
+  .info a { color:var(--aqua); cursor:pointer; text-decoration:underline; }
+  .vers { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:8px; }
+  .ver { border:2px solid transparent; border-radius:3px; cursor:pointer; background:#111; padding:0; overflow:hidden; position:relative; }
+  .ver.on { border-color:var(--roxo); } .ver canvas { width:100%; display:block; aspect-ratio:16/9; }
+  .ver .acoes { position:absolute; right:3px; top:3px; display:flex; gap:3px; opacity:0; transition:.15s; } .ver:hover .acoes { opacity:1; }
+  .ver .acoes b { background:rgba(0,0,0,.7); border-radius:2px; padding:1px 5px; font-weight:400; font-size:10.5px; }
+  .chips { display:flex; flex-wrap:wrap; gap:4px; } .chips span { padding:2px 8px; border:1px solid #444; border-radius:10px; cursor:pointer; } .chips span:hover { border-color:var(--roxo); }
+  .serv { display:grid; gap:4px; } .sv { display:grid; grid-template-columns:auto auto 1fr; gap:2px 8px; align-items:baseline; padding:6px 8px; border:1px solid #333; border-radius:3px; cursor:pointer; }
+  .sv.on { border-color:var(--roxo); background:#221a33; } .sv i { grid-column:1/-1; font-style:normal; color:#aaa; font-size:11px; }
+  .tag { font-size:10px; padding:0 5px; border-radius:2px; background:#333; } .tag.g { background:#1f4d2f; } .tag.p { background:#5a3a1a; } .tag.l { background:#24324d; }
+  .mut { color:var(--mut); }
+</style>
+</head>
+<body>
+<div class="nota"><b>Maquete da fonte "IA generativa"</b> — arraste <b>IA generativa</b> de Fontes para uma casa (aqui: clique nela). O clipe abre com o pedido no painel;
+<b>✦ Gerar</b> faz 4 imagens; um clique na imagem põe ela no clipe. As imagens aqui são de mentira (desenhadas na página), só para sentir o fluxo.</div>
+<div class="app">
+  <div class="grade"><h3>Grade (camada 1)</h3><div class="cells" id="cells"></div></div>
+  <div class="fontes">
+    <h3>Fontes</h3>
+    <div class="grp">FONTES DE VÍDEO</div>
+    <div class="it">Stroboscope</div><div class="it">Test Card</div>
+    <div class="it">Text Animator</div><div class="it">Text Block</div><div class="it">Texto</div><div class="it">Texto com IA</div>
+    <div class="it novo" id="srcIA">✦ IA generativa <small>imagem por pedido</small></div>
+    <div class="it">Laser (espelho)</div>
+    <div class="grp">DISPOSITIVOS DE CAPTURA</div><div class="it">Logitech BRIO</div>
+    <div class="grp">CAPTURA DE TELA, JANELA E PÁGINA WEB</div><div class="it">URL / Página web…</div>
+    <h3 style="margin-top:18px">Configuração › IA (imagens)</h3>
+    <div class="serv" id="serv"></div>
+    <p class="mut" style="line-height:1.45">A chave fica só neste PC, guardada pelo Windows, como no Texto com IA. Cada serviço com o link de onde pegar a chave.</p>
+  </div>
+  <div class="painel" id="painel"></div>
+</div>
+<script>
+const SERV = [
+  ['gemini', 'Google Gemini (imagem)', 'grátis', 'g', 'A mesma chave do Texto com IA. Cota grátis por dia; depois é pago.'],
+  ['pollinations', 'Pollinations', 'sem chave', 'g', 'Grátis e sem conta. Mais lento e às vezes cai; a imagem passa pelo servidor deles.'],
+  ['local', 'No próprio PC (ComfyUI)', 'local', 'l', 'Sem internet e sem custo. Precisa do ComfyUI instalado e de uma placa de vídeo boa.'],
+  ['openai', 'OpenAI (gpt-image)', 'pago', 'p', 'Qualidade alta. Chave paga.'],
+];
+const ESTILOS = ['A IA escolhe', 'Foto', 'Ilustração', 'Neon / cyberpunk', 'Aquarela', 'Psicodélico', 'Xilogravura', 'Fundo abstrato p/ VJ', 'Textura em loop'];
+const PROP = ['16:9', '9:16', '1:1', '4:3', 'Tela da saída'];
+const SUG = ['floresta neon com fumaça', 'mandala fractal girando, cores quentes', 'cidade à noite chovendo, reflexos', 'textura de tinta escorrendo, preto e dourado', 'onda do mar em xilogravura'];
+let st = { serv: 'gemini', estilo: 0, prop: 0, qtd: 4, pedido: 'mandala fractal girando, cores quentes', versoes: null, esc: -1, gerando: false, sel: 2, sem: false };
+let cells = [null, null, null, null, null, null];
+
+function fake(cv, seed, estilo) {   // imagem de mentira: degradês e formas
+  const x = cv.getContext('2d'), W = cv.width, H = cv.height, r = (n) => { const s = Math.sin(seed * 999 + n * 77.7) * 43758.5; return s - Math.floor(s); };
+  const h = Math.floor(r(1) * 360), g = x.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, `hsl(${h},80%,${12 + r(2) * 20}%)`); g.addColorStop(1, `hsl(${(h + 120 + r(3) * 90) % 360},85%,${30 + r(4) * 25}%)`);
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  for (let i = 0; i < 26; i++) { x.globalAlpha = .25 + r(i + 10) * .5; x.fillStyle = `hsl(${(h + i * 23) % 360},90%,${45 + r(i) * 30}%)`; x.beginPath(); const rr = (6 + r(i + 30) * 40) * W / 320; x.arc(W / 2 + Math.cos(i * 0.9 + seed) * (i * 4.5) * W / 320, H / 2 + Math.sin(i * 0.9 + seed) * (i * 2.6) * W / 320, rr, 0, Math.PI * 2); x.fill(); }
+  x.globalAlpha = 1;
+}
+function render() {
+  const C = document.getElementById('cells'); C.innerHTML = '';
+  cells.forEach((c, i) => {
+    const d = document.createElement('div'); d.className = 'cell' + (i === st.sel ? ' on' : '') + (c && c.gerando ? ' gerando' : '');
+    if (c) { const cv = document.createElement('canvas'); cv.width = 160; cv.height = 90; if (c.seed != null) fake(cv, c.seed); else { const x = cv.getContext('2d'); x.fillStyle = '#221a33'; x.fillRect(0, 0, 160, 90); x.fillStyle = '#b48cff'; x.font = '700 14px Segoe UI'; x.textAlign = 'center'; x.fillText('✦', 80, 50); } d.appendChild(cv); const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = c.nome; d.appendChild(nm); if (c.gerando) { const b = document.createElement('div'); b.className = 'bar'; b.style.width = (c.prog || 0) + '%'; d.appendChild(b); } }
+    d.onclick = () => { if (!c) { cells[i] = { nome: 'IA generativa', seed: null }; } st.sel = i; render(); };
+    C.appendChild(d);
+  });
+  const S = document.getElementById('serv'); S.innerHTML = '';
+  for (const [id, n, preco, cls, d] of SERV) { const r = document.createElement('div'); r.className = 'sv' + (st.serv === id ? ' on' : ''); r.innerHTML = `<b>${n}</b><span class="tag ${cls}">${preco}</span><span style="text-align:right"><a style="color:var(--aqua)">${id === 'local' ? 'Baixar ↗' : id === 'pollinations' ? '' : 'Pegar a chave ↗'}</a></span><i>${d}</i>`; r.onclick = () => { st.serv = id; render(); }; S.appendChild(r); }
+  painel();
+}
+function painel() {
+  const P = document.getElementById('painel'), c = cells[st.sel];
+  if (!c) { P.innerHTML = '<div class="mut">Clique numa casa vazia para pôr a fonte IA generativa nela.</div>'; return; }
+  P.innerHTML = `<div class="ph">✦ IA generativa</div>
+    <div class="row"><span>Pedido</span><textarea id="pd" placeholder="descreva a imagem do jeito que sair">${st.pedido}</textarea></div>
+    <div class="row"><span>Ideias</span><div class="chips">${SUG.map(s => `<span>${s}</span>`).join('')}</div></div>
+    <div class="row"><span>Estilo</span><div class="seg" id="es">${ESTILOS.map((e, i) => `<button class="${i === st.estilo ? 'on' : ''}" data-i="${i}">${e}</button>`).join('')}</div></div>
+    <div class="row"><span>Proporção</span><div class="seg" id="pr">${PROP.map((e, i) => `<button class="${i === st.prop ? 'on' : ''}" data-i="${i}">${e}</button>`).join('')}</div></div>
+    <div class="row"><span>Quantas</span><div class="seg" id="qt">${[1, 2, 4].map(n => `<button class="${n === st.qtd ? 'on' : ''}" data-n="${n}">${n}</button>`).join('')}</div></div>
+    <div class="row"><span>Depois</span><div class="seg" id="dp"><button class="on">Imagem parada</button><button>Ken Burns (zoom lento)</button><button>Loop na batida</button></div></div>
+    <button class="go" id="go">${st.gerando ? 'Gerando… 4 imagens' : '✦ Gerar'}</button>
+    <div class="info"><span>Serviço: ${SERV.find(s => s[0] === st.serv)[1]} · ${st.serv === 'gemini' ? '~10 s por imagem' : st.serv === 'local' ? '~20 s por imagem' : '~15 s por imagem'}</span><a>trocar serviço</a></div>
+    ${st.versoes ? `<div class="vers" id="vs">${st.versoes.map((v, i) => `<div class="ver ${i === st.esc ? 'on' : ''}" data-i="${i}"><canvas width="320" height="180" data-seed="${v}"></canvas><div class="acoes"><b>↻ variar</b><b>⤢ maior</b></div></div>`).join('')}</div>
+    <div class="mut" style="margin-top:6px;line-height:1.45">Um clique põe a imagem no clipe. <b>↻ variar</b> faz outras parecidas com essa; <b>⤢ maior</b> refaz em 4K. As imagens ficam salvas em Vídeos\\OpenLume\\IA e entram na composição como arquivo, então abrem em qualquer PC.</div>` : ''}`;
+  P.querySelectorAll('#es button').forEach(b => b.onclick = () => { st.estilo = +b.dataset.i; painel(); });
+  P.querySelectorAll('#pr button').forEach(b => b.onclick = () => { st.prop = +b.dataset.i; painel(); });
+  P.querySelectorAll('#qt button').forEach(b => b.onclick = () => { st.qtd = +b.dataset.n; painel(); });
+  P.querySelectorAll('#dp button').forEach(b => b.onclick = () => { P.querySelectorAll('#dp button').forEach(x => x.classList.remove('on')); b.classList.add('on'); });
+  P.querySelectorAll('.chips span').forEach(s => s.onclick = () => { st.pedido = s.textContent; painel(); });
+  P.querySelector('#pd').oninput = (e) => st.pedido = e.target.value;
+  P.querySelector('#go').onclick = gerar;
+  P.querySelectorAll('.ver canvas').forEach(cv => fake(cv, +cv.dataset.seed));
+  P.querySelectorAll('.ver').forEach(v => v.onclick = () => { st.esc = +v.dataset.i; cells[st.sel] = { nome: st.pedido.slice(0, 22), seed: st.versoes[st.esc] }; render(); });
+}
+function gerar() {
+  if (st.gerando) return; st.gerando = true; const c = cells[st.sel]; c.gerando = true; c.prog = 0; render();
+  const t = setInterval(() => { c.prog += 9; if (c.prog >= 100) { clearInterval(t); c.gerando = false; st.gerando = false; st.versoes = Array.from({ length: st.qtd }, () => Math.random() * 100); st.esc = 0; cells[st.sel] = { nome: st.pedido.slice(0, 22), seed: st.versoes[0] }; } render(); }, 160);
+}
+document.getElementById('srcIA').onclick = () => { const i = cells.findIndex(c => !c); cells[i] = { nome: 'IA generativa', seed: null }; st.sel = i; st.versoes = null; render(); };
+cells[2] = { nome: 'IA generativa', seed: null };
+render();
+</script>
+</body>
+</html>
