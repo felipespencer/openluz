@@ -35,7 +35,8 @@ Phases: 1 of 8 complete
 | 6 | Versão Android | TBD | Not started | - |
 | 7 | Saída avançada | 2/2 | Complete | 2026-11-05 |
 | 8 | Webcam virtual | 1/1 | ✅ Complete | 2026-11-02 |
-| 9 | Editor de texto | 0/1 | Planned | - |
+| 9 | Editor de texto | 0/1 | In progress (09-01 no checkpoint) | - |
+| 10 | Modelos 3D | 0/1 | Not started | - |
 
 ## Phase Details
 
@@ -184,6 +185,17 @@ batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor
 **Plans:**
 - [ ] 09-01: editor com várias caixas, efeitos e animação; fontes separadas
 - [ ] 09-02: IA generativa como fonte própria (a planejar)
+
+### Phase 10: Modelos 3D
+
+**Goal:** abrir modelos 3D como clipe (pedido de 2026-11-07: "quero que ele leia 3d... .glb, mas que aceite mais formatos tipo obj").
+Formatos: GLB/GLTF, OBJ (+MTL), FBX, STL, PLY, 3MF, DAE. Desenho por three.js (MIT) num canvas que vira textura, fundo transparente;
+girar sozinho, câmera (órbita, zoom), luz pronta, material por cima (cor, arame, só contorno), animações que vêm no GLB/FBX, e ♪ na batida
+nos controles (giro, escala). Recurso só do OpenLume (o Resolume não abre 3D sem o Wire). Maquete antes de construir.
+**Depends on:** nada
+
+**Plans:**
+- [ ] 10-01: a planejar (maquete do painel do clipe 3D primeiro)
 
 ## Ideias para um marco futuro
 
