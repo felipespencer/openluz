@@ -317,6 +317,7 @@ export function serializeClip(c) {
   if (c.kind === 'video' || c.kind === 'image') { if (!c.path) return { ...o, missing: true }; o.path = c.path; }
   if (c.kind === 'source') { o.source = c.source; o.params = c.params; }
   if (c.kind === 'text') o.text = c.text;
+  if (c.iagen) o.iagen = { ...c.iagen, gerando: false, erro: '' };   // ✦ IA generativa: o pedido e as versões vão junto
   if (c.kind === 'camera') { o.deviceId = c.deviceId; }
   if (c.kind === 'capture') o.cap = { srcName: c.cap.srcName, url: c.cap.url, w: c.cap.w, h: c.cap.h, youtube: c.cap.youtube || undefined };
   if (c.kind === 'laser') o.laserId = c.laserId;
@@ -326,7 +327,8 @@ export async function deserializeClip(o, ctx) {
   if (!o) return null;
   let c = null;
   try {
-    if (o.kind === 'video' || o.kind === 'image') { if (!o.path) return null; c = await clipFromPath(o.path, o.name); }
+    // o tipo vem do arquivo: um clipe renomeado (sem extensão no nome) também abre; o nome volta pelo applyClipProps
+    if (o.kind === 'video' || o.kind === 'image') { if (!o.path) return null; c = await clipFromPath(o.path, isVideoName(o.name || '') || isImageName(o.name || '') ? o.name : undefined); }
     else if (o.kind === 'source') c = sourceClip(o.source);
     else if (o.kind === 'text') c = textClip(null, ehCartaz(o.text) ? 'cartaz' : !!(o.text && o.text.animator), o.text || {});
     else if (o.kind === 'camera') { c = await cameraClip(o.deviceId, o.name); }
@@ -346,6 +348,7 @@ export function applyClipProps(c, o) {
   if (o.kind === 'source' && c.params) Object.assign(c.params, o.params || {});
   if (o.kind === 'text' && c.text) { c.text = ehCartaz(o.text) ? JSON.parse(JSON.stringify(o.text)) : migrateText({ ...(o.text || {}) }); c.animHist = null; renderText(c); }
   c.name = o.name || c.name; c.fit = o.fit || c.fit; c.speed = o.speed || 1; c.panim = JSON.parse(JSON.stringify(o.panim || {})); c.afx = (o.afx || []).map(f => ({ ...f, params: { ...f.params } })); c.fx = (o.fx || []).map(f => cloneFx(f)); c.transform = Object.assign(IDENT_TR(), o.transform || {}); c.ap = Object.assign({ mode: 'layer', l: 0, c: 0, dur: 'clip', secs: 5 }, o.ap || {});
+  if (o.iagen) c.iagen = JSON.parse(JSON.stringify(o.iagen));
   if (o.tr) Object.assign(c.tr, o.tr, { playing: true }); if (!c.tr.out) c.tr.out = c.dur; Object.assign(c.audio, o.audio || {}); c.blend = o.blend || ''; c.opacity = o.opacity ?? 1; c.trig = o.trig || 'normal'; c.ignoreColumn = !!o.ignoreColumn;
   return c;
 }

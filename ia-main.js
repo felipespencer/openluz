@@ -183,5 +183,6 @@ function instalar() {
       return { ok: true, resposta: await pedir(s, modelo, chave(c, s), req), servico: s, modelo: s === 'claude' ? CLAUDE_MODELO : modelo };
     } catch (e) { return { ok: false, erro: String(e.message || e) }; }
   });
+  require('./ia-imagem-main.js').instalarImagem({ ler, gravar, chave });   // ✦ IA generativa (09-02): mesmas chaves, mesmo cofre
 }
 module.exports = { instalar };

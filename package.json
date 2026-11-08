@@ -1,7 +1,7 @@
 {
   "name": "openlume",
   "productName": "OpenLume",
-  "version": "0.2.0-beta.56",
+  "version": "0.2.0-beta.57",
   "description": "OpenLume: software livre de VJ e projeção mapeada, no jeito do Resolume",
   "license": "GPL-3.0",
   "main": "main.js",
@@ -21,6 +21,7 @@
       "main.js",
       "lasercube.js",
       "ia-main.js",
+      "ia-imagem-main.js",
       "app/**/*",
       "package.json",
       "!node_modules/onnxruntime-node/bin/napi-v6/{darwin,linux}/**",

@@ -5,6 +5,7 @@ import { FITS } from './engine.js';
 import { MIXER_OPTS, MIXER_OPT, mixerById, mixerColor } from './mixers.js';
 import { EFFECTS, effectById, mkFx } from './effects.js';
 import { sourceById } from './sources.js';
+import { mediaUrl } from './clips.js';
 import { PLAY_MODES, AWAY_MODES, captureNavigate, renderText, textClip, playClip, pauseClip, seekClip, setRate, applyAudio, mediaOf, rebuildAudioFx, updateAudioFx } from './clips.js';
 import { AUTOPILOT } from './composition.js';
 import { SHAPES, BEATS, ANIM } from './beat.js';
@@ -337,6 +338,78 @@ export class Panels {
     }
     P.appendChild(this.pselect('Fundo', 'Fundo|Transparente deixa ver as camadas de baixo.', FUNDOS, t.fundo || 'none', v => { this.ctx.markUndo(); t.fundo = v; up(); }));
   }
+  // ✦ IA generativa (plano 09-02, maquete ia-generativa-mockup.html): pedido, estilo, proporção, quantas, depois; Gerar; versões
+  iagenRows(P, clip) {
+    const st = clip.iagen, D = window.projDesktop;
+    const box = el('div', 'iabox iagen'); P.appendChild(box);
+    box.appendChild(this.phead('✦ IA generativa', '✦ IA generativa|Escreva o que quer ver: a IA faz a imagem e ela vira este clipe. Serviço em Configuração › IA (imagens).'));
+    box.appendChild(this.parea('Pedido', 'Pedido|Descreva a imagem do jeito que sair, em português.', st.pedido, v => { st.pedido = v; }));
+    const chips = el('div', 'iachips');
+    for (const s of ['floresta neon com fumaça', 'mandala fractal, cores quentes', 'cidade à noite chovendo, reflexos', 'tinta escorrendo, preto e dourado', 'onda do mar em xilogravura']) { const b = el('button', '', s); b.type = 'button'; b.onclick = () => { st.pedido = s; this.render(); }; chips.appendChild(b); }
+    box.appendChild(this.prow('Ideias', 'Ideias|Um clique põe a ideia no pedido.', chips));
+    const seg = (lab, help, opts, key, conv = (v) => v) => { const r = el('div', 'iafun'); for (const [v, n] of opts) { const b = el('button', String(st[key]) === String(v) ? 'on' : '', n); b.type = 'button'; b.dataset[key] = v; b.onclick = () => { st[key] = conv(v); if (key === 'depois') { this.ctx.markUndo(); this.aplicarDepois(clip); } this.render(); }; r.appendChild(b); } box.appendChild(this.prow(lab, help, r)); };
+    seg('Estilo', 'Estilo|O jeito da imagem.', [['ia', 'A IA escolhe'], ['foto', 'Foto'], ['ilustracao', 'Ilustração'], ['neon', 'Neon'], ['aquarela', 'Aquarela'], ['psicodelico', 'Psicodélico'], ['xilogravura', 'Xilogravura'], ['vj', 'Fundo p/ VJ'], ['textura', 'Textura em loop']], 'estilo');
+    seg('Proporção', 'Proporção|16:9 enche a tela de projeção; 9:16 é de celular em pé.', [['16:9', '16:9'], ['9:16', '9:16'], ['1:1', '1:1'], ['4:3', '4:3']], 'prop');
+    seg('Quantas', 'Quantas|Quantas versões por vez.', [[1, '1'], [2, '2'], [4, '4']], 'qtd', Number);
+    seg('Depois', 'Depois|O que a imagem faz no ar: fica parada, Ken Burns (zoom lento) ou pulsa na batida.', [['parada', 'Imagem parada'], ['kenburns', 'Ken Burns'], ['batida', 'Loop na batida']], 'depois');
+    const go = el('button', 'wide iago', st.gerando ? (st.espera ? `O serviço pede um tempo: próxima em ${st.espera} s (${st.feitas || 0} de ${st.total})` : `Gerando… ${(st.feitas || 0) + 1} de ${st.total || st.qtd}`) : '✦ Gerar'); go.type = 'button'; go.disabled = !!st.gerando; go.dataset.k = 'gerar';
+    go.onclick = () => this.iaGerar(clip, {}); box.appendChild(go);
+    if (st.gerando) { const b = el('div', 'iaprog'); b.appendChild(el('i')); box.appendChild(b); }
+    const info = el('div', 'iainfo'); info.append(el('span', '', st.erro ? 'Não deu: ' + st.erro : 'Serviço: ' + (st.servico || '…')));
+    const tr = el('a', 'ialink', 'trocar serviço'); tr.onclick = () => this.ctx.iaImgDialog(() => this.render()); info.appendChild(tr); box.appendChild(info);
+    if (!st.servico && D && D.iaImg) D.iaImg.config().then(c => { st.servico = c.servico; if (this.ctx.selectedClip && this.ctx.selectedClip() === clip) this.render(); });
+    if (st.versoes && st.versoes.length) {
+      const row = el('div', 'iaver');
+      st.versoes.forEach((p, i) => {
+        const b = el('div', 'iav' + (i === st.esc ? ' on' : '')); b.dataset.v = i;
+        const im = el('img'); im.src = mediaUrl(p); im.draggable = false; b.appendChild(im);
+        const ac = el('div', 'iaac'); const va = el('button', '', '↻'); va.type = 'button'; va.title = 'Variar: outras parecidas com esta'; va.dataset.k = 'variar';
+        va.onclick = (e) => { e.stopPropagation(); this.iaGerar(clip, { base: p }); };
+        const mx = el('button', '', '⤢'); mx.type = 'button'; mx.title = 'Maior: refaz esta em resolução mais alta'; mx.dataset.k = 'maior';
+        mx.onclick = (e) => { e.stopPropagation(); this.iaGerar(clip, { base: p, maior: true, n: 1 }); };
+        ac.append(va, mx); b.appendChild(ac);
+        b.onclick = () => this.iaEscolherImg(clip, i);
+        row.appendChild(b);
+      });
+      box.appendChild(row);
+    }
+  }
+  async iaGerar(clip, o) {
+    const D = window.projDesktop, st = clip.iagen; if (!D || !D.iaImg || st.gerando) return;
+    if (!String(st.pedido || '').trim()) { st.erro = 'escreva o pedido primeiro'; this.render(); return; }
+    // uma imagem por pedido: a primeira já entra no clipe enquanto as outras chegam; serviço que limita ("1 a cada 45 s",
+    // como o Pollinations sem chave) faz esperar com contagem na tela e tenta de novo
+    const n = o.n || st.qtd, novas = [];
+    st.gerando = true; st.erro = ''; st.feitas = 0; st.total = n; st.espera = 0; this.render();
+    for (let k = 0; k < n; k++) {
+      let r = null;
+      for (let tent = 0; tent < 3; tent++) {
+        r = await D.iaImg.gerar({ pedido: st.pedido, estilo: st.estilo, prop: st.prop, n: 1, base: o.base, maior: !!o.maior, servico: window.__iaImgServico });
+        const m = !r.ok && /(\d+)\s*s(ec|egundos)?/i.exec(r.erro || ''); const lim = !r.ok && /limit|cota|429|retry/i.test(r.erro || '');
+        if (r.ok || !lim) break;
+        let t = Math.min(120, m ? +m[1] + 2 : 47);
+        while (t > 0) { st.espera = t; this.render(); await new Promise(z => setTimeout(z, 1000)); t--; }
+        st.espera = 0;
+      }
+      if (!r.ok) { st.erro = r.erro; if (r.semChave) this.ctx.iaImgDialog(() => this.render()); break; }
+      st.servico = r.servico; novas.push(...r.arquivos); st.versoes = [...r.arquivos, ...(st.versoes || [])].slice(0, 12); st.feitas = k + 1;
+      if (k === 0) { const c2 = await this.iaEscolherImg(clip, 0); if (c2) clip = c2; } else { st.esc = (st.esc ?? 0) + 1; this.render(); }
+    }
+    st.gerando = false; st.espera = 0; this.render();
+  }
+  async iaEscolherImg(clip, i) {
+    const st = clip.iagen, p = st.versoes[i]; if (!p) return;
+    st.esc = i;
+    const n = await this.ctx.iaTrocarImagem(clip, p);
+    if (n) this.aplicarDepois(n);
+    this.render(); return n;
+  }
+  // Depois: Ken Burns e Loop na batida são um Transform com ♪ na escala (dá para ver e mexer na lista de efeitos)
+  aplicarDepois(clip) {
+    const st = clip.iagen; clip.fx = (clip.fx || []).filter(f => !f.iagen);
+    if (st.depois === 'kenburns') clip.fx.push({ id: 'transform', params: { x: 0, y: 0, scale: 1.08, rot: 0 }, bypass: false, iagen: true, panim: { scale: { shape: 'lfo', beats: 32, min: 1.0, max: 1.18 }, x: { shape: 'lfo', beats: 64, min: -0.04, max: 0.04 } } });
+    if (st.depois === 'batida') clip.fx.push({ id: 'transform', params: { x: 0, y: 0, scale: 1, rot: 0 }, bypass: false, iagen: true, panim: { scale: { shape: '1floor', beats: 1, min: 1.0, max: 1.07 } } });
+  }
   // Estilos prontos (maquete presets-texto-mockup.html): um clique quebra o texto e aplica fonte, cor, tamanho e animação
   presetRows(P, clip) {
     const t = clip.text, row = el('div', 'presets'); row.dataset.help = 'Estilos prontos|Um clique monta o cartaz no estilo: a palavra forte fica grande, o resto vira apoio. Depois dá para mexer em tudo à mão; Ctrl+Z volta.';
@@ -399,6 +472,7 @@ export class Panels {
     if (!clip) { $('clipTitle').textContent = 'Clipe'; P.appendChild(el('div', 'vazio', 'Nenhum clipe selecionado. Clique no nome de um clipe para ver a prévia, ou na miniatura para pôr no ar. Solte aqui um arquivo, uma fonte ou um efeito.')); return; }
     $('clipTitle').textContent = clip.name;
     P.appendChild(this.ptext('Nome', 'Nome|O nome do clipe.', clip.name, v => { clip.name = v || clip.name; this.ctx.renderGrid(); }));
+    if (clip.iagen) this.iagenRows(P, clip);
     if (clip.kind === 'video') this.transportRows(P, clip);
     else if (clip.kind === 'image') P.appendChild(this.prow('Tamanho', '', el('span', 'pinfo', clip.w + ' × ' + clip.h)));
     else if (clip.kind === 'source') {

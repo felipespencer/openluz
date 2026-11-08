@@ -126,6 +126,23 @@ async function putFiles(li, col, files) {
   }
   return ok;
 }
+// ✦ IA generativa (plano 09-02): a casa começa com a imagem de espera e o pedido no painel; cada versão escolhida troca a imagem
+// no mesmo lugar, com os mesmos ajustes (e no ar, se estava)
+const IAGEN = () => ({ pedido: '', estilo: 'ia', prop: '16:9', qtd: 4, depois: 'parada', versoes: [], esc: -1, gerando: false, erro: '' });
+async function putIaGen(li, col) {
+  if (!D || !D.iaImg) { toast('A IA generativa só funciona no programa instalado no Windows'); return false; }
+  try { const c = await C.clipFromPath(await D.iaImg.espera()); c.name = 'IA generativa'; c.iagen = IAGEN(); putClip(li, col, c); panels.tab = 'clip'; render(); return true; }
+  catch (e) { toast(e.message); return false; }
+}
+async function iaTrocarImagem(old, path) {
+  let li = -1, col = -1; state.layers.forEach((L, i) => { const k = L.clips.indexOf(old); if (k >= 0) { li = i; col = k; } });
+  if (li < 0) return null;
+  const L = state.layers[li], noAr = L.on === col;
+  const n = await C.clipFromPath(path);
+  C.applyClipProps(n, { ...C.serializeClip(old), kind: 'image' }); n.iagen = old.iagen; n.name = (old.iagen.pedido || 'IA generativa').slice(0, 28);
+  markUndo(); putClip(li, col, n); if (noAr) trigger(li, col);
+  render(); return n;
+}
 async function putPath(li, col, path, name) { try { putClip(li, col, await C.clipFromPath(path, name, D)); return true; } catch (e) { toast(e.message); return false; } }
 // preparar: converte o arquivo (H.264 todo intra ou DXV) e troca o clipe no lugar, mantendo os ajustes
 const preparingNow = new Map();
@@ -197,6 +214,7 @@ function dropInto(li, col, d, files, ctrl) {
   if (!d) return;
   if (d.path) return putPath(li, col, d.path, d.name);
   if (d.source) return putSource(li, col, d.source);
+  if (d.iagen) return putIaGen(li, col);
   if (d.text === 'cartaz') return putText(li, col, null, 'cartaz');
   if (d.text === 'ia') { const c = C.textClip(null, false); c.text.iaFonte = true; putClip(li, col, c); return c; }   // Text Block com o ✦ Montar com IA
   if (d.text) return putText(li, col, null, d.text === 'animator');
@@ -1255,6 +1273,38 @@ async function iaDialog(depois) {
     buttons: [{ label: 'Cancelar' }, { label: 'OK', primary: true, fn: async () => { if (st.chave) await D.ia.salvar({ para: st.servico, chave: st.chave }); await D.ia.salvar({ servico: st.servico }); if (depois) depois(); } }],
   });
 }
+// Configuração › IA (imagens): serviço da ✦ IA generativa e a chave de cada um (as mesmas do Texto com IA no caso do Gemini)
+const IMG_SERVICOS = [
+  ['pollinations', 'Pollinations', 'sem chave', 'Grátis e sem conta. Mais lento, às vezes cai, imagem um pouco menor e com a marca deles no canto.'],
+  ['gemini', 'Google Gemini (imagem)', 'pago', 'A mesma chave do Texto com IA, mas a imagem é paga: em 2026-11-08 a chave grátis respondeu "cota 0". Precisa ativar o faturamento no Google AI Studio.'],
+  ['comfyui', 'No próprio PC (ComfyUI)', 'local', 'Sem internet e sem custo, sem marca. Precisa do ComfyUI aberto, com um modelo baixado, e de placa de vídeo boa.'],
+  ['openai', 'OpenAI (gpt-image)', 'pago', 'Qualidade alta. Chave paga da OpenAI.'],
+];
+async function iaImgDialog(depois) {
+  if (!D || !D.iaImg) { toast('A IA generativa só funciona no programa instalado no Windows'); return; }
+  let cfg = await D.iaImg.config(); const st = { servico: cfg.servico, chave: '' };
+  openDialog({
+    title: 'Configuração › IA (imagens)', width: 560,
+    build: (body, K, redo) => {
+      body.appendChild(el('p', 'dtext', 'A ✦ IA generativa usa o serviço escolhido aqui. A chave fica só neste PC, guardada pelo Windows.'));
+      body.appendChild(K.phead('Serviço'));
+      for (const [id, nome, preco, desc] of IMG_SERVICOS) {
+        const r = el('label', 'iasrv' + (st.servico === id ? ' on' : '')); r.dataset.srv = id;
+        const link = el('a', 'ialink', id === 'comfyui' ? 'Baixar ↗' : id === 'pollinations' ? 'Site ↗' : 'Pegar a chave ↗'); link.href = '#';
+        link.onclick = (e) => { e.preventDefault(); e.stopPropagation(); D.iaImg.site(id); };
+        r.append(el('b', '', nome), el('span', 'iapreco ' + (preco === 'pago' ? 'pago' : preco === 'chave' ? '' : 'grátis'), preco), link, el('span', 'iadesc', desc + ((id === 'gemini' || id === 'openai') && cfg.temChave[id] ? ' · chave guardada' : '')));
+        r.onclick = () => { st.servico = id; st.chave = ''; redo(); };
+        body.appendChild(r);
+      }
+      if (st.servico === 'gemini' || st.servico === 'openai') {
+        const row = K.ptext('Chave', 'Chave|Fica só neste PC, guardada pelo Windows.', st.chave, v => { st.chave = v; });
+        const inp = row.querySelector('input'); inp.type = 'password'; inp.placeholder = cfg.temChave[st.servico] ? '•••••• guardada (cole outra para trocar)' : 'cole a chave aqui';
+        body.appendChild(row);
+      }
+    },
+    buttons: [{ label: 'Cancelar' }, { label: 'OK', primary: true, fn: async () => { if (st.chave) await D.ia.salvar({ para: st.servico, chave: st.chave }); await D.iaImg.servico(st.servico); if (depois) depois(); } }],
+  });
+}
 function preferencesDialog() {
   const p = { recDir: recorder.c.dir || '', showFps: !$('fpsBox').hidden, nudgePct: state.bpm.nudgePct, hwDecode: !window.__projSoftDecode };
   openDialog({
@@ -1286,7 +1336,7 @@ const panels = new Panels({
   prepare: (fmt) => { const s = selectedCell(); if (s) prepareClip(state.layers.indexOf(s.L), s.idx, fmt); }, preparing: (c) => preparingNow.has(c.path) ? preparingNow.get(c.path) : null,
   openLaser: (f) => { laser.sel = f; laser.show(); },
   selectedGroup, setLayerGroup, newGroup, removeGroup, addLayerToGroup, fadeTo, renderDecks, audio,
-  iaDialog: (depois) => iaDialog(depois), editarTexto: (c) => textEditor.abrir(c), selectedCell, putClip, markUndo, bpm: () => state.bpm.bpm, cols: () => COLS,
+  iaDialog: (depois) => iaDialog(depois), editarTexto: (c) => textEditor.abrir(c), iaTrocarImagem, iaImgDialog: (depois) => iaImgDialog(depois), selectedCell, putClip, markUndo, bpm: () => state.bpm.bpm, cols: () => COLS,
 });
 // Depois de gravar: a gravação vira um clipe na primeira casa vazia da camada selecionada, como no Resolume
 async function recordingToClip(path, name, file) {
@@ -1571,7 +1621,7 @@ async function alternarWebcam() {
 // (os valores também mudam por código, sem evento: por isso a conferência periódica)
 function aquaSliders() { const sync = () => { for (const r of document.querySelectorAll('input[type=range]')) { const mn = +r.min || 0, mx = r.max === '' ? 100 : +r.max, p = mx > mn ? Math.max(0, Math.min(1, (+r.value - mn) / (mx - mn))) * 100 : 0, v = p.toFixed(1) + '%'; if (r.style.getPropertyValue('--p') !== v) r.style.setProperty('--p', v); } }; addEventListener('input', sync, true); setInterval(sync, 120); sync(); }
 aquaSliders();
-window.projecionista = { iaDialog, get textEditor() { return textEditor; }, webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
+window.projecionista = { iaDialog, putIaGen, iaTrocarImagem, get textEditor() { return textEditor; }, webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
   probe: (pts) => engine.probe(state.layers, pts),
   probeScreen: (sc, pts) => engine.probeScreen(sc, state.layers, state.screens, pts),
   serialize: () => serializeComposition(state, laser, COLS), load: loadComposition, reset: resetComposition,
