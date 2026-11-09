@@ -45,7 +45,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [09-01 e 09-02: loops fechados; Fase 9 concluída]
   ✓        ✓        ○     [10-01: no checkpoint, esperando o "aprovado"]
   ✓        ✓        ○     [09-03: no checkpoint (beta.59 instalada, e31dbed); falta a chave real do Felipe]
-  ✓        ○        ○     [11-01: Seguir rosto no clipe de câmera, plano criado, começa pela maquete]
+  ✓        ✓        ○     [11-01: no checkpoint — maquete aprovada ("aprovadoo face traccking"), beta.62 instalada (bb27ed8), rosto-check 21/21 com câmera falsa]
 ```
 
 ## Accumulated Context
@@ -111,7 +111,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
 
 Last session: 2026-11-05
 Stopped at: 09-03 criado (2026-11-09); 10-01 no checkpoint, beta.58 instalada. Commits locais ainda não enviados ao GitHub.
-Next action: Felipe colar a chave ID:segredo do Higgsfield, gerar uma imagem e dizer "aprovado" → /paul:unify 09-03; aprovar a maquete do 11-01 quando ela sair; e dizer "aprovado" nos modelos 3D → /paul:unify 10-01.
+Next action: Felipe testar o Seguir rosto com a webcam dele na beta.62 e dizer "aprovado" → /paul:unify 11-01; Felipe colar a chave ID:segredo do Higgsfield, gerar uma imagem e dizer "aprovado" → /paul:unify 09-03; aprovar a maquete do 11-01 quando ela sair; e dizer "aprovado" nos modelos 3D → /paul:unify 10-01.
 Resume file: .paul/phases/09-editor-de-texto/09-03-PLAN.md
 Resume context: Resolume: API em 127.0.0.1:8080; Saída avançada Screen 1 = Spout "Arena - Screen 1". ARMADILHAS desta máquina: o Resolume congela de vez em quando (API responde, Spout some, monitor preto) — reiniciar só o Arena resolve (ele abre com o aviso "Wire integration is missing", é só Continue); clipe H.264 a 60 fps congela nele; a marca d'água do demo passa pela captura (compare.mjs já captura duas vezes); o Resolume rende a ~30 fps aqui. OpenLuz: `location.reload()` NÃO recarrega os módulos (cache do app://), é preciso reabrir o Electron; o diálogo "Projetores" abre ao iniciar (botão Pular). Clipes de teste em tools/compare/clips (rampa, alfa.png, quadA/B/C.png, andando.mp4 a 375 px/s).
 
