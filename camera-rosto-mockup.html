@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seguir rosto</title>
+<!-- Maquete do plano 11-01: o clipe de câmera ganha "Seguir rosto". Detector YuNet (OpenCV Zoo, MIT) no onnxruntime-web que já vem
+     no programa (app/vendor/ort). Abrir por http (ex.: py -m http.server na pasta do projeto), não por file://. -->
+<style>
+  :root { --bg:#151515; --pan:#1f1f1f; --ln:#333; --tx:#ddd; --mut:#8b8b8b; --aqua:#7fd6c2; --lar:#ff8a2b; --verde:#5fd38a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#0c0c0c; color:var(--tx); font:12px "Segoe UI", system-ui, sans-serif; }
+  .nota { padding:8px 14px; color:var(--mut); border-bottom:1px solid #222; line-height:1.45; } .nota b { color:#eee; }
+  .app { display:grid; grid-template-columns:1fr 1fr 330px; gap:10px; padding:10px 14px; }
+  .box { background:var(--pan); border:1px solid var(--ln); border-radius:4px; padding:8px; }
+  h3 { margin:0 0 6px; font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; display:flex; justify-content:space-between; }
+  h3 small { text-transform:none; letter-spacing:0; color:#666; }
+  .tela { position:relative; background:#000; aspect-ratio:16/9; border:1px solid #2a2a2a; border-radius:2px; overflow:hidden; }
+  .tela canvas { width:100%; height:100%; display:block; }
+  .fonte { display:flex; gap:4px; margin-top:8px; } .fonte button { flex:1; }
+  button { height:24px; padding:0 8px; border:0; border-radius:2px; background:#3a3a3a; color:#ddd; cursor:pointer; font:inherit; }
+  button.on { background:var(--aqua); color:#111; font-weight:600; }
+  .medidas { margin-top:8px; color:var(--mut); line-height:1.6; } .medidas b { color:#ddd; font-weight:600; }
+  .painel { grid-row:1 / 3; grid-column:3; padding:0; }
+  .ph { font-weight:700; padding:6px 10px; background:#202a26; border-left:3px solid var(--aqua); }
+  .ph small { color:var(--mut); font-weight:400; margin-left:6px; }
+  .sec { padding:4px 10px 10px; border-top:1px solid #2a2a2a; }
+  .gh { font-size:10.5px; color:var(--aqua); font-weight:700; letter-spacing:.06em; margin:10px 0 4px; display:flex; align-items:center; justify-content:space-between; }
+  .row { display:grid; grid-template-columns:92px 1fr 46px 16px; gap:6px; align-items:center; margin:5px 0; }
+  .row > span:first-child { color:var(--mut); } .row output { color:#aaa; text-align:right; font-size:11px; }
+  .row .n8 { cursor:pointer; color:#555; text-align:center; } .row .n8.on { color:var(--lar); }
+  .row.full { grid-template-columns:92px 1fr; }
+  input[type=range] { width:100%; accent-color:var(--aqua); }
+  .seg { display:flex; flex-wrap:wrap; gap:3px; } .seg button { height:22px; }
+  .liga { display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; user-select:none; }
+  .liga i { width:30px; height:16px; border-radius:8px; background:#444; position:relative; display:block; }
+  .liga i::after { content:""; position:absolute; left:2px; top:2px; width:12px; height:12px; border-radius:50%; background:#bbb; transition:left .15s; }
+  .liga.on i { background:var(--aqua); } .liga.on i::after { left:16px; background:#111; }
+  .liga b { font-size:12.5px; } .liga small { color:var(--mut); margin-left:auto; }
+  .off { opacity:.4; pointer-events:none; }
+  .info { color:var(--mut); line-height:1.6; padding:6px 10px; } .info b { color:#ddd; font-weight:600; }
+  .baixo { grid-column:1 / 3; color:var(--mut); line-height:1.55; }
+  .baixo b { color:#ddd; }
+  .bpm { display:inline-flex; gap:4px; vertical-align:middle; margin-left:6px; } .bpm i { width:8px; height:8px; border-radius:50%; background:#333; display:block; } .bpm i.on { background:var(--lar); }
+</style>
+</head>
+<body>
+<div class="nota"><b>Maquete — câmera que segue o rosto</b>. Liga no painel do clipe de câmera (direita). À esquerda, a imagem inteira da câmera, com o rosto achado
+(verde) e o pedaço que vai para a camada (laranja). No meio, o que a camada recebe. O rosto é achado <b>aqui no PC</b>, sem internet, e nada fica guardado:
+o programa acha "um rosto", não sabe de quem é. Use a <b>webcam</b> (o navegador pede licença) ou o <b>exemplo</b> (foto com duas pessoas, andando de um lado para o outro).</div>
+<div class="app">
+  <div class="box">
+    <h3>Prévia · imagem inteira da câmera <small id="tam"></small></h3>
+    <div class="tela"><canvas id="cvPrev" width="960" height="540"></canvas></div>
+    <div class="fonte"><button id="bWeb">Webcam</button><button id="bEx" class="on">Exemplo (duas pessoas andando)</button></div>
+  </div>
+  <div class="box">
+    <h3>O que a camada recebe <small>a saída não mostra marcação</small></h3>
+    <div class="tela"><canvas id="cvOut" width="960" height="540"></canvas></div>
+    <div class="medidas" id="med">carregando o detector…</div>
+  </div>
+  <div class="box painel">
+    <div class="ph">Câmera <small id="camNome">Exemplo · 1280 × 720</small></div>
+    <div class="liga on" id="liga"><i></i><b>Seguir rosto</b><small>recorta e acompanha</small></div>
+    <div class="sec" id="ctl">
+      <div class="gh">ENQUADRAMENTO</div>
+      <div class="row full"><span>Enquadrar</span><div class="seg" data-k="enq"><button data-v="rosto">Rosto</button><button data-v="busto" class="on">Busto</button><button data-v="corpo">Corpo</button></div></div>
+      <div class="row"><span>Zoom</span><input type="range" min="0.5" max="2" step="0.01" value="1" data-k="zoom"><output></output><span class="n8" data-a="zoom" title="♪ na batida">♪</span></div>
+      <div class="row"><span>Altura</span><input type="range" min="0.2" max="0.6" step="0.01" value="0.36" data-k="alt"><output></output><span class="n8" data-a="alt" title="♪ na batida">♪</span></div>
+      <div class="gh">MOVIMENTO</div>
+      <div class="row"><span>Suavidade</span><input type="range" min="0" max="1" step="0.01" value="0.6" data-k="suave"><output></output><span></span></div>
+      <div class="row full"><span>Vários rostos</span><div class="seg" data-k="varios"><button data-v="maior" class="on">O maior</button><button data-v="todos">Todos juntos</button><button data-v="meio">O do meio</button></div></div>
+      <div class="row full"><span>Sem rosto</span><div class="seg" data-k="sem"><button data-v="fica" class="on">Fica onde estava</button><button data-v="inteira">Volta à imagem inteira</button><button data-v="centro">Centro</button></div></div>
+      <div class="gh">PRÉVIA</div>
+      <div class="row full"><span>Marcação</span><div class="seg" data-k="marca"><button data-v="1" class="on">Mostrar na Prévia</button><button data-v="0">Esconder</button></div></div>
+    </div>
+    <div class="info" id="info">Rostos: <b>–</b></div>
+    <div class="info">BPM 120 <span class="bpm" id="bpm"><i></i><i></i><i></i><i></i></span></div>
+  </div>
+  <div class="box baixo">
+    <b>Como fica no programa:</b> o grupo "Seguir rosto" aparece só no clipe de câmera (webcam e câmera do celular). Desligado, a câmera fica exatamente igual a hoje.
+    O recorte acontece antes dos efeitos, então o <b>Background Removal</b> e os outros efeitos veem a imagem já enquadrada. Zoom e Altura aceitam ♪ e MIDI.
+    A composição salva guarda os ajustes; a cópia para outra casa segue o rosto sozinha; Ctrl+Z desfaz cada ajuste.
+  </div>
+</div>
+<script src="app/vendor/ort/ort.webgpu.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const P = { on: true, enq: 'busto', zoom: 1, alt: 0.36, suave: 0.6, varios: 'maior', sem: 'fica', marca: '1' };
+const anim = { zoom: false, alt: false };
+const ENQ = { rosto: 2.0, busto: 3.0, corpo: 6.5 };   // altura do recorte em alturas de rosto
+// ---------- fontes: webcam ou exemplo ----------
+const src = document.createElement('canvas'); src.width = 1280; src.height = 720; const sx = src.getContext('2d', { willReadFrequently: true });
+let video = null, foto = new Image(); foto.src = 'tools/compare/clips/rostos.jpg';
+function desenhaFonte(t) {
+  if (video && video.readyState >= 2) { if (src.width !== video.videoWidth) { src.width = video.videoWidth; src.height = video.videoHeight; } sx.drawImage(video, 0, 0, src.width, src.height); return; }
+  if (src.width !== 1280) { src.width = 1280; src.height = 720; }
+  sx.fillStyle = '#2b2b2b'; sx.fillRect(0, 0, 1280, 720);
+  if (!foto.complete || !foto.naturalWidth) return;
+  // a foto (1024×576) passeia pela imagem: as pessoas andam de um lado para o outro, param, e às vezes saem de quadro
+  const ciclo = (t / 1000) % 16, w = 980, h = w * foto.naturalHeight / foto.naturalWidth;
+  let x = ciclo < 6 ? -120 + 420 * (ciclo / 6) : ciclo < 9 ? 300 : ciclo < 13 ? 300 - 420 * ((ciclo - 9) / 4) : ciclo < 14.5 ? -120 - 900 * ((ciclo - 13) / 1.5) : -1020 + 900 * ((ciclo - 14.5) / 1.5);
+  sx.drawImage(foto, x, 720 - h - 20 + 14 * Math.sin(t / 700), w, h);
+}
+$('bEx').onclick = () => { if (video) { video.srcObject.getTracks().forEach(t => t.stop()); video = null; } $('bEx').classList.add('on'); $('bWeb').classList.remove('on'); $('camNome').textContent = 'Exemplo · 1280 × 720'; };
+$('bWeb').onclick = async () => {
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+    video = document.createElement('video'); video.muted = true; video.playsInline = true; video.srcObject = st; await video.play();
+    $('bWeb').classList.add('on'); $('bEx').classList.remove('on'); $('camNome').textContent = 'Webcam · ' + video.videoWidth + ' × ' + video.videoHeight;
+  } catch (e) { $('med').textContent = 'A webcam não abriu (' + e.name + '): fica o exemplo.'; }
+};
+// ---------- detector YuNet (entrada fixa 640×640, BGR 0..255) ----------
+let sess = null, ocupado = false, ultimo = [], msDet = 0, nDet = 0, t0Det = performance.now(), porSeg = 0;
+const lb = document.createElement('canvas'); lb.width = lb.height = 640; const lx = lb.getContext('2d', { willReadFrequently: true });
+const inp = new Float32Array(3 * 640 * 640);
+(async () => {
+  ort.env.wasm.wasmPaths = new URL('app/vendor/ort/', location.href).href; ort.env.wasm.numThreads = 1;
+  try { sess = await ort.InferenceSession.create('app/vendor/yunet/face_detection_yunet_2023mar.onnx', { executionProviders: ['wasm'] }); }
+  catch (e) { $('med').textContent = 'O detector não carregou: ' + e.message + ' (abra por http, não por arquivo)'; }
+})();
+async function detectar() {
+  if (!sess || ocupado) return; ocupado = true;
+  const s = 640 / Math.max(src.width, src.height), w = Math.round(src.width * s), h = Math.round(src.height * s);
+  lx.fillStyle = '#000'; lx.fillRect(0, 0, 640, 640); lx.drawImage(src, 0, 0, w, h);
+  const d = lx.getImageData(0, 0, 640, 640).data, N = 640 * 640;
+  for (let i = 0; i < N; i++) { inp[i] = d[i * 4 + 2]; inp[N + i] = d[i * 4 + 1]; inp[2 * N + i] = d[i * 4]; }
+  const t = performance.now();
+  const o = await sess.run({ input: new ort.Tensor('float32', inp, [1, 3, 640, 640]) });
+  msDet = performance.now() - t;
+  let cx = [];
+  for (const st of [8, 16, 32]) {
+    const cls = o['cls_' + st].data, obj = o['obj_' + st].data, bb = o['bbox_' + st].data, cols = 640 / st;
+    for (let i = 0; i < cls.length; i++) {
+      const sc = Math.sqrt(Math.min(1, Math.max(0, cls[i])) * Math.min(1, Math.max(0, obj[i]))); if (sc < 0.6) continue;
+      const r = Math.floor(i / cols), c = i % cols, bw = Math.exp(bb[i * 4 + 2]) * st, bh = Math.exp(bb[i * 4 + 3]) * st;
+      cx.push({ x: ((c + bb[i * 4]) * st - bw / 2) / s, y: ((r + bb[i * 4 + 1]) * st - bh / 2) / s, w: bw / s, h: bh / s, sc });
+    }
+  }
+  cx.sort((a, b) => b.sc - a.sc); const fica = [];
+  for (const b of cx) if (fica.every(f => iou(b, f) < 0.3)) fica.push(b);
+  ultimo = fica; nDet++; ocupado = false;
+}
+const iou = (a, b) => { const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y), x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h); const i = Math.max(0, x2 - x1) * Math.max(0, y2 - y1); return i / (a.w * a.h + b.w * b.h - i + 1e-9); };
+// ---------- rastreio: escolhe o rosto, guarda o mesmo entre quadros, alvo do recorte, filtro 1€ ----------
+let seguido = null, semDesde = 0;
+function escolher(rs) {
+  if (!rs.length) return null;
+  if (P.varios === 'todos') { const x0 = Math.min(...rs.map(r => r.x)), y0 = Math.min(...rs.map(r => r.y)), x1 = Math.max(...rs.map(r => r.x + r.w)), y1 = Math.max(...rs.map(r => r.y + r.h)); const hm = rs.reduce((a, r) => a + r.h, 0) / rs.length; return { x: x0, y: y0, w: x1 - x0, h: hm, todos: { h: y1 - y0 } }; }
+  // continua no mesmo rosto se ele ainda está lá (não pula de pessoa)
+  if (seguido && !seguido.todos) { const m = rs.map(r => [r, iou(r, seguido)]).sort((a, b) => b[1] - a[1])[0]; if (m[1] > 0.2) return m[0]; }
+  if (P.varios === 'meio') return rs.slice().sort((a, b) => Math.abs(a.x + a.w / 2 - src.width / 2) - Math.abs(b.x + b.w / 2 - src.width / 2))[0];
+  return rs.slice().sort((a, b) => b.w * b.h - a.w * a.h)[0];
+}
+class UmEuro { constructor() { this.x = null; this.dx = 0; } passo(v, dt, minCut, beta) { if (this.x == null) { this.x = v; return v; } const a = (c) => { const r = 2 * Math.PI * c * dt; return r / (r + 1); }; const dv = (v - this.x) / dt; this.dx += a(1) * (dv - this.dx); const cut = minCut + beta * Math.abs(this.dx); this.x += a(cut) * (v - this.x); return this.x; } }
+const fX = new UmEuro(), fY = new UmEuro(), fH = new UmEuro();
+let crop = null;
+function alvo(f, t) {
+  const W = src.width, H = src.height, asp = 16 / 9;
+  if (!f) return P.sem === 'inteira' || !crop ? { cx: W / 2, cy: H / 2, h: H } : P.sem === 'centro' ? { cx: W / 2, cy: H / 2, h: crop.h } : crop;
+  const zoom = P.zoom * (anim.zoom ? 1 + 0.12 * pulso(t) : 1), alt = P.alt + (anim.alt ? 0.06 * pulso(t) : 0);
+  let h = (f.todos ? Math.max(f.todos.h * 1.6, f.h * ENQ[P.enq]) : f.h * ENQ[P.enq]) / zoom;
+  if (f.todos) h = Math.max(h, (f.w * 1.25) / asp);
+  h = Math.min(H, W / asp, Math.max(H * 0.12, h));
+  const fcx = f.x + f.w / 2, fcy = f.y + f.h / 2;
+  return { cx: fcx, cy: fcy + h * (0.5 - alt), h };
+}
+const pulso = (t) => { const b = (t / 1000) * 2; return Math.pow(1 - (b % 1), 3); };   // 120 BPM, golpe e queda
+// ---------- laço ----------
+const cP = $('cvPrev').getContext('2d'), cO = $('cvOut').getContext('2d');
+let tAnt = performance.now(), tDet = 0;
+function quadro(t) {
+  const dt = Math.max(1 / 120, (t - tAnt) / 1000); tAnt = t;
+  desenhaFonte(t); const W = src.width, H = src.height, asp = 16 / 9;
+  if (P.on && t - tDet > 66) { tDet = t; detectar(); }   // ~15 por segundo
+  const f = P.on ? escolher(ultimo) : null; if (f) { seguido = f; semDesde = 0; } else if (!semDesde) semDesde = t;
+  const segura = !f && semDesde && t - semDesde < 1000 && crop;
+  let a = P.on ? (segura ? crop : alvo(f, t)) : { cx: W / 2, cy: H / 2, h: H };
+  const minCut = 0.05 + (1 - P.suave) * 3, beta = 0.002 + (1 - P.suave) * 0.02;
+  let cx = fX.passo(a.cx, dt, minCut, beta), cy = fY.passo(a.cy, dt, minCut, beta), h = fH.passo(a.h, dt, minCut, beta * 0.5);
+  h = Math.min(h, H, W / asp); const w = h * asp;
+  cx = Math.min(W - w / 2, Math.max(w / 2, cx)); cy = Math.min(H - h / 2, Math.max(h / 2, cy));
+  crop = { cx, cy, h };
+  // saída: só o recorte, preenchendo
+  cO.drawImage(src, cx - w / 2, cy - h / 2, w, h, 0, 0, 960, 540);
+  // prévia: imagem inteira + marcação
+  const k = Math.min(960 / W, 540 / H), ox = (960 - W * k) / 2, oy = (540 - H * k) / 2;
+  cP.fillStyle = '#000'; cP.fillRect(0, 0, 960, 540); cP.drawImage(src, ox, oy, W * k, H * k);
+  if (P.marca === '1' && P.on) {
+    cP.fillStyle = 'rgba(0,0,0,.45)'; const rx = ox + (cx - w / 2) * k, ry = oy + (cy - h / 2) * k, rw = w * k, rh = h * k;
+    cP.fillRect(ox, oy, W * k, ry - oy); cP.fillRect(ox, ry + rh, W * k, oy + H * k - ry - rh); cP.fillRect(ox, ry, rx - ox, rh); cP.fillRect(rx + rw, ry, ox + W * k - rx - rw, rh);
+    cP.strokeStyle = '#ff8a2b'; cP.lineWidth = 2; cP.strokeRect(rx, ry, rw, rh);
+    for (const r of ultimo) { const sel = f && !f.todos && r.x === f.x && r.y === f.y; cP.strokeStyle = sel || P.varios === 'todos' ? '#5fd38a' : 'rgba(95,211,138,.45)'; cP.lineWidth = sel ? 2.5 : 1.5; cP.strokeRect(ox + r.x * k, oy + r.y * k, r.w * k, r.h * k); }
+  }
+  $('tam').textContent = W + ' × ' + H;
+  if (t - t0Det > 1000) { porSeg = nDet / ((t - t0Det) / 1000); nDet = 0; t0Det = t; }
+  if (sess) $('med').innerHTML = P.on ? `Detector: <b>${msDet.toFixed(1)} ms</b> por vez · <b>${porSeg.toFixed(0)}</b> vezes por segundo · recorte de <b>${Math.round(w)} × ${Math.round(h)}</b> px (zoom ${(H / h).toFixed(2)}×)` : 'Seguir rosto desligado: a camada recebe a imagem inteira, igual a hoje.';
+  $('info').innerHTML = 'Rostos na imagem: <b>' + (P.on ? ultimo.length : '–') + '</b>' + (P.on && !f && semDesde ? ' · sem rosto: ' + (t - semDesde < 1000 ? 'segurando' : { fica: 'fica onde estava', inteira: 'voltando à imagem inteira', centro: 'centro' }[P.sem]) : '');
+  [...$('bpm').children].forEach((e, i) => e.classList.toggle('on', Math.floor((t / 500) % 4) === i));
+  requestAnimationFrame(quadro);
+}
+requestAnimationFrame(quadro);
+// ---------- painel ----------
+$('liga').onclick = () => { P.on = !P.on; $('liga').classList.toggle('on', P.on); $('ctl').classList.toggle('off', !P.on); if (!P.on) ultimo = []; };
+for (const sg of document.querySelectorAll('.seg[data-k]')) for (const b of sg.children) b.onclick = () => { P[sg.dataset.k] = b.dataset.v; [...sg.children].forEach(x => x.classList.toggle('on', x === b)); if (sg.dataset.k === 'varios') seguido = null; };
+for (const r of document.querySelectorAll('input[data-k]')) { const o = r.nextElementSibling, k = r.dataset.k, mostra = () => { o.textContent = k === 'zoom' ? (+r.value).toFixed(2) + '×' : Math.round(r.value * 100) + '%'; }; r.oninput = () => { P[k] = +r.value; mostra(); }; mostra(); }
+for (const n of document.querySelectorAll('.n8')) n.onclick = () => { anim[n.dataset.a] = !anim[n.dataset.a]; n.classList.toggle('on', anim[n.dataset.a]); };
+</script>
+</body>
+</html>
