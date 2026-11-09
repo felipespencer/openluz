@@ -10,6 +10,14 @@ const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { LaserCube } = require('./lasercube.js');
 
+// Baterias de teste: PROJ_USERDATA põe o programa noutra pasta de dados (chaves, composições e trava próprias).
+if (process.env.PROJ_USERDATA) app.setPath('userData', process.env.PROJ_USERDATA);
+// Uma cópia só por pasta de dados: duas abertas brigavam pela composição salva e pelas janelas de saída, e a tela piscava
+// (Felipe, 2026-11-09: "tá piscando o openluz todo errado"). Abrir de novo só traz a que já está aberta para a frente.
+let mainWin = null;
+if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+app.on('second-instance', () => { if (mainWin && !mainWin.isDestroyed()) { if (mainWin.isMinimized()) mainWin.restore(); mainWin.show(); mainWin.focus(); } });
+
 // Renomeado de OpenLume para OpenLuz (2026-11-09): a pasta de dados leva o nome do produto, então os dados da antiga (preferências,
 // chaves da IA, composições, presets, certificado do celular, armazenamento da página) são copiados uma vez para a nova, arquivo por
 // arquivo e sem sobrescrever, pulando os caches. Uma marca na pasta nova evita repetir; a pasta antiga fica intacta.
@@ -161,6 +169,7 @@ function createMain() {
     backgroundColor: '#1b1c1f', title: 'OpenLuz', autoHideMenuBar: true,
     webPreferences: { ...PREFS, preload: path.join(APP_DIR, 'preload.js') },
   });
+  mainWin = win;
   win.webContents.on('render-process-gone', (_e, d) => {
     lastCrash = 'a janela caiu: ' + d.reason + ' (código ' + d.exitCode + ')'; logLine('janela', lastCrash + ' — reabrindo');
     if (d.reason !== 'clean-exit' && d.reason !== 'killed' && !win.isDestroyed()) setTimeout(() => { try { win.webContents.reload(); } catch { } }, 500);

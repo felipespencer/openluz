@@ -355,14 +355,17 @@ export class Panels {
     const go = el('button', 'wide iago', st.gerando ? (st.espera ? `O serviço pede um tempo: próxima em ${st.espera} s (${st.feitas || 0} de ${st.total})` : `Gerando… ${(st.feitas || 0) + 1} de ${st.total || st.qtd}`) : '✦ Gerar'); go.type = 'button'; go.disabled = !!st.gerando; go.dataset.k = 'gerar';
     go.onclick = () => this.iaGerar(clip, {}); box.appendChild(go);
     if (st.gerando) { const b = el('div', 'iaprog'); b.appendChild(el('i')); box.appendChild(b); }
-    const info = el('div', 'iainfo'); info.append(el('span', '', st.erro ? 'Não deu: ' + st.erro : 'Serviço: ' + (st.servico || '…')));
-    const tr = el('a', 'ialink', 'trocar serviço'); tr.onclick = () => this.ctx.iaImgDialog(() => this.render()); info.appendChild(tr); box.appendChild(info);
+    const NOMES = { pollinations: 'Pollinations', gemini: 'Gemini', comfyui: 'ComfyUI', openai: 'OpenAI', higgsfield: 'Higgsfield' };
+    const sp = el('span', '', st.erro ? 'Não deu: ' + st.erro : 'Serviço: …');
+    const info = el('div', 'iainfo'); info.append(sp);
+    const tr = el('a', 'ialink', 'trocar serviço'); tr.onclick = () => this.ctx.iaImgDialog(() => { st.erro = ''; st.trocar = false; this.render(); }); info.appendChild(tr); box.appendChild(info);
     if (st.erro && st.trocar && !st.gerando) {   // não adianta insistir com este serviço: um clique passa para o grátis e gera de novo
       const b = el('button', 'wide', 'Usar o Pollinations (grátis) e gerar'); b.type = 'button'; b.dataset.k = 'usarGratis';
       b.onclick = async () => { await D.iaImg.servico('pollinations'); st.servico = 'pollinations'; st.trocar = false; this.iaGerar(clip, {}); };
       box.appendChild(b);
     }
-    if (!st.servico && D && D.iaImg) D.iaImg.config().then(c => { st.servico = c.servico; if (this.ctx.selectedClip && this.ctx.selectedClip() === clip) this.render(); });
+    // o serviço vem SEMPRE da configuração (antes ficava guardado no clipe e não mudava ao trocar em Configuração › IA)
+    if (D && D.iaImg) D.iaImg.config().then(c => { st.servico = c.servico; if (!st.erro) sp.textContent = 'Serviço: ' + (NOMES[c.servico] || c.servico); });
     if (st.versoes && st.versoes.length) {
       const row = el('div', 'iaver');
       st.versoes.forEach((p, i) => {

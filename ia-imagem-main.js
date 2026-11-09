@@ -57,7 +57,7 @@ function erroDoServico(url, status, j, txt) {
     if (/limit:\s*0\b/.test(det)) return mk('a chave do Gemini não tem imagem grátis (o Google dá cota zero de imagem sem faturamento). Ative o faturamento no Google AI Studio ou use o Pollinations', { trocar: true });
     return mk('o Gemini pediu um tempo (limite por minuto)', { esperar: Math.min(120, (seg ? +seg[1] : 30) + 2) });
   }
-  if (/not_enough_credits|insufficient.*(credit|balance|fund)|billing_hard_limit/i.test(det) || status === 402) return mk('sem crédito no ' + ({ higgsfield: 'Higgsfield: ponha saldo em console.higgsfield.ai', openai: 'OpenAI: ponha saldo em platform.openai.com', gemini: 'Gemini' }[quem] || 'serviço'), { trocar: true });
+  if (/not_enough_credits|insufficient_quota|credit_balance|no credits remaining|insufficient.*(credit|balance|fund)|billing_hard_limit/i.test(det + ' ' + txt) || status === 402) return mk('sem crédito no ' + ({ higgsfield: 'Higgsfield: ponha saldo em console.higgsfield.ai', openai: 'OpenAI: ponha saldo em platform.openai.com', gemini: 'Gemini' }[quem] || 'serviço'), { trocar: true });
   if (status === 401 || status === 403) return mk('a chave não foi aceita (' + status + '): confira se colou inteira' + (quem === 'higgsfield' ? ', no formato ID:segredo' : ''), { trocar: true });
   if (status === 429) return mk('o serviço pediu um tempo (429)', { esperar: Math.min(120, (seg ? +seg[1] : 30) + 2) });
   if (status >= 500) return mk('o serviço está com problema agora (' + status + '): tente de novo daqui a pouco ou troque de serviço');
