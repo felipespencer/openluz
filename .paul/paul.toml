@@ -21,7 +21,7 @@ status = "in_progress"
 plans_completed = 4
 
 [loop]
-position = "PLAN"
+position = "APPLY"
 plan = "09-03"
 plan_path = "phases/09-editor-de-texto/09-03-PLAN.md"
 
