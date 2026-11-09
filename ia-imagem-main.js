@@ -7,8 +7,10 @@ const path = require('node:path');
 const fs = require('node:fs');
 const zlib = require('node:zlib');
 
-const SERVICOS_IMG = ['gemini', 'pollinations', 'comfyui', 'openai'];
-const SITES_IMG = { gemini: 'https://aistudio.google.com/apikey', openai: 'https://platform.openai.com/api-keys', comfyui: 'https://www.comfy.org/download', pollinations: 'https://pollinations.ai' };
+const SERVICOS_IMG = ['gemini', 'pollinations', 'comfyui', 'openai', 'higgsfield'];
+const PAGOS_IMG = ['gemini', 'openai', 'higgsfield'];
+const NOME_IMG = { gemini: 'Gemini', openai: 'OpenAI', higgsfield: 'Higgsfield' };
+const SITES_IMG = { gemini: 'https://aistudio.google.com/apikey', openai: 'https://platform.openai.com/api-keys', comfyui: 'https://www.comfy.org/download', pollinations: 'https://pollinations.ai', higgsfield: 'https://console.higgsfield.ai' };
 const ESTILO = {
   ia: '', foto: 'fotografia realista, luz natural, alta definição', ilustracao: 'ilustração digital colorida, traço limpo',
   neon: 'estética neon cyberpunk, cores saturadas brilhando no escuro', aquarela: 'pintura em aquarela, manchas suaves, papel texturizado',
@@ -48,7 +50,7 @@ async function buscar(url, opts = {}, ms = 120000) {
     if (!r.ok) {
       const txt = await r.text().catch(() => ''); let j = null; try { j = JSON.parse(txt); } catch { }
       const msg = (j && (j.error && (j.error.message || j.error))) || txt.slice(0, 200) || ('HTTP ' + r.status);
-      const e = new Error(r.status === 429 ? (/generativelanguage/.test(url) ? 'o Gemini não liberou imagem para esta chave (429): a imagem dele é paga; ative o faturamento no Google AI Studio ou use o Pollinations' : 'o serviço disse que a cota acabou por agora (429): tente daqui a pouco ou troque de serviço') : r.status === 401 || r.status === 403 ? 'a chave não foi aceita (' + r.status + ')' : String(msg)); e.status = r.status; throw e;
+      const e = new Error(r.status === 429 ? (/generativelanguage/.test(url) ? 'o Gemini não liberou imagem para esta chave (429): a imagem dele é paga; ative o faturamento no Google AI Studio ou use o Pollinations' : 'o serviço disse que a cota acabou por agora (429): tente daqui a pouco ou troque de serviço') : r.status === 401 || r.status === 403 ? 'a chave não foi aceita (' + r.status + ')' : r.status === 402 ? 'sem saldo no serviço (402): ponha crédito na conta (no Higgsfield, em console.higgsfield.ai)' : String(msg)); e.status = r.status; throw e;
     }
     return r;
   } catch (e) { if (e.name === 'AbortError') throw new Error('o serviço demorou demais para responder'); if (/fetch failed/.test(e.message)) throw new Error('sem conexão com o serviço'); throw e; } finally { fim(); }
@@ -87,6 +89,44 @@ async function openai(k, r, n) {
   const j = await res.json();
   return (j.data || []).map(d => ({ buf: Buffer.from(d.b64_json, 'base64'), mime: 'image/png' }));
 }
+// Higgsfield (plano 09-03): SOUL 2 pela API pública (docs.higgsfield.ai, lida em 2026-11-09). Chave = "ID:segredo" do console;
+// pedido na fila → acompanha pelo status_url que a resposta trouxe (só se for do mesmo host: a chave não vai para outro lugar)
+// → baixa images[].url na hora (a URL expira). batch_size só aceita 1 ou 4: 4 vai num pedido, 1 e 2 vão um por um.
+// PROJ_HIGGS_URL (só no programa de desenvolvimento) aponta para o servidor de mentira da bateria (tools/higgs-falso.mjs).
+const HIGGS = () => (!app.isPackaged && process.env.PROJ_HIGGS_URL) || 'https://api.higgsfield.ai';
+const HIGGS_PROP = { '16:9': 16 / 9, '9:16': 9 / 16, '4:3': 4 / 3, '3:4': 3 / 4, '1:1': 1, '2:3': 2 / 3, '3:2': 3 / 2 };
+const espera = (ms) => new Promise(r => setTimeout(r, ms));
+async function higgsfield(k, r, n) {
+  if (!/^[^:\s]+:[^:\s]+$/.test(k)) throw new Error('a chave do Higgsfield é ID:segredo (as duas partes que o console mostra, com dois-pontos no meio)');
+  const base = HIGGS(), host = new URL(base).host, seguro = new URL(base).protocol === 'https:';
+  const [pw, ph] = (r.prop || '16:9').split(':').map(Number), alvo = pw && ph ? pw / ph : 16 / 9;
+  const aspect = Object.keys(HIGGS_PROP).reduce((a, b) => Math.abs(Math.log(HIGGS_PROP[b] / alvo)) < Math.abs(Math.log(HIGGS_PROP[a] / alvo)) ? b : a);
+  const H = () => ({ 'Content-Type': 'application/json', Authorization: 'Key ' + k, 'Idempotency-Key': require('node:crypto').randomUUID() });
+  const doHost = (u) => { try { const x = new URL(u); return x.host === host && (x.protocol === 'https:' || !seguro); } catch { return false; } };
+  const um = async (lote) => {
+    const res = await buscar(base + '/higgsfield-ai/soul/v2/standard', { method: 'POST', headers: H(), body: JSON.stringify({ prompt: textoPedido(r), aspect_ratio: aspect, resolution: r.maior ? '1080p' : '720p', batch_size: lote }) }, 60000);
+    let j = await res.json();
+    const st = j.status_url || (j.request_id ? base + '/requests/' + encodeURIComponent(j.request_id) + '/status' : '');
+    if (!st || !doHost(st)) throw new Error('o Higgsfield respondeu sem um endereço de acompanhamento válido');
+    const t0 = Date.now();
+    while (!['completed', 'failed', 'nsfw', 'canceled'].includes(j.status)) {
+      if (Date.now() - t0 > 300000) {
+        if (j.cancel_url && doHost(j.cancel_url)) fetch(j.cancel_url, { method: 'POST', headers: { Authorization: 'Key ' + k } }).catch(() => { });
+        throw new Error('o Higgsfield não terminou em 5 minutos (pedido cancelado)');
+      }
+      await espera(2000);
+      j = { cancel_url: j.cancel_url, ...(await (await buscar(st, { headers: { Authorization: 'Key ' + k } }, 20000)).json()) };
+    }
+    if (j.status === 'nsfw') throw new Error('o Higgsfield recusou o pedido pela moderação de conteúdo (nsfw): mude o texto');
+    if (j.status === 'canceled') throw new Error('o pedido foi cancelado no Higgsfield');
+    if (j.status === 'failed') throw new Error('o Higgsfield não conseguiu gerar' + (j.error ? ': ' + String(j.error.message || j.error).slice(0, 200) : ''));
+    const urls = (j.images || []).map(x => x && x.url).filter(u => /^https?:\/\//.test(u || ''));
+    return Promise.all(urls.map(async u => { const im = await buscar(u, {}, 60000); return { buf: Buffer.from(await im.arrayBuffer()), mime: im.headers.get('content-type') || 'image/jpeg' }; }));
+  };
+  if (n === 4) return um(4);
+  return (await Promise.all(Array.from({ length: n }, () => um(1)))).flat();
+}
+
 const COMFY = 'http://127.0.0.1:8188';
 async function comfyui(r, n) {
   let ckpts;
@@ -144,7 +184,7 @@ function instalarImagem({ ler, gravar, chave }) {
       if (s === 'falso') imgs = falso(req, n);
       else if (s === 'pollinations') imgs = await pollinations(req, n);
       else if (s === 'comfyui') imgs = await comfyui(req, n);
-      else if (s === 'gemini' || s === 'openai') { const k = chave(c, s); if (!k) return { ok: false, erro: 'falta a chave do ' + (s === 'gemini' ? 'Gemini' : 'OpenAI') + ': cole em Configuração › IA', semChave: true }; imgs = s === 'gemini' ? await gemini(k, req, n) : await openai(k, req, n); }
+      else if (PAGOS_IMG.includes(s)) { const k = chave(c, s); if (!k) return { ok: false, erro: 'falta a chave do ' + NOME_IMG[s] + ': cole em Configuração › IA (imagens)', semChave: true }; imgs = s === 'gemini' ? await gemini(k, req, n) : s === 'openai' ? await openai(k, req, n) : await higgsfield(k, req, n); }
       else return { ok: false, erro: 'serviço desconhecido' };
       if (!imgs.length) return { ok: false, erro: 'o serviço não devolveu imagem' };
       return { ok: true, servico: s, arquivos: imgs.map((im, i) => gravarImg(pedido, i, im.buf, im.mime)) };

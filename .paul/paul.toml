@@ -21,9 +21,9 @@ status = "in_progress"
 plans_completed = 4
 
 [loop]
-position = "APPLY"
-plan = "07-02"
-plan_path = "phases/07-saida-avancada/07-02-PLAN.md"
+position = "PLAN"
+plan = "09-03"
+plan_path = "phases/09-editor-de-texto/09-03-PLAN.md"
 
 [satellite]
 groom = true

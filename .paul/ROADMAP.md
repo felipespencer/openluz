@@ -35,8 +35,9 @@ Phases: 1 of 8 complete
 | 6 | Versão Android | TBD | Not started | - |
 | 7 | Saída avançada | 2/2 | Complete | 2026-11-05 |
 | 8 | Webcam virtual | 1/1 | ✅ Complete | 2026-11-02 |
-| 9 | Editor de texto | 0/1 | In progress (09-01 no checkpoint) | - |
-| 10 | Modelos 3D | 0/1 | Not started | - |
+| 9 | Editor de texto | 2/3 | In progress (09-03 planejado) | - |
+| 10 | Modelos 3D | 0/1 | In progress (10-01 no checkpoint) | - |
+| 11 | Câmera que segue o rosto | 0/1 | Planning (11-01 criado) | - |
 
 ## Phase Details
 
@@ -176,7 +177,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 **Plans:**
 - [x] 08-01: Saída › Webcam virtual, peça nativa no instalador, avisos e testes — fechado em 2026-11-02 com a beta.46; conferido no Meet pelo Felipe
 
-### Phase 9: Editor de texto ✓ concluída (2026-11-09)
+### Phase 9: Editor de texto (reaberta para o 09-03)
 
 **Goal:** clipe de texto bonito sem esforço: ✎ Editar texto no jeito do Canva (várias caixas, estilo por pedaço, efeitos, animação na
 batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor-texto-mockup.html` aprovada. Recurso só do OpenLuz.
@@ -185,6 +186,7 @@ batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor
 **Plans:**
 - [x] 09-01: editor com várias caixas, efeitos e animação; fontes separadas (aprovado 2026-11-09)
 - [x] 09-02: fonte ✦ IA generativa (imagens por pedido; aprovado 2026-11-09)
+- [ ] 09-03: Higgsfield (SOUL 2) como serviço de imagem, opcional e pago (pedido de 2026-11-09); vídeo do Higgsfield num plano seguinte
 
 ### Phase 10: Modelos 3D
 
@@ -196,6 +198,15 @@ nos controles (giro, escala). Recurso só do OpenLuz (o Resolume não abre 3D se
 
 **Plans:**
 - [ ] 10-01: clipe 3D (maquete modelo-3d-mockup.html aprovada 2026-11-09; no checkpoint)
+
+### Phase 11: Câmera que segue o rosto
+
+**Goal:** o clipe de câmera ganha "Seguir rosto": detecção de rosto local (YuNet, MIT) e recorte suave acompanhando a pessoa.
+Pedido de 2026-11-09 ("Reconhecimento facial pra controlar câmera com crop, uma opção que aparece no clipe da câmera"). Só detecção, sem identificar quem é. Maquete antes.
+**Depends on:** nada
+
+**Plans:**
+- [ ] 11-01: maquete camera-rosto-mockup.html, detector + rastreio + recorte no clipe de câmera, rosto-check
 
 ## Ideias para um marco futuro
 

@@ -1280,7 +1280,9 @@ const IMG_SERVICOS = [
   ['gemini', 'Google Gemini (imagem)', 'pago', 'A mesma chave do Texto com IA, mas a imagem é paga: em 2026-11-08 a chave grátis respondeu "cota 0". Precisa ativar o faturamento no Google AI Studio.'],
   ['comfyui', 'No próprio PC (ComfyUI)', 'local', 'Sem internet e sem custo, sem marca. Precisa do ComfyUI aberto, com um modelo baixado, e de placa de vídeo boa.'],
   ['openai', 'OpenAI (gpt-image)', 'pago', 'Qualidade alta. Chave paga da OpenAI.'],
+  ['higgsfield', 'Higgsfield (SOUL 2)', 'pago', 'Fotos de pessoas, moda e editorial. Paga por imagem, com saldo comprado no console deles (mínimo US$ 5). A chave é ID:segredo.'],
 ];
+const IMG_PAGOS = ['gemini', 'openai', 'higgsfield'];
 async function iaImgDialog(depois) {
   if (!D || !D.iaImg) { toast('A IA generativa só funciona no programa instalado no Windows'); return; }
   let cfg = await D.iaImg.config(); const st = { servico: cfg.servico, chave: '' };
@@ -1293,13 +1295,13 @@ async function iaImgDialog(depois) {
         const r = el('label', 'iasrv' + (st.servico === id ? ' on' : '')); r.dataset.srv = id;
         const link = el('a', 'ialink', id === 'comfyui' ? 'Baixar ↗' : id === 'pollinations' ? 'Site ↗' : 'Pegar a chave ↗'); link.href = '#';
         link.onclick = (e) => { e.preventDefault(); e.stopPropagation(); D.iaImg.site(id); };
-        r.append(el('b', '', nome), el('span', 'iapreco ' + (preco === 'pago' ? 'pago' : preco === 'chave' ? '' : 'grátis'), preco), link, el('span', 'iadesc', desc + ((id === 'gemini' || id === 'openai') && cfg.temChave[id] ? ' · chave guardada' : '')));
+        r.append(el('b', '', nome), el('span', 'iapreco ' + (preco === 'pago' ? 'pago' : preco === 'chave' ? '' : 'grátis'), preco), link, el('span', 'iadesc', desc + (IMG_PAGOS.includes(id) && cfg.temChave[id] ? ' · chave guardada' : '')));
         r.onclick = () => { st.servico = id; st.chave = ''; redo(); };
         body.appendChild(r);
       }
-      if (st.servico === 'gemini' || st.servico === 'openai') {
+      if (IMG_PAGOS.includes(st.servico)) {
         const row = K.ptext('Chave', 'Chave|Fica só neste PC, guardada pelo Windows.', st.chave, v => { st.chave = v; });
-        const inp = row.querySelector('input'); inp.type = 'password'; inp.placeholder = cfg.temChave[st.servico] ? '•••••• guardada (cole outra para trocar)' : 'cole a chave aqui';
+        const inp = row.querySelector('input'); inp.type = 'password'; inp.placeholder = cfg.temChave[st.servico] ? '•••••• guardada (cole outra para trocar)' : st.servico === 'higgsfield' ? 'ID:segredo (do console.higgsfield.ai)' : 'cole a chave aqui';
         body.appendChild(row);
       }
     },

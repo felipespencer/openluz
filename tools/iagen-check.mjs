@@ -95,6 +95,63 @@ await ev(`(() => { const b = ${P}.browser; b.search = ''; b.setTab('src'); retur
   const g = await pos('#clipPan .iagen [data-k=gerar]'); await click(g.x, g.y); await wait(300);
   check('pedido vazio avisa em português', /escreva o pedido/.test(await ev(`${clip}.iagen.erro`)));
 }
+// 8. Higgsfield (plano 09-03), com o servidor de mentira: PROJ_HIGGS=1 e o programa aberto com PROJ_HIGGS_URL=http://127.0.0.1:18089.
+//    Sem PROJ_HIGGS (programa instalado), só confere que a linha está no diálogo.
+{
+  const D = 'window.projDesktop.iaImg', antes = await ev(`${D}.config()`);
+  await ev(`(() => { ${P}.panels.ctx.iaImgDialog(() => { }); return 1; })()`); await wait(500);
+  const lin = await pos('.dlg .iasrv[data-srv="higgsfield"]');
+  check('Configuração › IA (imagens) tem a linha Higgsfield (SOUL 2), pago', !!lin && await ev(`/Higgsfield \\(SOUL 2\\)/.test(document.querySelector('.dlg .iasrv[data-srv="higgsfield"]').textContent) && !!document.querySelector('.dlg .iasrv[data-srv="higgsfield"] .iapreco.pago')`));
+  await click(lin.x, lin.y); await wait(300);
+  const campo = await pos('.dlg input[type=password]');
+  check('clicar no Higgsfield mostra o campo da chave com a dica ID:segredo', !!campo && /ID:segredo/.test(await ev(`document.querySelector('.dlg input[type=password]').placeholder`)) || (antes.temChave.higgsfield && !!campo));
+  if (!process.env.PROJ_HIGGS || antes.temChave.higgsfield) {
+    await key('Escape', 'Escape', 27); await wait(300); await ev(`document.querySelectorAll('.dlg, .dlgOver').forEach(d => d.remove()); 1`);
+    if (antes.temChave.higgsfield) console.log('(já há chave do Higgsfield guardada: o teste com o servidor de mentira fica de fora para não trocá-la)');
+  } else {
+    const F = 'http://127.0.0.1:' + (process.env.PROJ_HIGGS_PORT || 18089);
+    const { subir } = await import('./higgs-falso.mjs'); let falso = null; try { falso = await subir(Number(process.env.PROJ_HIGGS_PORT || 18089)); } catch { }   // já pode estar de pé
+    const lg = async () => (await fetch(F + '/__log')).json(), limpa = () => fetch(F + '/__limpar');
+    await click(campo.x, campo.y); await send('Input.insertText', { text: 'teste-id:teste-segredo' }); await wait(200);
+    const ok = await ev(`(() => { const b = [...document.querySelectorAll('.dlg button')].find(x => x.textContent.trim() === 'OK'); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`); await click(ok.x, ok.y); await wait(500);
+    const cfg = await ev(`${D}.config()`);
+    check('OK guarda o Higgsfield como serviço e a chave (a página só sabe que existe)', cfg.servico === 'higgsfield' && cfg.temChave.higgsfield && !JSON.stringify(cfg).includes('segredo'), JSON.stringify(cfg));
+    await ev(`(() => { window.__iaImgServico = undefined; ${P}.panels.render(); return 1; })()`); await wait(300);
+    const gerar = async (texto, qtd) => {
+      await ev(`(() => { ${clip}.iagen.pedido = ${JSON.stringify(texto)}; ${clip}.iagen.erro = ''; ${P}.panels.render(); return 1; })()`); await wait(200);
+      const q = await pos(`#clipPan .iagen [data-qtd="${qtd}"]`); await click(q.x, q.y);
+      const g = await pos('#clipPan .iagen [data-k=gerar]'); await click(g.x, g.y);
+      for (let i = 0; i < 150 && await ev(`${clip}.iagen.gerando`); i++) await wait(200); await wait(400);
+    };
+    await limpa(); const v0 = await ev(`${clip}.iagen.versoes.length`);
+    await gerar('farol na tempestade', 1);
+    let l = await lg();
+    check('✦ Gerar manda ao Higgsfield o cabeçalho Key ID:segredo, SOUL 2, 16:9, 720p', l.length === 1 && l[0].auth === 'Key teste-id:teste-segredo' && l[0].body.aspect_ratio === '16:9' && l[0].body.resolution === '720p' && l[0].body.batch_size === 1 && /farol/.test(l[0].body.prompt) && !!l[0].idem, JSON.stringify(l));
+    check('a imagem do Higgsfield entra no clipe, gravada em Vídeos\\\\OpenLuz\\\\IA', await ev(`${clip}.iagen.versoes.length`) === v0 + 1 && !(await ev(`${clip}.iagen.erro`)) && /OpenLuz[\\/]IA[\\/]farol/i.test(await ev(`${clip}.path`)), await ev(`${clip}.iagen.erro || ${clip}.path`));
+    await limpa(); await gerar('farol na tempestade', 4); l = await lg();
+    check('Quantas 4 faz quatro versões, uma imagem por pedido (nada pago e jogado fora)', l.length === 4 && l.every(x => x.body.batch_size === 1) && await ev(`${clip}.iagen.versoes.length`) === v0 + 5, l.length + ' pedidos');
+    await limpa();
+    await ev(`(() => { const e = document.querySelector('#clipPan .iagen .iav[data-v="0"] [data-k=maior]'); e.style.opacity = 1; e.parentElement.style.opacity = 1; return 1; })()`);
+    { const m = await pos('#clipPan .iagen .iav[data-v="0"] [data-k=maior]'); await click(m.x, m.y); for (let i = 0; i < 150 && await ev(`${clip}.iagen.gerando`); i++) await wait(200); await wait(300); }
+    l = await lg(); check('Fazer maior pede 1080p ao Higgsfield', l.length >= 1 && l.every(x => x.body.resolution === '1080p'), JSON.stringify(l.map(x => x.body.resolution)));
+    await gerar('teste #402', 1);
+    check('sem saldo (402) avisa em português', /sem saldo/.test(await ev(`${clip}.iagen.erro`)), await ev(`${clip}.iagen.erro`));
+    await gerar('teste #nsfw', 1);
+    check('recusado pela moderação avisa em português', /modera/.test(await ev(`${clip}.iagen.erro`)), await ev(`${clip}.iagen.erro`));
+    await gerar('teste #failed', 1);
+    check('falha do Higgsfield avisa em português', /não conseguiu gerar/.test(await ev(`${clip}.iagen.erro`)), await ev(`${clip}.iagen.erro`));
+    const n1 = await ev(`${clip}.iagen.versoes.length`); await gerar('farol depois do erro', 1);
+    check('depois dos erros o próximo pedido funciona', await ev(`${clip}.iagen.versoes.length`) === n1 + 1 && !(await ev(`${clip}.iagen.erro`)));
+    // a chave longe da página, da composição e do log
+    const naPagina = await ev(`(() => document.documentElement.outerHTML.includes('teste-segredo') || JSON.stringify(Object.entries(localStorage)).includes('teste-segredo') || JSON.stringify(${P}.C.serializeClip(${clip})).includes('teste-segredo'))()`);
+    const fs = await import('node:fs'), path = await import('node:path');
+    let noLog = false; for (const d of ['OpenLuz', 'openluz']) { try { noLog = noLog || fs.readFileSync(path.join(process.env.APPDATA, d, 'openluz.log'), 'utf8').includes('teste-segredo'); } catch { } }
+    check('a chave não aparece na página, no localStorage, na composição nem no openluz.log', !naPagina && !noLog);
+    // devolve como estava: apaga a chave de teste e volta o serviço
+    await ev(`window.projDesktop.ia.salvar({ para: 'higgsfield', chave: '' })`); await ev(`${D}.servico(${JSON.stringify(antes.servico)})`);
+    if (falso) falso.srv.close();
+  }
+}
 await ev(`(() => { window.__iaImgServico = undefined; ${P}.clearCell(0, 0); ${P}.render(); return 1; })()`);
 console.log(`${n} verificações, ${falhas} falha(s) — ${falhas ? 'REPROVADO: ' + ruins.join(', ') : 'APROVADO'}`);
 ws.close(); process.exit(falhas ? 1 : 0);
