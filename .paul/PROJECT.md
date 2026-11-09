@@ -1,10 +1,10 @@
 ---
 description: "Software livre de projeção mapeada de nível profissional, feito por projecionistas de rua e de palco"
 type: Project
-about: "OpenLume"
+about: "OpenLuz"
 ---
 
-# OpenLume
+# OpenLuz
 
 ## What This Is
 
@@ -14,7 +14,7 @@ WebGL2; Saída avançada com telas, slices, quatro cantos, malha bezier, soft ed
 90 efeitos de vídeo e 6 de áudio; fontes geradas, texto, câmera, GIF, vídeo preparado por
 WebCodecs; decks, grupos, crossfader, BPM, autopilot; APC40 mkII nativa; módulo de laser para o
 LaserCube por Wi-Fi. Três versões sobre o mesmo motor: Windows (Electron, já existe), web e
-Android. O projecionista.app fica parado e vira uma versão brasileira feita em cima do OpenLume.
+Android. O projecionista.app fica parado e vira uma versão brasileira feita em cima do OpenLuz.
 
 ## Core Value
 
@@ -30,7 +30,7 @@ nível profissional.
 | Status | Em uso pelo Felipe; repositório público desde 2026-10-29 |
 | Last Updated | 2026-11-03 |
 
-**Repositório:** `felipespencer/openlume` (público; colaboradores dobidu e
+**Repositório:** `felipespencer/openluz` (público; colaboradores dobidu e
 fbarretto). Pasta local `OneDrive/Documentos/projecionista-pc`, remote `origin`.
 
 ## Requirements
@@ -119,7 +119,7 @@ teste `PROJ_TEST=<pasta> electron .`; CDP na porta 9333 para verificar a interfa
 | Recomeçar o programa de PC do zero, no jeito do Resolume | Três interfaces reencaixadas do celular foram rejeitadas | 2026-10-13 | Active |
 | Tudo do Resolume entra; poda é do Felipe | Prefere decidir vendo | 2026-10-14 | Active |
 | Maquete HTML aprovada antes de construir telas grandes | Foi o que funcionou (Saída avançada, laser) | 2026-10-14 | Active |
-| Projeto principal passa a ser o OpenLume, GPL-3.0, três versões | Alcance internacional, nome neutro | 2026-10-15 | Active |
+| Projeto principal passa a ser o OpenLuz, GPL-3.0, três versões | Alcance internacional, nome neutro | 2026-10-15 | Active |
 | Repositório privado até existir organização no GitHub | Pedido do Felipe | 2026-10-15 | Superseded: público desde 2026-10-29 |
 | Webcam pela câmera virtual do OBS, sem câmera própria | A DLL assinada do OBS dispensa certificado; cada computador precisa do OBS instalado | 2026-11-02 | Active |
 
@@ -127,7 +127,7 @@ teste `PROJ_TEST=<pasta> electron .`; CDP na porta 9333 para verificar a interfa
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Felipe faz um show inteiro só com o OpenLume (projeção + laser) | 1 show | 0 | Not started |
+| Felipe faz um show inteiro só com o OpenLuz (projeção + laser) | 1 show | 0 | Not started |
 | Versões web e Android abrindo o mesmo motor | 3 versões | 1 (Windows) | At risk |
 | Repositório público com colaboradores | público | público; colaboradores sem admin | In progress |
 
@@ -148,8 +148,8 @@ teste `PROJ_TEST=<pasta> electron .`; CDP na porta 9333 para verificar a interfa
 
 | Resource | URL |
 |----------|-----|
-| Repository | https://github.com/felipespencer/openlume |
-| Releases | https://github.com/felipespencer/openlume/releases |
+| Repository | https://github.com/felipespencer/openluz |
+| Releases | https://github.com/felipespencer/openluz/releases |
 | Rumo detalhado | `ROADMAP.md` na raiz do repositório |
 
 ---

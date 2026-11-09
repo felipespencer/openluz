@@ -3,7 +3,7 @@
 // Uso: node tools/compare/lote2-check.mjs <imagem>
 import path from 'node:path';
 const pages = await (await fetch('http://127.0.0.1:9333/json')).json();
-const page = pages.find(p => p.type === 'page' && p.title === 'OpenLume');
+const page = pages.find(p => p.type === 'page' && p.title === 'OpenLuz');
 const ws = new WebSocket(page.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
 let id = 0; const waits = new Map();
 ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id && waits.has(d.id)) { waits.get(d.id)(d); waits.delete(d.id); } };

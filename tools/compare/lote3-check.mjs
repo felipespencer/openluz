@@ -7,7 +7,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 const pages = await (await fetch('http://127.0.0.1:9333/json')).json();
-const page = pages.find(p => p.type === 'page' && p.title === 'OpenLume');
+const page = pages.find(p => p.type === 'page' && p.title === 'OpenLuz');
 const ws = new WebSocket(page.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
 let id = 0; const waits = new Map();
 ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id && waits.has(d.id)) { waits.get(d.id)(d); waits.delete(d.id); } };
@@ -66,14 +66,14 @@ for (const [nome, fixo, soValor] of lote) {
   }
   console.log('  qps ' + (await qps()).toFixed(1));
 }
-// LUT: as do OpenLume pela lista; um .cube do disco (negativo, 2×2×2, escrito agora) pelo leitor de arquivo;
+// LUT: as do OpenLuz pela lista; um .cube do disco (negativo, 2×2×2, escrito agora) pelo leitor de arquivo;
 // a borda preta em volta da imagem é fora da camada, o efeito não pega nela: só conta o que não é preto puro
 await setFx('LUT'); await S(400);
 const a0 = await ev(snap); const okSel = await pick('LUT 3D', 'builtin:Quente', 'LUT'); await S(500);
 const lutV = await ev(`${P}.state.layers[0].fx[0].lut`), dQ = dif(a0, await ev(snap));
 const okQ = okSel === true && lutV === 'builtin:Quente' && dQ > 0.5; if (!okQ) falhas++;
 console.log(`LUT: Quente pela lista ${okQ ? 'ok' : 'FALHOU'} Δ${dQ.toFixed(2)}`);
-const cube = path.join(os.tmpdir(), 'openlume-lote3-negativo.cube');
+const cube = path.join(os.tmpdir(), 'openluz-lote3-negativo.cube');
 fs.writeFileSync(cube, 'TITLE "negativo"\nLUT_3D_SIZE 2\n' + [0, 1].flatMap(b => [0, 1].flatMap(g => [0, 1].map(r => `${1 - r} ${1 - g} ${1 - b}`))).join('\n') + '\n');
 const cubeAbs = cube.replace(/\\/g, '/');
 await ev(`(() => { const f = ${P}.state.layers[0].fx[0]; f.lut = ${JSON.stringify(cubeAbs)}; ${P}.render(); return 1; })()`); await S(900);

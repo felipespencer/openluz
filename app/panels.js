@@ -89,13 +89,13 @@ export class Panels {
     P.appendChild(this.pnum('· Mín', 'Mínimo|O valor no ponto mais baixo da forma.', a.min, { ...o, reset: p.min }, v => { a.min = v; }));
     P.appendChild(this.pnum('· Máx', 'Máximo|O valor no ponto mais alto da forma.', a.max, { ...o, reset: p.max }, v => { a.max = v; }));
   }
-  // efeito LUT: a tabela 3D (as do OpenLume ou um arquivo .cube do disco)
+  // efeito LUT: a tabela 3D (as do OpenLuz ou um arquivo .cube do disco)
   lutRow(P, f, def) {
     const cur = f.lut || '', nome = (k) => k.split(/[\\/]/).pop().replace(/\.cube$/i, '');
     const ops = [['', '— nenhuma —'], ...BUILTIN_NAMES.map(n => ['builtin:' + n, n])];
     if (cur && !cur.startsWith('builtin:')) ops.push([cur, nome(cur) + ' (arquivo)']);
     ops.push(['__abrir', 'Abrir arquivo .cube…']);
-    P.appendChild(this.pselect('LUT 3D', def.name + ' · LUT 3D|A tabela de cores. As do OpenLume vêm prontas; "Abrir arquivo" aceita qualquer .cube 3D (DaVinci Resolve, Premiere, sites de LUT).', ops, cur, v => {
+    P.appendChild(this.pselect('LUT 3D', def.name + ' · LUT 3D|A tabela de cores. As do OpenLuz vêm prontas; "Abrir arquivo" aceita qualquer .cube 3D (DaVinci Resolve, Premiere, sites de LUT).', ops, cur, v => {
       if (v !== '__abrir') { f.lut = v; this.render(); return; }
       const inp = el('input'); inp.type = 'file'; inp.accept = '.cube'; inp.style.display = 'none'; document.body.appendChild(inp);
       inp.onchange = async () => {
@@ -261,7 +261,7 @@ export class Panels {
     // arquivo preparado (H.264 todo intra ou DXV) toca no reprodutor próprio: ré e pulo lisos
     const prog = this.ctx.preparing(clip);
     if (clip.anim) P.appendChild(this.prow('Arquivo', 'Animação|GIF (ou WebP/AVIF) animado, quadro a quadro: ré, pulo e velocidade funcionam como num vídeo preparado.', el('span', 'pinfo ok', 'animação · ' + clip.player.frames + ' quadros · ' + clip.player.fps.toFixed(0) + ' fps')));
-    else if (clip.player) P.appendChild(this.prow('Arquivo', 'Preparado|Cada quadro é chave e o OpenLume decodifica por conta própria: ré, pulo e esfregar sem travar.', el('span', 'pinfo ok', 'preparado · ' + (clip.player.allIntra ? 'todo intra' : clip.player.codec) + ' · ' + clip.player.fps.toFixed(0) + ' fps')));
+    else if (clip.player) P.appendChild(this.prow('Arquivo', 'Preparado|Cada quadro é chave e o OpenLuz decodifica por conta própria: ré, pulo e esfregar sem travar.', el('span', 'pinfo ok', 'preparado · ' + (clip.player.allIntra ? 'todo intra' : clip.player.codec) + ' · ' + clip.player.fps.toFixed(0) + ' fps')));
     else if (prog != null) P.appendChild(this.prow('Preparando', '', el('span', 'pinfo', Math.round(prog * 100) + ' %')));
     else if (clip.path && !isPrepared(clip.name)) { P.appendChild(this.pbutton('Preparar (H.264 todo intra)', 'Preparar|Converte para H.264 com todos os quadros chave, como o DXV do Resolume: ré, pulo e esfregar ficam lisos. Cria nome.proj.mp4 ao lado do original.', () => this.ctx.prepare('h264'))); }
     else P.appendChild(this.prow('Arquivo', '', el('span', 'pinfo', 'solto na janela sem caminho; abra pelo painel Arquivos para poder preparar')));
@@ -300,7 +300,7 @@ export class Panels {
   iaRows(P, clip) {
     const D = window.projDesktop, st = clip._ia || (clip._ia = { pedido: null, funcoes: ['diagramar'], estilo: 'ia', versoes: null, escolhida: -1, status: '', servico: '' });
     const box = el('div', 'iabox'); P.appendChild(box);
-    box.appendChild(this.phead('✦ Montar com IA', '✦ Montar com IA|Escreva do jeito que sair: a IA monta o cartaz, anima na batida, escreve a partir de um pedido e separa texto longo em clipes. Quem desenha é o OpenLume: depois dá para mexer em tudo à mão. Serviço em Configuração › IA.'));
+    box.appendChild(this.phead('✦ Montar com IA', '✦ Montar com IA|Escreva do jeito que sair: a IA monta o cartaz, anima na batida, escreve a partir de um pedido e separa texto longo em clipes. Quem desenha é o OpenLuz: depois dá para mexer em tudo à mão. Serviço em Configuração › IA.'));
     box.appendChild(this.parea('Pedido', 'Pedido|O texto (ou, com Escrever, o que você quer que a IA escreva).', st.pedido ?? clip.text.content, v => { st.pedido = v; }));
     const fr = el('div', 'iafun'); fr.dataset.help = 'O que a IA faz|Ligue uma ou mais funções.';
     for (const [k, nome] of FUNCOES) { const b = el('button', st.funcoes.includes(k) ? 'on' : '', nome); b.type = 'button'; b.dataset.f = k; b.onclick = () => { st.funcoes = st.funcoes.includes(k) ? st.funcoes.filter(x => x !== k) : [...st.funcoes, k]; this.render(); }; fr.appendChild(b); }

@@ -10,7 +10,7 @@
   html, body { height:100%; }
   body { margin:0; background:#0c0c0c; color:var(--tx); font:12px "Segoe UI", system-ui, sans-serif; display:flex; flex-direction:column; }
   button { font:inherit; color:inherit; }
-  /* fundo: o OpenLume escurecido atrás */
+  /* fundo: o OpenLuz escurecido atrás */
   .app { position:absolute; inset:0; background:repeating-linear-gradient(90deg,#1b1b1b 0 150px,#202020 150px 152px); opacity:.35; }
   .nota { position:relative; z-index:2; padding:8px 14px; color:var(--mut); background:#0c0c0c; border-bottom:1px solid #222; }
   .nota b { color:#eee; }
@@ -296,7 +296,7 @@ function lado() {
     ANIMS.forEach(([id, n, d]) => { const b = document.createElement('div'); b.className = 'an' + (k.an === id ? ' on' : ''); b.innerHTML = `<i>${n}</i><span style="color:var(--mut);font-size:10.5px">${d}</span>`; b.onclick = () => { k.an = id; desenhar(); }; g.appendChild(b); });
     C.insertAdjacentHTML('beforeend', `<h4>Ritmo</h4><div class="ctl"><span>Batidas</span><select style="grid-column:2/4;background:#111;color:#eee;border:1px solid #3a3a3a;height:24px"><option>1/4</option><option>1/2</option><option selected>1</option><option>2</option><option>4</option><option>8</option></select></div>
       <div class="ctl"><span>Por</span><select style="grid-column:2/4;background:#111;color:#eee;border:1px solid #3a3a3a;height:24px"><option>Letra</option><option selected>Palavra</option><option>Linha</option><option>Caixa inteira</option></select></div>
-      <div style="color:var(--mut);margin-top:8px;line-height:1.45">Segue o BPM do OpenLume, como o ♪ dos controles.</div>`);
+      <div style="color:var(--mut);margin-top:8px;line-height:1.45">Segue o BPM do OpenLuz, como o ♪ dos controles.</div>`);
   }
 }
 document.getElementById('abas').onclick = (e) => { if (e.target.dataset.a) { aba = e.target.dataset.a; lado(); } };

@@ -3,7 +3,7 @@
 // Programa aberto com --remote-debugging-port=9333 (ou PROJ_CDP). Uso: node tools/webcam-check.mjs [--sem-obs] [--basico]
 const base = 'http://127.0.0.1:' + (process.env.PROJ_CDP || 9333), semObs = process.argv.includes('--sem-obs'), basico = process.argv.includes('--basico');
 const pages = await (await fetch(base + '/json')).json();
-const page = pages.find(p => p.type === 'page' && p.title === 'OpenLume');
+const page = pages.find(p => p.type === 'page' && p.title === 'OpenLuz');
 const ws = new WebSocket(page.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
 let id = 0; const waits = new Map();
 ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id && waits.has(d.id)) { waits.get(d.id)(d); waits.delete(d.id); } };

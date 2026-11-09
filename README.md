@@ -1,4 +1,4 @@
-# OpenLume
+# OpenLuz
 
 **[Português](#português) · [English](#english)**
 
@@ -6,7 +6,7 @@
 
 ## Português
 
-OpenLume é um software livre e de código aberto pra VJ, performance visual ao vivo e projeção mapeada. A inspiração é o Resolume, com melhorias pensadas por quem faz projeção na rua e em palco.
+OpenLuz é um software livre e de código aberto pra VJ, performance visual ao vivo e projeção mapeada. A inspiração é o Resolume, com melhorias pensadas por quem faz projeção na rua e em palco.
 
 Vai ter três versões: **web** (abre no navegador), **Windows** e **Android**, todas com o mesmo motor por baixo.
 
@@ -23,7 +23,7 @@ Vai ter três versões: **web** (abre no navegador), **Windows** e **Android**, 
 
 ### De onde vem
 
-O OpenLume nasce da experiência do [projecionista.app](https://projecionista.app), ferramenta de projeção mapeada feita no Brasil pra rede [Projetemos](https://projetemos.org). A partir de agora o OpenLume é o motor, e o projecionista.app passa a ser uma versão feita em cima dele.
+O OpenLuz nasce da experiência do [projecionista.app](https://projecionista.app), ferramenta de projeção mapeada feita no Brasil pra rede [Projetemos](https://projetemos.org). A partir de agora o OpenLuz é o motor, e o projecionista.app passa a ser uma versão feita em cima dele.
 
 ### Idioma
 
@@ -31,7 +31,7 @@ A interface começa em português. A tradução pra inglês e outros idiomas vem
 
 ### Baixar
 
-Instalador do Windows (MSI) e versão sem instalar (zip) na página de [releases](https://github.com/felipespencer/openlume/releases).
+Instalador do Windows (MSI) e versão sem instalar (zip) na página de [releases](https://github.com/felipespencer/openluz/releases).
 
 ### Rodar do código (versão Windows, hoje)
 
@@ -46,11 +46,11 @@ Rumo e pendências: [ROADMAP.md](ROADMAP.md).
 
 ### Contribuir
 
-O projeto ainda está tomando forma. Ideias, relatos de uso e bugs são bem-vindos nas [issues](https://github.com/felipespencer/openlume/issues).
+O projeto ainda está tomando forma. Ideias, relatos de uso e bugs são bem-vindos nas [issues](https://github.com/felipespencer/openluz/issues).
 
 ### Licença
 
-GPL-3.0. Você pode usar, estudar, modificar e distribuir o OpenLume, mas quem distribuir uma versão modificada tem que liberar o código dela com a mesma licença. Texto completo em [LICENSE](LICENSE).
+GPL-3.0. Você pode usar, estudar, modificar e distribuir o OpenLuz, mas quem distribuir uma versão modificada tem que liberar o código dela com a mesma licença. Texto completo em [LICENSE](LICENSE).
 
 ### Autor
 
@@ -60,7 +60,7 @@ Felipe Spencer · [Videodifusora](https://github.com/felipespencer)
 
 ## English
 
-OpenLume is a free and open source tool for VJing, live visual performance and projection mapping. It's inspired by Resolume, with improvements shaped by people who project on streets and stages.
+OpenLuz is a free and open source tool for VJing, live visual performance and projection mapping. It's inspired by Resolume, with improvements shaped by people who project on streets and stages.
 
 It will ship in three versions: **web** (runs in the browser), **Windows** and **Android**, all sharing the same engine underneath.
 
@@ -77,7 +77,7 @@ It will ship in three versions: **web** (runs in the browser), **Windows** and *
 
 ### Background
 
-OpenLume grows out of [projecionista.app](https://projecionista.app), a projection mapping tool made in Brazil for the [Projetemos](https://projetemos.org) network. From now on OpenLume is the engine, and projecionista.app becomes a version built on top of it.
+OpenLuz grows out of [projecionista.app](https://projecionista.app), a projection mapping tool made in Brazil for the [Projetemos](https://projetemos.org) network. From now on OpenLuz is the engine, and projecionista.app becomes a version built on top of it.
 
 ### Language
 
@@ -85,7 +85,7 @@ The interface starts in Portuguese. English and other languages will come later.
 
 ### Download
 
-Windows installer (MSI) and portable zip on the [releases](https://github.com/felipespencer/openlume/releases) page.
+Windows installer (MSI) and portable zip on the [releases](https://github.com/felipespencer/openluz/releases) page.
 
 ### Run from source (Windows version, for now)
 
@@ -100,11 +100,11 @@ Roadmap (Portuguese): [ROADMAP.md](ROADMAP.md).
 
 ### Contributing
 
-The project is still taking shape. Ideas, usage reports and bug reports are welcome in the [issues](https://github.com/felipespencer/openlume/issues).
+The project is still taking shape. Ideas, usage reports and bug reports are welcome in the [issues](https://github.com/felipespencer/openluz/issues).
 
 ### License
 
-GPL-3.0. You're free to use, study, change and share OpenLume, but if you distribute a modified version you have to release its source under the same license. Full text in [LICENSE](LICENSE).
+GPL-3.0. You're free to use, study, change and share OpenLuz, but if you distribute a modified version you have to release its source under the same license. Full text in [LICENSE](LICENSE).
 
 ### Author
 

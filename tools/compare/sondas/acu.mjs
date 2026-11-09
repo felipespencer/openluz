@@ -1,6 +1,6 @@
 // Acuarela nunca para de mudar: comparar por estatística. Em cada caso: põe o efeito do zero nos dois programas, espera, captura dois quadros
 // com 0,5 s entre eles e mede: distância até a imagem original (D), mudança no tempo (T) e nitidez restante (N, 1 = igual à original).
-// Uso: node tools/compare/sondas/acu.mjs <imagem> "nome:Controle=v,Controle=v" ...   [ACU_SO=O só OpenLume]
+// Uso: node tools/compare/sondas/acu.mjs <imagem> "nome:Controle=v,Controle=v" ...   [ACU_SO=O só OpenLuz]
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -16,7 +16,7 @@ const S = ms => new Promise(r => setTimeout(r, ms));
 const cap = (arq) => execFileSync('py', [path.join(HERE, '..', 'capture.py'), arq, '4'], { stdio: ['ignore', 'pipe', 'ignore'] });
 async function ol(expr) {
   const pages = await (await fetch('http://127.0.0.1:9333/json')).json();
-  const page = pages.find(p => p.type === 'page' && p.title.includes('OpenLume') && !p.url.includes('output.html'));
+  const page = pages.find(p => p.type === 'page' && p.title.includes('OpenLuz') && !p.url.includes('output.html'));
   const ws = new WebSocket(page.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
   const res = await new Promise(r => { ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id === 1) r(d); }; ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: expr, awaitPromise: true, returnByValue: true } })); });
   ws.close(); if (res.result.exceptionDetails) throw new Error(res.result.exceptionDetails.exception?.description || res.result.exceptionDetails.text);
@@ -50,6 +50,6 @@ for (const caso of casos) {
   await ol(`(() => { const P = window.projecionista, L = P.state.layers[0], def = P.EFFECTS.find(e => e.name === 'Acuarela'), params = {}; for (const p of def.params) params[p.key] = p.def; const v = ${JSON.stringify(vals)}; for (const [k, x] of Object.entries(v)) if (def.rparams[k]) params[def.rparams[k]] = +x; L.fx = []; P.render(); L.fx = [{ id: def.id, params, bypass: false, anim: {} }]; return 1; })()`);
   await S(espera); await grava(a); await S(500); await grava(b);
   const o = med(a, b);
-  if (process.env.ACU_SALVA) fs.copyFileSync(a, path.join(process.env.ACU_SALVA, nome + '.openlume.png'));
-  console.log(nome.padEnd(10), 'Resolume', JSON.stringify(r), 'OpenLume', JSON.stringify(o));
+  if (process.env.ACU_SALVA) fs.copyFileSync(a, path.join(process.env.ACU_SALVA, nome + '.openluz.png'));
+  console.log(nome.padEnd(10), 'Resolume', JSON.stringify(r), 'OpenLuz', JSON.stringify(o));
 }

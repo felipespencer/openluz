@@ -1,5 +1,5 @@
 // LUT 3D (efeito LUT, igual ao do Resolume 7.28): lê arquivo .cube (Adobe/Resolve) e guarda os LUTs que vêm com o
-// OpenLume. Os do OpenLume são feitos por conta aqui (nenhum arquivo de terceiros); os do Resolume (pasta luts dele, da
+// OpenLuz. Os do OpenLuz são feitos por conta aqui (nenhum arquivo de terceiros); os do Resolume (pasta luts dele, da
 // IWLTBAP) não podem ser redistribuídos, mas a pessoa pode abrir qualquer .cube que tiver.
 // Uma LUT: { name, n, data: Float32Array(n³ × 4, RGBA) }, vermelho variando mais rápido, como no .cube.
 
@@ -24,7 +24,7 @@ export function parseCube(text, name = 'LUT') {
   return { name, n, data, min, max };
 }
 
-// LUTs do OpenLume, calculadas: nome → função de (r, g, b) em 0..1 para [r, g, b]
+// LUTs do OpenLuz, calculadas: nome → função de (r, g, b) em 0..1 para [r, g, b]
 const L = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 const cl = (x) => Math.max(0, Math.min(1, x));
 const curva = (x, k) => cl(0.5 + (x - 0.5) * k);

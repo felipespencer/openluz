@@ -21,7 +21,7 @@ export const ANIM_KEYS = { aOpacity: 1, aScale: 1, aX: 0, aY: 0, aRot: 0, anchor
 
 export function textDefaults(animator = false) {
   return {
-    v: 2, animator, content: animator ? 'OpenLume' : 'OpenLume', font: 'Arial', style: 'Bold', color: '#ffffffff', size: 1,
+    v: 2, animator, content: animator ? 'OpenLuz' : 'OpenLuz', font: 'Arial', style: 'Bold', color: '#ffffffff', size: 1,
     align: animator ? 'left' : 'center', valign: 'center', lineWidth: 1920, x: 0, y: 0, rotation: 0, scale: 1,
     spacingX: 0, spacingY: 0, outlineColor: '#ff0000ff', outlineWidth: 0, glowIn: 0, glowOut: 0,
     animated: false, range: 'chars', order: 'front', delay: 100, ...ANIM_KEYS,

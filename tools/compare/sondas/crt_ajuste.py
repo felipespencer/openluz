@@ -1,4 +1,4 @@
-# CRT: vinheta (razão sobre a faixa branca da imagem de prova) e médias Resolume × OpenLume de cada caso da bateria.
+# CRT: vinheta (razão sobre a faixa branca da imagem de prova) e médias Resolume × OpenLuz de cada caso da bateria.
 import sys
 from pathlib import Path
 import numpy as np
@@ -19,6 +19,6 @@ r = np.clip(a[:, 240:480] / np.maximum(b[:, 240:480], 1), 0, 1.2)
 for lo, hi in [(0, .02), (.02, .05), (.05, .1), (.1, .2), (.2, .3), (.3, .4), (.4, .6), (.6, .8)]:
     m = (f >= lo) & (f < hi)
     if m.any(): print(f' f {lo}-{hi}: razão {r[m].mean():.3f} (f médio {f[m].mean():.3f})')
-print('médias (Resolume, OpenLume):')
+print('médias (Resolume, OpenLuz):')
 for n in sys.argv[2:]:
-    print(f' {n:10s} {load(S / f"cmp-{n}.resolume.png").mean():.1f} {load(S / f"cmp-{n}.openlume.png").mean():.1f}')
+    print(f' {n:10s} {load(S / f"cmp-{n}.resolume.png").mean():.1f} {load(S / f"cmp-{n}.openluz.png").mean():.1f}')

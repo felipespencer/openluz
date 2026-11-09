@@ -47,7 +47,7 @@ async function ollamaPronto() {
     const exe = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama', 'ollama.exe');
     if (!fs.existsSync(exe)) return false;
     // pelo Start-Process do Windows: aberto direto daqui, o Ollama herdava os soquetes do Electron (segurava a porta do
-    // DevTools e a do celular mesmo depois de o OpenLume fechar)
+    // DevTools e a do celular mesmo depois de o OpenLuz fechar)
     try { spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', `Start-Process -WindowStyle Hidden -FilePath '${exe.replace(/'/g, "''")}' -ArgumentList 'serve'`], { stdio: 'ignore', windowsHide: true }); } catch { return false; }
     for (let i = 0; i < 30; i++) { await new Promise(r => setTimeout(r, 500)); try { await getJson(OLLAMA + '/api/tags', {}, 1500); return true; } catch { } }
     return false;

@@ -1,5 +1,5 @@
 // Mede o efeito de cada controle do Background Removal na saída real do motor (modo Máscara, quadro parado da pessoa).
-// Uso: node tools/drive.mjs evalfile tools/compare/br-controles.js  (OpenLume aberto com --remote-debugging-port=9333)
+// Uso: node tools/drive.mjs evalfile tools/compare/br-controles.js  (OpenLuz aberto com --remote-debugging-port=9333)
 // Para cada qualidade e controle: diferença média contra o padrão (/255), % de pixels que mudaram, área da máscara e % de pixels de borda.
 (async () => {
   const CLIP = window.__brClip || 'tools/compare/saida/pessoa2/f05.png';

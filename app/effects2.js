@@ -137,7 +137,7 @@ export const MORE = [
       return acc; }` },
   // LUT do Resolume 7.28: troca cada cor pela da tabela 3D (arquivo .cube), com interpolação entre os pontos; sem arquivo, passa a imagem.
   // A tabela vem de lut.js (f.lut: 'builtin:Nome' ou o caminho do .cube); o motor entrega em uLut (textura 3D) e uLutN (lado da tabela).
-  { id: 'lut', name: 'LUT', desc: 'Troca as cores da imagem pelas de uma tabela 3D (arquivo .cube, como os de correção de cor de cinema), ou por uma das que vêm com o OpenLume.', lut: true,
+  { id: 'lut', name: 'LUT', desc: 'Troca as cores da imagem pelas de uma tabela 3D (arquivo .cube, como os de correção de cor de cinema), ou por uma das que vêm com o OpenLuz.', lut: true,
     params: [], rfields: { 'LUT 3D': 'lut' },
     glsl: `vec4 fx(vec2 uv){ vec4 c = texture(uTex, uv); if (uLutN < 2.0) return c;
       vec3 u = clamp(un(c), 0.0, 1.0); return pre(texture(uLut, (u * (uLutN - 1.0) + 0.5) / uLutN).rgb, c.a); }` },

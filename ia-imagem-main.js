@@ -1,7 +1,7 @@
 // ✦ IA generativa (plano 09-02, maquete ia-generativa-mockup.html): imagens por pedido, pelo processo principal.
 // Serviços: Gemini (a mesma chave do Texto com IA), Pollinations (sem chave), ComfyUI no próprio PC, OpenAI (pago) e 'falso'
 // (a bateria: desenha uma imagem lisa, sem rede). A chave nunca sai daqui; a página recebe só os caminhos dos arquivos gravados
-// em Vídeos\OpenLume\IA. Nenhum código vem da IA: a resposta é imagem (bytes) e nada mais.
+// em Vídeos\OpenLuz\IA. Nenhum código vem da IA: a resposta é imagem (bytes) e nada mais.
 const { app, ipcMain, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -17,7 +17,7 @@ const ESTILO = {
 };
 const PROP = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1440, 1440], '4:3': [1600, 1200] };
 
-const pasta = () => { const d = path.join(app.getPath('videos'), 'OpenLume', 'IA'); fs.mkdirSync(d, { recursive: true }); return d; };
+const pasta = () => { const d = path.join(app.getPath('videos'), 'OpenLuz', 'IA'); fs.mkdirSync(d, { recursive: true }); return d; };
 const nomeArq = (pedido, i, ext) => {
   const base = String(pedido || 'imagem').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40).toLowerCase() || 'imagem';
   const t = new Date(), p2 = (n) => String(n).padStart(2, '0');
@@ -102,7 +102,7 @@ async function comfyui(r, n) {
     4: { class_type: 'EmptyLatentImage', inputs: { width: w, height: h, batch_size: n } },
     5: { class_type: 'KSampler', inputs: { seed: Math.floor(Math.random() * 1e9), steps: 25, cfg: 6.5, sampler_name: 'euler', scheduler: 'normal', denoise: 1, model: ['1', 0], positive: ['2', 0], negative: ['3', 0], latent_image: ['4', 0] } },
     6: { class_type: 'VAEDecode', inputs: { samples: ['5', 0], vae: ['1', 2] } },
-    7: { class_type: 'SaveImage', inputs: { filename_prefix: 'openlume', images: ['6', 0] } },
+    7: { class_type: 'SaveImage', inputs: { filename_prefix: 'openluz', images: ['6', 0] } },
   };
   const { prompt_id } = await (await buscar(COMFY + '/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: g }) }, 10000)).json();
   for (let t = 0; t < 600; t++) {

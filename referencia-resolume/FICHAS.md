@@ -1,7 +1,7 @@
 # Fichas dos efeitos de vídeo do Resolume
 
 Tiradas da API REST do Resolume Arena 7.28.1 (`GET /effects` + cada efeito posto na camada 1) por
-`node tools/compare/resolume.mjs fichas`. Servem para igualar os controles dos efeitos do OpenLume.
+`node tools/compare/resolume.mjs fichas`. Servem para igualar os controles dos efeitos do OpenLuz.
 "Opacity" é a mistura do próprio efeito; aparece em todos.
 
 ## Acuarela

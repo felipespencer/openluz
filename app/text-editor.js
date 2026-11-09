@@ -291,7 +291,7 @@ export class EditorTexto {
       const sel = (lab, key, opts) => { const r = el('div', 'ctl'); const s = el('select'); s.dataset.k = key; for (const [v, t] of opts) { const o = el('option', '', t); o.value = String(v); s.appendChild(o); } s.value = String(k.an[key]); s.onchange = () => this.muda(() => { k.an[key] = key === 'batidas' ? +s.value : s.value; }); r.append(el('span', '', lab), s); C.appendChild(r); };
       sel('Batidas', 'batidas', BATIDAS.map(b => [b, b < 1 ? '1/' + Math.round(1 / b) : String(b)]));
       sel('Por', 'por', POR);
-      C.appendChild(el('div', 'nota', 'Segue o BPM do OpenLume, como o ♪ dos controles.'));
+      C.appendChild(el('div', 'nota', 'Segue o BPM do OpenLuz, como o ♪ dos controles.'));
     }
   }
 

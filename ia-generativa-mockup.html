@@ -111,7 +111,7 @@ function painel() {
     <button class="go" id="go">${st.gerando ? 'Gerando… 4 imagens' : '✦ Gerar'}</button>
     <div class="info"><span>Serviço: ${SERV.find(s => s[0] === st.serv)[1]} · ${st.serv === 'gemini' ? '~10 s por imagem' : st.serv === 'local' ? '~20 s por imagem' : '~15 s por imagem'}</span><a>trocar serviço</a></div>
     ${st.versoes ? `<div class="vers" id="vs">${st.versoes.map((v, i) => `<div class="ver ${i === st.esc ? 'on' : ''}" data-i="${i}"><canvas width="320" height="180" data-seed="${v}"></canvas><div class="acoes"><b>↻ variar</b><b>⤢ maior</b></div></div>`).join('')}</div>
-    <div class="mut" style="margin-top:6px;line-height:1.45">Um clique põe a imagem no clipe. <b>↻ variar</b> faz outras parecidas com essa; <b>⤢ maior</b> refaz em 4K. As imagens ficam salvas em Vídeos\\OpenLume\\IA e entram na composição como arquivo, então abrem em qualquer PC.</div>` : ''}`;
+    <div class="mut" style="margin-top:6px;line-height:1.45">Um clique põe a imagem no clipe. <b>↻ variar</b> faz outras parecidas com essa; <b>⤢ maior</b> refaz em 4K. As imagens ficam salvas em Vídeos\\OpenLuz\\IA e entram na composição como arquivo, então abrem em qualquer PC.</div>` : ''}`;
   P.querySelectorAll('#es button').forEach(b => b.onclick = () => { st.estilo = +b.dataset.i; painel(); });
   P.querySelectorAll('#pr button').forEach(b => b.onclick = () => { st.prop = +b.dataset.i; painel(); });
   P.querySelectorAll('#qt button').forEach(b => b.onclick = () => { st.qtd = +b.dataset.n; painel(); });

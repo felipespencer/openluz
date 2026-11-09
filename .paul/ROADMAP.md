@@ -1,14 +1,14 @@
 ---
-description: "OpenLume — milestone and phase structure"
+description: "OpenLuz — milestone and phase structure"
 type: Roadmap
-about: "OpenLume"
+about: "OpenLuz"
 ---
 
-# Roadmap: OpenLume
+# Roadmap: OpenLuz
 
 ## Overview
 
-O OpenLume já nasceu com o grosso do Resolume feito (release 0.1.0 para Windows em 2026-10-15).
+O OpenLuz já nasceu com o grosso do Resolume feito (release 0.1.0 para Windows em 2026-10-15).
 Este roadmap começa daí: o próximo marco leva o programa do "funciona no PC do Felipe" ao
 "mapeia sozinho, está provado no equipamento real e sai nas três versões". O `ROADMAP.md` da
 raiz continua sendo a lista detalhada do que veio do Resolume e do que está feito.
@@ -59,18 +59,18 @@ sem biblioteca pesada vs. modelo ONNX; como alinhar a foto ao quadro do projetor
 - [x] 01-01: maquete `automape-mockup.html` com o fatiamento da foto funcionando; aprovação do Felipe
 - [x] 01-02: REC vira clipe (botão REC na barra; a gravação entra na grade) — pedido de 2026-10-22, feito antes do Automape no programa
 - [x] 01-03: `app/automape.js` + Saída › Automape… + botão na Saída avançada + malha projetada + editor + máscaras e slices de verdade; selftest e verificação por CDP
-- [ ] 01-04: IA em fotos novas (SAM local em ONNX ou Claude) e MCP do OpenLume (servidor MCP exposto pelo programa: ler foto, criar slices/máscaras, mexer na composição) para o Claude e outros agentes operarem o programa; o Automape vira uma ferramenta dele (pedido de 2026-10-21, a confirmar)
+- [ ] 01-04: IA em fotos novas (SAM local em ONNX ou Claude) e MCP do OpenLuz (servidor MCP exposto pelo programa: ler foto, criar slices/máscaras, mexer na composição) para o Claude e outros agentes operarem o programa; o Automape vira uma ferramenta dele (pedido de 2026-10-21, a confirmar)
 - [ ] 01-05: IA de profundidade na foto (modelo monocular em ONNX, como o "tirar o fundo"): separar superfícies por profundidade e prévia 3D do mapeamento (pedido de 2026-10-21, a confirmar)
 
 ### Phase 2: Efeitos do Resolume
 
-**Goal:** todos os efeitos, fontes e mixers do Resolume no OpenLume, iguais por fora (mesmo
+**Goal:** todos os efeitos, fontes e mixers do Resolume no OpenLuz, iguais por fora (mesmo
 nome, mesmos controles, mesmas faixas, mesmos presets) e iguais na tela, conferidos lado a lado
 com o Resolume com os mesmos valores. Pedido de 2026-10-25 ("não quero efeitos próprios, quero
 copiar"): copiar o COMPORTAMENTO, escrevendo cada efeito do zero; nada de shader, patch `.wired`
 ou código tirado do Resolume (repo público GPL; risco de remoção do repositório).
 **Depends on:** Phase 1 (ordem de prioridade do Felipe: antes de "Celular e plugins")
-**Research:** Likely (como capturar o Resolume e o OpenLume com os mesmos valores e comparar a
+**Research:** Likely (como capturar o Resolume e o OpenLuz com os mesmos valores e comparar a
 imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarcar)
 
 **Scope:**
@@ -82,7 +82,7 @@ imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarca
 - Ficha e controles no modelo do Wire: tipo (fonte/efeito/mixer), nome, autor, descrição, identificador, controles em ordem e grupos com mínimo/máximo/unidade/tipo de controle, presets
 
 **Plans:**
-- [x] 02-01: bancada lado a lado (REST do Resolume + CDP do OpenLume + captura + diferença por pixel), fichas de controles pela API, e o 1º lote igualado: Delay RGB, Trails, Threshold — fechado em 2026-10-30; de quebra Background Removal, Shape Mask, YouTube e celular (SUMMARY)
+- [x] 02-01: bancada lado a lado (REST do Resolume + CDP do OpenLuz + captura + diferença por pixel), fichas de controles pela API, e o 1º lote igualado: Delay RGB, Trails, Threshold — fechado em 2026-10-30; de quebra Background Removal, Shape Mask, YouTube e celular (SUMMARY)
 - [x] 02-02: Acuarela, Tilt Shift e CRT — fechado em 2026-11-02 com a beta.44; presets do CRT e outras diferenças abertas no SUMMARY
 - [x] 02-03: grade de clipes igual à do Resolume (miniatura no ar, nome na Prévia, ▶/■ de coluna, verde-água) — fechado em 2026-11-03 com a beta.47
 - [x] 02-04: camadas e decks como no Resolume — fechado em 2026-11-05 com a beta.49
@@ -94,9 +94,9 @@ imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarca
 
 ### Phase 3: Celular e plugins
 
-**Goal:** o celular vira controle do OpenLume pela rede (QR code, nada para instalar) com quatro
+**Goal:** o celular vira controle do OpenLuz pela rede (QR code, nada para instalar) com quatro
 modos — Desenhar, Toque, Pads e Controle —, em pé e deitado; o desenho do celular é um clipe;
-o OpenLume ganha um sistema de plugins (pasta com `plugin.js`: fonte ou efeito, parâmetros,
+o OpenLuz ganha um sistema de plugins (pasta com `plugin.js`: fonte ou efeito, parâmetros,
 toque) e os primeiros quatro plugins são de física em tempo real: Fluido (fogo, fumaça, tinta),
 Partículas, Rastro neon e Bolinhas. Pedido de 2026-10-25, a partir de um reel de plugin de
 física para o Resolume controlado pelo celular.
@@ -107,7 +107,7 @@ por QR; como carregar plugins de uma pasta com segurança; simulação de fluido
 
 **Scope:**
 - Maquete aprovada antes de construir (feita em 2026-10-25: `plugins-celular-mockup.html`)
-- Sistema de plugins: pasta `Documentos/OpenLume/plugins`, plugin aparece em Fontes/Efeitos, controles no painel Clipe e no celular, ligáveis a MIDI/som/Autopilot
+- Sistema de plugins: pasta `Documentos/OpenLuz/plugins`, plugin aparece em Fontes/Efeitos, controles no painel Clipe e no celular, ligáveis a MIDI/som/Autopilot
 - Celular: página servida pelo programa, QR code em "Conectar celular…", vários celulares e vários dedos
 - Modos do celular: Desenhar (cores, espessura, borracha, some aos poucos, novo, limpar), Toque (dedo vira mão no plugin no ar; Explosão, Limpar, Auto), Pads (só os clipes, grandes, uma camada por vez, disparo do começo), Controle (master, opacidade por camada, parâmetros do que está no ar)
 - Clipe de desenho: guarda os traços com o tempo; disparar refaz o desenho no ritmo em que foi feito
@@ -150,7 +150,7 @@ com `OutputPresentation` para o projetor.
 
 ### Phase 7: Saída avançada
 
-**Goal:** a Saída avançada do OpenLume vai além do Resolume onde o Felipe pede: emendas (soft edge) como
+**Goal:** a Saída avançada do OpenLuz vai além do Resolume onde o Felipe pede: emendas (soft edge) como
 degradês com alça puxados na própria imagem, quatro por slice, seleção sem surpresa na sobreposição, e o
 que mais surgir dos testes dele com projetores de verdade.
 **Depends on:** nada (executada em 2026-10-30, fora da ordem das fases, porque os pedidos vieram
@@ -169,9 +169,9 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 
 ### Phase 8: Webcam virtual
 
-**Goal:** a composição do OpenLume aparece como câmera no Google Meet e afins, pela câmera virtual do OBS (DLL assinada do OBS, com o OBS fechado). Pedido de 2026-11-02; prova de conceito funcionou no Chromium do Electron (1920×1080, 30 qps).
+**Goal:** a composição do OpenLuz aparece como câmera no Google Meet e afins, pela câmera virtual do OBS (DLL assinada do OBS, com o OBS fechado). Pedido de 2026-11-02; prova de conceito funcionou no Chromium do Electron (1920×1080, 30 qps).
 **Depends on:** nada
-**Research:** feita na prova de conceito (formato na memória openlume-webcam-virtual)
+**Research:** feita na prova de conceito (formato na memória openluz-webcam-virtual)
 
 **Plans:**
 - [x] 08-01: Saída › Webcam virtual, peça nativa no instalador, avisos e testes — fechado em 2026-11-02 com a beta.46; conferido no Meet pelo Felipe
@@ -179,7 +179,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 ### Phase 9: Editor de texto ✓ concluída (2026-11-09)
 
 **Goal:** clipe de texto bonito sem esforço: ✎ Editar texto no jeito do Canva (várias caixas, estilo por pedaço, efeitos, animação na
-batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor-texto-mockup.html` aprovada. Recurso só do OpenLume.
+batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor-texto-mockup.html` aprovada. Recurso só do OpenLuz.
 **Depends on:** nada (usa o Text Block do 02-05, os estilos prontos da beta.55 e a IA do 02-06)
 
 **Plans:**
@@ -191,7 +191,7 @@ batida); a IA vira a fonte "Texto com IA". Pedido de 2026-11-07; maquete `editor
 **Goal:** abrir modelos 3D como clipe (pedido de 2026-11-07: "quero que ele leia 3d... .glb, mas que aceite mais formatos tipo obj").
 Formatos: GLB/GLTF, OBJ (+MTL), FBX, STL, PLY, 3MF, DAE. Desenho por three.js (MIT) num canvas que vira textura, fundo transparente;
 girar sozinho, câmera (órbita, zoom), luz pronta, material por cima (cor, arame, só contorno), animações que vêm no GLB/FBX, e ♪ na batida
-nos controles (giro, escala). Recurso só do OpenLume (o Resolume não abre 3D sem o Wire). Maquete antes de construir.
+nos controles (giro, escala). Recurso só do OpenLuz (o Resolume não abre 3D sem o Wire). Maquete antes de construir.
 **Depends on:** nada
 
 **Plans:**
@@ -205,7 +205,7 @@ nos controles (giro, escala). Recurso só do OpenLume (o Resolume não abre 3D s
   projetor na Saída avançada (a homografia atual só serve para parede plana), calibrada por foto como no
   Automape; (3) soft-edge nas sobreposições. O Resolume não faz domo sozinho (usa Blendy Dome, VIOSO); seria
   recurso só nosso, como o Automape. Entra como fase quando ele pedir.
-- **OpenLume Leve, para computador velho** (pedido de 2026-11-06, "botasse só depois no plano, não precisa fazer agora"):
+- **OpenLuz Leve, para computador velho** (pedido de 2026-11-06, "botasse só depois no plano, não precisa fazer agora"):
   versão ultra leve para computador velho; **mínimo 4 GB de RAM** (decisão de 2026-11-06: "2 GB é muito pouco").
   3 a 5 camadas de vídeo no máximo, poucos efeitos, segurar um PNG e um vídeo pequeno, só 2 ou 3 Ctrl+Z.
   Forma proposta (falta o ok do Felipe): **modo Leve dentro do mesmo programa** e do mesmo instalador, ligado sozinho

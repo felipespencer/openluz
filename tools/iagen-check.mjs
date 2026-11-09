@@ -3,8 +3,8 @@
 // Uso: node tools/iagen-check.mjs (programa aberto com --remote-debugging-port=9333; limpa a casa no fim)
 const base = 'http://127.0.0.1:' + (process.env.PROJ_CDP || 9333);
 const pages = await (await fetch(base + '/json')).json();
-const page = pages.find(p => p.type === 'page' && p.title === 'OpenLume');
-if (!page) { console.error('janela do OpenLume não achada'); process.exit(1); }
+const page = pages.find(p => p.type === 'page' && p.title === 'OpenLuz');
+if (!page) { console.error('janela do OpenLuz não achada'); process.exit(1); }
 const ws = new WebSocket(page.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
 let id = 0; const waits = new Map();
 ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && waits.has(d.id)) { waits.get(d.id)(d); waits.delete(d.id); } };
@@ -50,7 +50,7 @@ await ev(`(() => { const b = ${P}.browser; b.search = ''; b.setTab('src'); retur
   await esperar();
   const r = await ev(`(() => { const c = ${clip}; return { pedido: c.iagen.pedido, n: c.iagen.versoes.length, path: c.path, esc: c.iagen.esc, erro: c.iagen.erro, w: c.w, nome: c.name }; })()`);
   check('o pedido escrito fica guardado', r.pedido === 'onda do mar em xilogravura', r.pedido);
-  check('✦ Gerar faz duas versões em arquivo, em Vídeos\\\\OpenLume\\\\IA', r.n === 2 && /OpenLume[\\/]IA[\\/]onda-do-mar/i.test(r.path) && !r.erro, JSON.stringify(r));
+  check('✦ Gerar faz duas versões em arquivo, em Vídeos\\\\OpenLuz\\\\IA', r.n === 2 && /OpenLuz[\\/]IA[\\/]onda-do-mar/i.test(r.path) && !r.erro, JSON.stringify(r));
   check('a primeira versão entrou no clipe', r.esc === 1 && r.w > 0 && r.nome.startsWith('onda do mar'), JSON.stringify(r));
   check('as versões aparecem como miniaturas', await ev(`document.querySelectorAll('#clipPan .iagen .iav img').length`) === 2);
 }

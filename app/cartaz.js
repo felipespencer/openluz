@@ -1,6 +1,6 @@
 // Fonte "Texto" (plano 09-01, maquete editor-texto-mockup.html): um cartaz com várias caixas de texto, no jeito do Canva.
 // Cada caixa tem trechos (cor/fonte/negrito/itálico por pedaço), efeito (sombra, neon, vazado...) e animação na batida.
-// O mesmo desenho serve ao editor e à projeção: o que se vê no editor é o que sai. Recurso só do OpenLume.
+// O mesmo desenho serve ao editor e à projeção: o que se vê no editor é o que sai. Recurso só do OpenLuz.
 import { PRESETS, quebrar } from './text-presets.js';
 
 export const EFEITOS = [['nenhum', 'Nenhum'], ['sombra', 'Sombra'], ['elevar', 'Elevar'], ['vazado', 'Vazado'], ['contorno', 'Contorno'], ['fundo', 'Fundo'],

@@ -1,5 +1,5 @@
 // Texto com IA (plano 02-06): monta o pedido, valida a resposta e aplica uma versão no clipe de texto.
-// A IA só devolve dados no formato de SCHEMA; quem desenha é o OpenLume (text.js), e tudo fica editável à mão.
+// A IA só devolve dados no formato de SCHEMA; quem desenha é o OpenLuz (text.js), e tudo fica editável à mão.
 // O pedido vai pelo processo principal (ia-main.js), onde fica a chave.
 import { STYLES, textDefaults, fontCss, EM, layoutText } from './text.js';
 import { SHAPES, BEATS } from './beat.js';
@@ -36,7 +36,7 @@ export function fontesParaIA(todas) {
 export function montarPedido({ texto, funcoes, estilo, fontes, atual, bpm }) {
   const f = new Set(funcoes);
   const system = [
-    'Você diagrama textos para projeção em shows, festas e eventos de rua, no programa OpenLume (como o Text Block e o Text Animator do Resolume).',
+    'Você diagrama textos para projeção em shows, festas e eventos de rua, no programa OpenLuz (como o Text Block e o Text Animator do Resolume).',
     'A tela tem 1920 x 1080 px. Tamanho 1 = letra com 93 px de altura de maiúscula; vai de 0.5 a 10. Um título forte costuma ter de 1.5 a 3; linhas de apoio de 0.6 a 1.2.',
     'Cada linha do texto tem fonte, estilo (' + STYLES.join(', ') + '), tamanho, cor (#rrggbbaa) e espaço extra entre as letras (px no tamanho 1; 0 é o normal, use de -5 a 20).',
     'Use só estas fontes, escritas exatamente assim: ' + fontes.join(', ') + '.',

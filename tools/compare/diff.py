@@ -1,6 +1,6 @@
-# Compara a saída do Resolume com a do OpenLume: as duas reduzidas a 960x540, diferença média e máxima
-# por canal (0-255) e uma imagem Resolume | OpenLume | diferença (ampliada 4x).
-# Uso: py tools/compare/diff.py resolume.png openlume.png lado-a-lado.png
+# Compara a saída do Resolume com a do OpenLuz: as duas reduzidas a 960x540, diferença média e máxima
+# por canal (0-255) e uma imagem Resolume | OpenLuz | diferença (ampliada 4x).
+# Uso: py tools/compare/diff.py resolume.png openluz.png lado-a-lado.png
 # Recusa imagem lisa (preta ou de uma cor só): é sinal de captura falsa.
 import json, sys
 
@@ -15,7 +15,7 @@ def ler(p):
 
 
 r, o = ler(sys.argv[1]), ler(sys.argv[2])
-for nome, img in (('Resolume', r), ('OpenLume', o)):
+for nome, img in (('Resolume', r), ('OpenLuz', o)):
     if img.std() < 2:
         sys.exit(f'captura do {nome} lisa (desvio {img.std():.1f}): conferir janela/clipe')
 d = np.abs(r - o)

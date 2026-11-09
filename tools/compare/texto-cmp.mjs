@@ -1,4 +1,4 @@
-// Compara o texto do OpenLume (app/text.js, pelo CDP na porta 9333) com as capturas do Resolume feitas por texto.py.
+// Compara o texto do OpenLuz (app/text.js, pelo CDP na porta 9333) com as capturas do Resolume feitas por texto.py.
 // Uso: node tools/compare/texto-cmp.mjs <lista.txt> [--capturar]
 //   lista: uma linha por caso, como em texto.py: "<rotulo> Controle=valor ..." (~ = espaço, \n = quebra de linha).
 //   --capturar refaz a captura do Resolume (py texto.py) antes; sem ele usa saida/texto/<rotulo>.png que já existe.
@@ -14,8 +14,8 @@ const MAP = { 'Text': 'content', 'Font': 'font', 'Style': 'style', 'Color': 'col
 
 async function olEval(expr) {
   const pages = await (await fetch('http://127.0.0.1:9333/json')).json();
-  const page = pages.find(p => p.type === 'page' && p.title.includes('OpenLume') && !p.url.includes('output.html'));
-  if (!page) throw new Error('OpenLume não está aberto com --remote-debugging-port=9333');
+  const page = pages.find(p => p.type === 'page' && p.title.includes('OpenLuz') && !p.url.includes('output.html'));
+  if (!page) throw new Error('OpenLuz não está aberto com --remote-debugging-port=9333');
   const ws = new WebSocket(page.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
   const res = await new Promise(r => { ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id === 1) r(d); }; ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: expr, awaitPromise: true, returnByValue: true } })); });
   ws.close();
@@ -35,7 +35,7 @@ for (const linha of casos) {
   const t = ANIM ? acum : {};
   for (const p of pares) {
     let [k, v] = p.replace(/~/g, ' ').split(/=(.*)/s); v = v.replace(/\\n/g, '\n');
-    const key = (ANIM ? MAP_A : MAP)[k]; if (!key) throw new Error('controle sem par no OpenLume: ' + k);
+    const key = (ANIM ? MAP_A : MAP)[k]; if (!key) throw new Error('controle sem par no OpenLuz: ' + k);
     t[key] = ['align', 'valign'].includes(key) ? v.toLowerCase() : key === 'animated' ? v === 'true' : key === 'range' ? RANGE[v] : key === 'order' ? ORDER[v] : ['content', 'font', 'style', 'color', 'outlineColor'].includes(key) ? v : Number(v);
   }
   const url = await olEval(`(async () => { const T = await import('./text.js'); const t = { ...T.textDefaults(${ANIM}), content: 'Resolume', ...${JSON.stringify(t)} };
