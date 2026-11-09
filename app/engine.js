@@ -26,8 +26,9 @@ void main(){ v = a * 0.5 + 0.5; vec2 p = a * uScale; p.x *= uAspect; float c = c
 // uPre = 1: já vem premultiplicada (resultado de efeito, de fonte ou de mistura) e entra como está — multiplicar de novo
 // escurecia duas vezes tudo que é meio transparente e passa por efeito (visto na bancada do Threshold, 2026-10-25)
 const FS_LAYER = `#version 300 es
-precision highp float; in vec2 v; uniform sampler2D uTex; uniform float uOp; uniform float uPre; out vec4 o;
-void main(){ vec4 c = texture(uTex, v); if (uPre < 0.5) c.rgb *= c.a; o = c * uOp; }`;
+precision highp float; in vec2 v; uniform sampler2D uTex; uniform float uOp; uniform float uPre; uniform vec4 uSrc; out vec4 o;
+void main(){ vec4 c = texture(uTex, uSrc.xy + v * uSrc.zw); if (uPre < 0.5) c.rgb *= c.a; o = c * uOp; }`;
+// uSrc: o pedaço da textura que entra (x, y, largura, altura em uv; (0,0,1,1) = inteira). O "Seguir rosto" da câmera (11-01) usa.
 
 // slice: posição em px da tela; luv é a coordenada local (0..1) dentro do recorte
 const VS_SLICE = `#version 300 es
@@ -118,7 +119,7 @@ export class Engine {
     canvas.width = width; canvas.height = height;
     const gl = this.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: true });
     if (!gl) throw new Error('WebGL2 indisponível');
-    this.progLayer = this.program(VS_LAYER, FS_LAYER, ['uScale', 'uPos', 'uRot', 'uAspect', 'uOp', 'uPre', 'uTex']);
+    this.progLayer = this.program(VS_LAYER, FS_LAYER, ['uScale', 'uPos', 'uRot', 'uAspect', 'uOp', 'uPre', 'uTex', 'uSrc']);
     this.progSlice = this.program(VS_SLICE, FS_SLICE, ['uScreen', 'uIn', 'uRot', 'uFlip', 'uSrc', 'uTex', 'uBC', 'uRGB', 'uUseSoft', 'uSoftP', 'uGamma', 'uNG', 'uGA', 'uGB', 'uInSize', 'uUseMask', 'uMask']);
     this.progScreen = this.program(VS_QUAD, FS_SCREEN, ['uTex', 'uMask', 'uUseMask', 'uBC', 'uRGB', 'uOp']);
     this.progCopy = this.program(VS_QUAD, FS_COPY, ['uTex', 'uOpaque']);
@@ -408,8 +409,10 @@ void main(){ float sg = max(uSigma, 0.01); int R = int(ceil(sg * (uCos > 0.5 ? 1
   }
 
   // ---------- camadas ----------
+  // recorte do Seguir rosto: só quando o clipe é desenhado (a Prévia com marcação pede a imagem inteira: noCropId)
+  cropOf(clip) { return clip && clip._crop && clip.id !== this.noCropId ? clip._crop : null; }
   fitScale(clip, W, H) {
-    const ar = clip.w / clip.h, car = W / H;
+    const k = this.cropOf(clip), ar = k ? (clip.w * k.w) / (clip.h * k.h) : clip.w / clip.h, car = W / H;
     let sx = 1, sy = 1;
     if (clip.fit === 'contain') { if (ar > car) sy = car / ar; else sx = ar / car; }
     else if (clip.fit === 'cover') { if (ar > car) sx = ar / car; else sy = car / ar; }
@@ -426,6 +429,8 @@ void main(){ float sg = max(uSigma, 0.01); int R = int(ceil(sg * (uCos > 0.5 ? 1
     gl.uniform2f(P.u.uPos, t.x, t.y); gl.uniform1f(P.u.uRot, -t.rot * Math.PI / 180); gl.uniform1f(P.u.uAspect, W / H);
     gl.uniform1f(P.u.uOp, opacity);
     gl.uniform1f(P.u.uPre, clip && clip.kind !== 'source' ? 0 : 1);   // só a textura de um elemento (vídeo, imagem, texto) ainda tem alfa reto
+    const k = this.cropOf(clip);   // a textura sobe virada (UNPACK_FLIP_Y): o y do uv cresce para cima
+    if (k) gl.uniform4f(P.u.uSrc, k.x, 1 - k.y - k.h, k.w, k.h); else gl.uniform4f(P.u.uSrc, 0, 0, 1, 1);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }

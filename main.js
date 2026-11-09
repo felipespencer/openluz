@@ -413,6 +413,16 @@ app.whenReady().then(async () => {
       e.sender.postMessage('seg:port', null, [port2]);
     } catch (err) { logLine('erro', 'seg nativo: ' + (err.message || err)); }
   });
+  // Seguir rosto (11-01): outro utilityProcess, com o detector de rosto (YuNet) no onnxruntime-node; a janela fala direto com ele
+  let faceProc = null;
+  ipcMain.on('face:port', (e) => {
+    try {
+      if (!faceProc) { faceProc = utilityProcess.fork(path.join(__dirname, 'app', 'face-native.js'), [], { serviceName: 'OpenLuz rosto' }); faceProc.on('exit', () => { faceProc = null; }); }
+      const { port1, port2 } = new MessageChannelMain();
+      faceProc.postMessage({ type: 'port' }, [port1]);
+      e.sender.postMessage('face:port', null, [port2]);
+    } catch (err) { logLine('erro', 'rosto: ' + (err.message || err)); }
+  });
   // Webcam virtual: outro utilityProcess, que escreve os quadros na câmera virtual do OBS; a janela fala direto com ele
   let camProc = null;
   ipcMain.on('webcam:port', (e) => {

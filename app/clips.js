@@ -9,6 +9,7 @@ export const setAudioEngine = (a) => { audioEngine = a; };
 import { cloneFx } from './effects.js';
 import { drawText, textDefaults, migrateText, ANIM_KEYS } from './text.js';
 import { animValue } from './beat.js';
+import { faceDefaults, faceSerial } from './face.js';
 import { desenharCartaz, cartazPadrao, ehCartaz, animada, textoDe } from './cartaz.js';
 import * as M3 from './model3d.js';
 
@@ -176,7 +177,7 @@ export function hsvCss(h, s, v) {
 // câmera: um elemento de vídeo ligado ao dispositivo
 export async function cameraClip(deviceId, label) {
   const stream = await navigator.mediaDevices.getUserMedia({ video: deviceId ? { deviceId: { exact: deviceId } } : true, audio: false });
-  const c = base('camera', label || 'Câmera'); c.deviceId = deviceId || ''; c.stream = stream;
+  const c = base('camera', label || 'Câmera'); c.deviceId = deviceId || ''; c.stream = stream; c.face = faceDefaults();   // Seguir rosto (11-01), desligado
   const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = stream; await v.play().catch(() => { });
   await new Promise(r => { if (v.videoWidth) r(); else v.onloadedmetadata = r; });
   c.el = v; c.w = v.videoWidth || 1280; c.h = v.videoHeight || 720;
@@ -194,7 +195,7 @@ export async function phoneAnswer(offer) {
   await new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') r(); }; setTimeout(r, 3000); });
   const clip = async () => {
     const stream = await Promise.race([got, new Promise((_, rej) => setTimeout(() => rej(new Error('o celular não mandou vídeo')), 15000))]);
-    const c = base('camera', 'Celular' + (offer.ip ? ' ' + String(offer.ip).replace('::ffff:', '') : '')); c.phone = true; c.pc = pc; c.stream = stream;
+    const c = base('camera', 'Celular' + (offer.ip ? ' ' + String(offer.ip).replace('::ffff:', '') : '')); c.phone = true; c.pc = pc; c.stream = stream; c.face = faceDefaults();
     const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = stream; await v.play().catch(() => { });
     await new Promise(r => { if (v.videoWidth) r(); else { v.onloadedmetadata = r; setTimeout(r, 4000); } });
     c.el = v; c.w = v.videoWidth || 1280; c.h = v.videoHeight || 720;
@@ -254,6 +255,7 @@ export function cloneClip(c) {
   if (c.kind === 'camera' || c.kind === 'capture') { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = c.stream; v.play().catch(() => { }); n.el = v; if (c.cap) { n.cap = { ...c.cap }; if (c.cap.key) webUse.set(c.cap.key, (webUse.get(c.cap.key) || 0) + 1); } }
   if (c.kind === 'lasermirror') { n.el = document.createElement('canvas'); n.el.width = n.el.height = 1080; }
   if (c.kind === 'model3d') { n.params = { ...c.params }; n.m3 = null; n.el = document.createElement('canvas'); n.el.width = M3.W; n.el.height = M3.H; M3.carregar(c.path).then(l => M3.montar(n, l)).catch(() => { }); }   // cada casa tem a sua cena
+  if (c.kind === 'camera') { n.face = c.face ? faceSerial(c.face) : faceDefaults(); n._crop = n._cropPx = n._fx = n._faces = n._seguido = n._faceRd = null; n._faceBusy = false; }   // a cópia segue o rosto sozinha
   n.ap = { ...c.ap }; n.panim = JSON.parse(JSON.stringify(c.panim || {})); n.afx = (c.afx || []).map(f => ({ ...f, params: { ...f.params } })); n.srcNode = n.gainNode = n.panNode = null; n.afxNodes = [];
   return n;
 }
@@ -336,7 +338,7 @@ export function serializeClip(c) {
   if (c.kind === 'text') o.text = c.text;
   if (c.kind === 'model3d') { o.path = c.path; o.params = c.params; }
   if (c.iagen) o.iagen = { ...c.iagen, gerando: false, erro: '' };   // ✦ IA generativa: o pedido e as versões vão junto
-  if (c.kind === 'camera') { o.deviceId = c.deviceId; }
+  if (c.kind === 'camera') { o.deviceId = c.deviceId; o.face = faceSerial(c.face); }
   if (c.kind === 'capture') o.cap = { srcName: c.cap.srcName, url: c.cap.url, w: c.cap.w, h: c.cap.h, youtube: c.cap.youtube || undefined };
   if (c.kind === 'laser') o.laserId = c.laserId;
   return o;
@@ -350,7 +352,7 @@ export async function deserializeClip(o, ctx) {
     else if (o.kind === 'source') c = sourceClip(o.source);
     else if (o.kind === 'model3d') { if (!o.path) return null; c = await model3dClip(o.path, o.name); }
     else if (o.kind === 'text') c = textClip(null, ehCartaz(o.text) ? 'cartaz' : !!(o.text && o.text.animator), o.text || {});
-    else if (o.kind === 'camera') { c = await cameraClip(o.deviceId, o.name); }
+    else if (o.kind === 'camera') { c = await cameraClip(o.deviceId, o.name); if (c && o.face) c.face = { ...faceDefaults(), ...faceSerial(o.face), params: { ...faceDefaults().params, ...(o.face.params || {}) } }; }
     else if (o.kind === 'capture') {
       let url = o.cap && o.cap.url, yt = o.cap && o.cap.youtube;
       if (yt) { const D = window.projDesktop; const port = D && D.localPort ? await D.localPort() : 0; url = 'http://127.0.0.1:' + port + '/yt.html?v=' + yt; }   // a porta do servidor local muda a cada abertura
@@ -366,6 +368,7 @@ export async function deserializeClip(o, ctx) {
 export function applyClipProps(c, o) {
   if (o.kind === 'source' && c.params) Object.assign(c.params, o.params || {});
   if (o.kind === 'model3d' && c.params) Object.assign(c.params, o.params || {});
+  if (o.kind === 'camera' && c.kind === 'camera' && o.face) { const d = faceDefaults(); c.face = { on: !!o.face.on, params: { ...d.params, ...(o.face.params || {}) }, panim: JSON.parse(JSON.stringify(o.face.panim || {})) }; }   // Ctrl+Z do Seguir rosto
   if (o.kind === 'text' && c.text) { c.text = ehCartaz(o.text) ? JSON.parse(JSON.stringify(o.text)) : migrateText({ ...(o.text || {}) }); c.animHist = null; renderText(c); }
   c.name = o.name || c.name; c.fit = o.fit || c.fit; c.speed = o.speed || 1; c.panim = JSON.parse(JSON.stringify(o.panim || {})); c.afx = (o.afx || []).map(f => ({ ...f, params: { ...f.params } })); c.fx = (o.fx || []).map(f => cloneFx(f)); c.transform = Object.assign(IDENT_TR(), o.transform || {}); c.ap = Object.assign({ mode: 'layer', l: 0, c: 0, dur: 'clip', secs: 5 }, o.ap || {});
   if (o.iagen) c.iagen = JSON.parse(JSON.stringify(o.iagen));

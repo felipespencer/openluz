@@ -23,6 +23,7 @@ import { KeyMap } from './keymap.js';
 import { EditorTexto } from './text-editor.js';
 import { Automape } from './automape.js';
 import { WebcamOut } from './webcam.js';
+import { tickFace, marcaNaPrevia, desenharMarca } from './face.js';
 import { initSplitters } from './splitters.js';
 import { paintScan } from './laser-model.js';
 import { BPM, SNAPS, advance, tap, resync, setBpm, click, effBpm } from './beat.js';
@@ -1582,7 +1583,8 @@ function loop() {
   loop.total = (loop.total || 0) + 1;
   if (now - (loop.fpsAt || 0) >= 1) { if (!$('fpsBox').hidden) $('fpsBox').textContent = loop.frames + ' fps · ' + state.layers.filter(L => L.on >= 0).length + ' no ar · ' + COLS + ' colunas'; loop.frames = 0; loop.fpsAt = now; }
   { const s = previewCell(), tn = now; for (const L of state.layers) C.tickText(liveClip(L), tn); if (s && s.clip) C.tickText(s.clip, tn); }
-  { const s = previewCell(); for (const L of state.layers) C.tick3d(liveClip(L), now); if (s && s.clip) C.tick3d(s.clip, now); }   // modelo 3D: a cena anda e é desenhada uma vez por quadro   // Text Animator: valores animados chegando a cada pedaço com atraso
+  { const s = previewCell(); for (const L of state.layers) C.tick3d(liveClip(L), now); if (s && s.clip) C.tick3d(s.clip, now); }
+  { const s = previewCell(), vis = new Set(state.layers.map(L => liveClip(L)).filter(Boolean)); if (s && s.clip) vis.add(s.clip); for (const c of vis) tickFace(c, now, engine, state.bpm, engine.W / engine.H); }   // Seguir rosto: pede quadros ao detector e anda o recorte   // modelo 3D: a cena anda e é desenhada uma vez por quadro   // Text Animator: valores animados chegando a cada pedaço com atraso
   // espelho do laser: o desenho do LaserCube vai para a projeção
   { const s = previewCell(); for (const L of state.layers) { const c = liveClip(L); for (const m of [c, s && s.clip]) if (m && m.kind === 'lasermirror' && m.paintedAt !== now) { m.paintedAt = now; paintScan(m.el.getContext('2d'), 1080, 1080, laser.scanNow(now), false); m.rev++; } } }
   engine.render(state.layers, engine.neededLayers(state.screens), now);
@@ -1592,7 +1594,11 @@ function loop() {
   if (!nOut || gravando || loop.frames % 2 === 0) engine.blit(monCtx);
   thumbSources();
   const pc = previewCell();
-  if (pc && pc.clip.kind !== 'laser' && prevCanvas.isConnected && (!nOut || loop.frames % 3 === 0)) { engine.previewLayer(pc.L, pc.idx); engine.blit(prevCtx); }
+  if (pc && pc.clip.kind !== 'laser' && prevCanvas.isConnected && (!nOut || loop.frames % 3 === 0)) {
+    const marca = marcaNaPrevia(pc.clip); if (marca) engine.noCropId = pc.clip.id;   // Prévia com marcação: a imagem inteira, com o rosto e o recorte por cima
+    try { engine.previewLayer(pc.L, pc.idx); } finally { engine.noCropId = null; }
+    engine.blit(prevCtx); if (marca) desenharMarca(prevCtx, pc.clip, engine, prevCanvas.width, prevCanvas.height);
+  }
   for (const sc of state.screens) {
     const open = sc.win && !sc.win.closed;
     if (!open && !(ao.open && ao.curScreen() === sc)) continue;

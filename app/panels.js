@@ -16,6 +16,7 @@ import { FUNCOES, ESTILOS, montarPedido, validarVersoes, aplicarVersao, fontesPa
 import { PRESETS, versaoDoPreset } from './text-presets.js';
 import { ehCartaz, textoDe, FUNDOS } from './cartaz.js';
 import { BUILTIN_NAMES, putLutText } from './lut.js';
+import { PARAMS_FACE, faceDefaults, stats as faceStats } from './face.js';
 
 const $ = (id) => document.getElementById(id);
 const fmtT = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
@@ -563,7 +564,18 @@ export class Panels {
         num('Brilho dentro', 'Animated Glow In', 'Soma ao brilho de dentro de cada pedaço.', 'aGlowIn', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
         num('Brilho fora', 'Animated Glow Out', 'Soma ao brilho de fora de cada pedaço.', 'aGlowOut', { min: 0, max: 1, step: 0.01, dec: 2, reset: 0 });
       }
-    } else if (clip.kind === 'camera') P.appendChild(this.prow('Câmera', '', el('span', 'pinfo', clip.name + ' · ' + clip.w + ' × ' + clip.h)));
+    } else if (clip.kind === 'camera') {
+      P.appendChild(this.prow('Câmera', '', el('span', 'pinfo', clip.name + ' · ' + clip.w + ' × ' + clip.h)));
+      // Seguir rosto (11-01): acha o rosto no próprio PC e recorta a imagem em volta dele, acompanhando a pessoa
+      const f = clip.face || (clip.face = faceDefaults()), H = (t) => 'Seguir rosto · ' + t;
+      P.appendChild(this.phead('Seguir rosto', H('Acha o rosto na imagem da câmera, aqui no PC e sem internet, e recorta em volta dele como um cinegrafista. Não sabe de quem é o rosto e não guarda nada.')));
+      P.appendChild(this.pcheck('Seguir rosto', H('Liga o recorte que acompanha o rosto. Desligado, a câmera fica inteira, como sempre.'), !!f.on, v => { f.on = v; this.render(); }, f.on ? 'ligado' : 'desligado'));
+      if (f.on) {
+        for (const p of PARAMS_FACE) this.paramRows(P, f, p, H(p.label + '|' + p.help));
+        const st = faceStats, n = (clip._faces || []).length;
+        P.appendChild(this.prow('Rostos', H('Quantos rostos o detector está vendo agora e quanto ele leva.'), el('span', 'pinfo', st.err ? st.err : n + (n === 1 ? ' rosto' : ' rostos') + (st.ms ? ' · ' + st.ms.toFixed(1) + ' ms' + (st.ep ? ' (' + (st.ep === 'dml' ? 'placa' : 'processador') + ')' : '') : ''))));
+      }
+    }
     else if (clip.kind === 'capture') {
       if (clip.cap.url) P.appendChild(this.ptext('Endereço', 'Endereço|A página que o navegador escondido mostra. Mudar aqui abre outra página no mesmo clipe.', clip.cap.url, v => { if (v && v !== clip.cap.url) { captureNavigate(clip, v); this.ctx.renderGrid(); } }));
       P.appendChild(this.prow('Captura', '', el('span', 'pinfo', (clip.cap.url ? 'página web' : clip.cap.srcName) + ' · ' + clip.w + ' × ' + clip.h)));
