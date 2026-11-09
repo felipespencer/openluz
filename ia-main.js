@@ -32,7 +32,15 @@ async function getJson(url, opts = {}, ms = 20000) {
   try {
     const r = await fetch(url, { ...opts, signal });
     const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch { }
-    if (!r.ok) { const e = new Error((j && (j.error && (j.error.message || j.error))) || txt.slice(0, 200) || ('HTTP ' + r.status)); e.status = r.status; throw e; }
+    if (!r.ok) {
+      const det = String((j && (j.error && (j.error.message || j.error))) || txt.slice(0, 200) || ('HTTP ' + r.status));
+      // em português; e.passa = vale tentar outro modelo do mesmo serviço (sobrecarga ou limite por minuto daquele modelo)
+      const msg = r.status === 401 || r.status === 403 ? 'a chave não foi aceita (' + r.status + ')'
+        : r.status === 429 ? (/limit:\s*0\b/.test(det) ? 'esta chave não tem cota para este modelo' : 'o serviço pediu um tempo (limite de uso por minuto)')
+        : r.status === 404 ? 'o modelo não existe mais para esta chave' : r.status >= 500 || /high demand|overloaded|unavailable/i.test(det) ? 'o serviço está sobrecarregado agora (' + r.status + ')'
+        : det;
+      const e = new Error(msg); e.status = r.status; e.passa = r.status === 429 || r.status === 404 || r.status >= 500; throw e;
+    }
     return j;
   } catch (e) { if (e.name === 'AbortError') throw new Error('o serviço demorou demais para responder'); throw e; } finally { fim(); }
 }
@@ -125,7 +133,14 @@ async function pedir(s, modelo, k, { system, user, schema }) {
     return jsonDe(j.message && j.message.content);
   }
   if (s === 'gemini') {
-    const j = await getJson('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(modelo) + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': k }, body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.9 } }) }, 120000);
+    // o flash mais novo às vezes responde 503 "high demand" (medido em 2026-11-09 com o gemini-3.8-flash): tenta os estáveis
+    const tentar = [modelo, 'gemini-3.7-flash', 'gemini-3.5-flash'].filter((m, i, a) => m && a.indexOf(m) === i);   // 2.5-flash: 'no longer available to new users' (2026-11-09)
+    let j = null, ultimo = null;
+    for (const m of tentar) {
+      try { j = await getJson('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': k }, body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.9 } }) }, 60000); break; }
+      catch (e) { ultimo = e; if (/demorou demais/.test(e.message)) throw new Error('o Gemini não respondeu em 60 s (o Google está sobrecarregado agora): use o Claude ou o Ollama em Configuração › IA, ou tente daqui a pouco'); if (!e.passa) throw e; }
+    }
+    if (!j) throw new Error('o Gemini ' + String(ultimo && ultimo.message || 'não respondeu').replace(/^o serviço /, '') + ' (tentei ' + tentar.length + ' modelos; é do lado do Google): use o Claude ou o Ollama em Configuração › IA, ou tente daqui a pouco');
     const parts = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
     if (!parts) throw new Error('o Gemini não devolveu resposta' + (j.promptFeedback && j.promptFeedback.blockReason ? ' (bloqueado: ' + j.promptFeedback.blockReason + ')' : ''));
     return jsonDe(parts.map(p => p.text || '').join(''));

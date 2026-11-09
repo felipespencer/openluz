@@ -42,6 +42,28 @@ function pngLiso(w, h, pinta) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
+// Erro do serviço → frase em português + o que fazer. e.esperar (segundos) só quando esperar resolve (limite por tempo);
+// e.trocar quando não adianta insistir com este serviço (cota zero, sem crédito, chave recusada): a página oferece o grátis.
+// Respostas medidas em 2026-11-09: Pollinations grátis = 402 FREE_LIMIT "1 image every 45 seconds per IP. Retry after 45s";
+// Gemini com chave grátis = 429 "generate_content_free_tier_requests, limit: 0" em todos os modelos de imagem;
+// Higgsfield sem saldo = 403 {"detail":"not_enough_credits"}.
+function erroDoServico(url, status, j, txt) {
+  const quem = /pollinations/.test(url) ? 'pollinations' : /generativelanguage/.test(url) ? 'gemini' : /openai\.com/.test(url) ? 'openai' : /higgsfield|^http:\/\/127\.0\.0\.1:18/.test(url) ? 'higgsfield' : '';
+  const det = String((j && ((j.error && (j.error.message || j.error.code || j.error)) || j.detail || j.message)) || txt || '').slice(0, 400);
+  const seg = /retry after\s*(\d+)\s*s/i.exec(det) || /"retryDelay"\s*:\s*"(\d+)/.exec(txt) || /(\d+)\s*seconds?/i.exec(det);
+  const mk = (m, extra = {}) => Object.assign(new Error(m), { status }, extra);
+  if (quem === 'pollinations' && (status === 402 || status === 429)) return mk('o Pollinations grátis faz 1 imagem a cada 45 s', { esperar: Math.min(120, (seg ? +seg[1] : 45) + 2) });
+  if (quem === 'gemini' && status === 429) {
+    if (/limit:\s*0\b/.test(det)) return mk('a chave do Gemini não tem imagem grátis (o Google dá cota zero de imagem sem faturamento). Ative o faturamento no Google AI Studio ou use o Pollinations', { trocar: true });
+    return mk('o Gemini pediu um tempo (limite por minuto)', { esperar: Math.min(120, (seg ? +seg[1] : 30) + 2) });
+  }
+  if (/not_enough_credits|insufficient.*(credit|balance|fund)|billing_hard_limit/i.test(det) || status === 402) return mk('sem crédito no ' + ({ higgsfield: 'Higgsfield: ponha saldo em console.higgsfield.ai', openai: 'OpenAI: ponha saldo em platform.openai.com', gemini: 'Gemini' }[quem] || 'serviço'), { trocar: true });
+  if (status === 401 || status === 403) return mk('a chave não foi aceita (' + status + '): confira se colou inteira' + (quem === 'higgsfield' ? ', no formato ID:segredo' : ''), { trocar: true });
+  if (status === 429) return mk('o serviço pediu um tempo (429)', { esperar: Math.min(120, (seg ? +seg[1] : 30) + 2) });
+  if (status >= 500) return mk('o serviço está com problema agora (' + status + '): tente de novo daqui a pouco ou troque de serviço');
+  return mk(det || 'HTTP ' + status);
+}
+
 const comTempo = (ms) => { const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms); return { signal: ac.signal, fim: () => clearTimeout(t) }; };
 async function buscar(url, opts = {}, ms = 120000) {
   const { signal, fim } = comTempo(ms);
@@ -49,8 +71,7 @@ async function buscar(url, opts = {}, ms = 120000) {
     const r = await fetch(url, { ...opts, signal });
     if (!r.ok) {
       const txt = await r.text().catch(() => ''); let j = null; try { j = JSON.parse(txt); } catch { }
-      const msg = (j && (j.error && (j.error.message || j.error))) || txt.slice(0, 200) || ('HTTP ' + r.status);
-      const e = new Error(r.status === 429 ? (/generativelanguage/.test(url) ? 'o Gemini não liberou imagem para esta chave (429): a imagem dele é paga; ative o faturamento no Google AI Studio ou use o Pollinations' : 'o serviço disse que a cota acabou por agora (429): tente daqui a pouco ou troque de serviço') : r.status === 401 || r.status === 403 ? 'a chave não foi aceita (' + r.status + ')' : r.status === 402 ? 'sem saldo no serviço (402): ponha crédito na conta (no Higgsfield, em console.higgsfield.ai)' : String(msg)); e.status = r.status; throw e;
+      throw erroDoServico(url, r.status, j, txt);
     }
     return r;
   } catch (e) { if (e.name === 'AbortError') throw new Error('o serviço demorou demais para responder'); if (/fetch failed/.test(e.message)) throw new Error('sem conexão com o serviço'); throw e; } finally { fim(); }
@@ -79,8 +100,9 @@ async function pollinations(r, n) {
   return Promise.all(Array.from({ length: n }, async (_, i) => {
     const seed = Math.floor(Math.random() * 1e9) + i;
     const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(textoPedido(r))}?width=${w * f}&height=${h * f}&seed=${seed}&nologo=true&model=flux`;
-    const res = await buscar(url, {}, 180000);
-    return { buf: Buffer.from(await res.arrayBuffer()), mime: res.headers.get('content-type') || 'image/jpeg' };
+    const res = await buscar(url, {}, 180000), mime = res.headers.get('content-type') || '';
+    if (!/^image\//.test(mime)) throw new Error('o Pollinations respondeu sem imagem: tente de novo');
+    return { buf: Buffer.from(await res.arrayBuffer()), mime };
   }));
 }
 async function openai(k, r, n) {
@@ -188,7 +210,7 @@ function instalarImagem({ ler, gravar, chave }) {
       else return { ok: false, erro: 'serviço desconhecido' };
       if (!imgs.length) return { ok: false, erro: 'o serviço não devolveu imagem' };
       return { ok: true, servico: s, arquivos: imgs.map((im, i) => gravarImg(pedido, i, im.buf, im.mime)) };
-    } catch (e) { return { ok: false, erro: String(e.message || e) }; }
+    } catch (e) { return { ok: false, erro: String(e.message || e), esperar: e.esperar || 0, trocar: !!e.trocar, servico: s }; }
   });
 }
 module.exports = { instalarImagem, SERVICOS_IMG };

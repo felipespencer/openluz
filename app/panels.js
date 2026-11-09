@@ -357,6 +357,11 @@ export class Panels {
     if (st.gerando) { const b = el('div', 'iaprog'); b.appendChild(el('i')); box.appendChild(b); }
     const info = el('div', 'iainfo'); info.append(el('span', '', st.erro ? 'Não deu: ' + st.erro : 'Serviço: ' + (st.servico || '…')));
     const tr = el('a', 'ialink', 'trocar serviço'); tr.onclick = () => this.ctx.iaImgDialog(() => this.render()); info.appendChild(tr); box.appendChild(info);
+    if (st.erro && st.trocar && !st.gerando) {   // não adianta insistir com este serviço: um clique passa para o grátis e gera de novo
+      const b = el('button', 'wide', 'Usar o Pollinations (grátis) e gerar'); b.type = 'button'; b.dataset.k = 'usarGratis';
+      b.onclick = async () => { await D.iaImg.servico('pollinations'); st.servico = 'pollinations'; st.trocar = false; this.iaGerar(clip, {}); };
+      box.appendChild(b);
+    }
     if (!st.servico && D && D.iaImg) D.iaImg.config().then(c => { st.servico = c.servico; if (this.ctx.selectedClip && this.ctx.selectedClip() === clip) this.render(); });
     if (st.versoes && st.versoes.length) {
       const row = el('div', 'iaver');
@@ -383,15 +388,15 @@ export class Panels {
     st.gerando = true; st.erro = ''; st.feitas = 0; st.total = n; st.espera = 0; this.render();
     for (let k = 0; k < n; k++) {
       let r = null;
-      for (let tent = 0; tent < 3; tent++) {
+      for (let tent = 0; tent < 4; tent++) {
         r = await D.iaImg.gerar({ pedido: st.pedido, estilo: st.estilo, prop: st.prop, n: 1, base: o.base, maior: !!o.maior, servico: window.__iaImgServico });
-        const m = !r.ok && /(\d+)\s*s(ec|egundos)?/i.exec(r.erro || ''); const lim = !r.ok && /limit|cota|429|retry/i.test(r.erro || '');
-        if (r.ok || !lim) break;
-        let t = Math.min(120, m ? +m[1] + 2 : 47);
+        if (r.ok || !r.esperar) break;   // só espera quando o serviço disse que é questão de tempo (o Pollinations grátis: 1 a cada 45 s)
+        let t = Math.min(120, r.esperar);
         while (t > 0) { st.espera = t; this.render(); await new Promise(z => setTimeout(z, 1000)); t--; }
         st.espera = 0;
       }
-      if (!r.ok) { st.erro = r.erro; if (r.semChave) this.ctx.iaImgDialog(() => this.render()); break; }
+      if (!r.ok) { st.erro = r.erro; st.trocar = !!r.trocar && r.servico !== 'pollinations'; if (r.semChave) this.ctx.iaImgDialog(() => this.render()); break; }
+      st.trocar = false;
       st.servico = r.servico; novas.push(...r.arquivos); st.versoes = [...r.arquivos, ...(st.versoes || [])].slice(0, 12); st.feitas = k + 1;
       if (k === 0) { const c2 = await this.iaEscolherImg(clip, 0); if (c2) clip = c2; } else { st.esc = (st.esc ?? 0) + 1; this.render(); }
     }

@@ -134,8 +134,11 @@ await ev(`(() => { const b = ${P}.browser; b.search = ''; b.setTab('src'); retur
     await ev(`(() => { const e = document.querySelector('#clipPan .iagen .iav[data-v="0"] [data-k=maior]'); e.style.opacity = 1; e.parentElement.style.opacity = 1; return 1; })()`);
     { const m = await pos('#clipPan .iagen .iav[data-v="0"] [data-k=maior]'); await click(m.x, m.y); for (let i = 0; i < 150 && await ev(`${clip}.iagen.gerando`); i++) await wait(200); await wait(300); }
     l = await lg(); check('Fazer maior pede 1080p ao Higgsfield', l.length >= 1 && l.every(x => x.body.resolution === '1080p'), JSON.stringify(l.map(x => x.body.resolution)));
+    await gerar('teste #creditos', 1);
+    check('sem crédito (403 not_enough_credits, como a API real) diz sem crédito, não chave recusada', /sem crédito no Higgsfield/.test(await ev(`${clip}.iagen.erro`)), await ev(`${clip}.iagen.erro`));
+    check('quando não adianta insistir aparece o botão Usar o Pollinations (grátis)', await ev(`!!document.querySelector('#clipPan [data-k=usarGratis]')`));
     await gerar('teste #402', 1);
-    check('sem saldo (402) avisa em português', /sem saldo/.test(await ev(`${clip}.iagen.erro`)), await ev(`${clip}.iagen.erro`));
+    check('sem saldo (402) avisa em português', /sem crédito/.test(await ev(`${clip}.iagen.erro`)), await ev(`${clip}.iagen.erro`));
     await gerar('teste #nsfw', 1);
     check('recusado pela moderação avisa em português', /modera/.test(await ev(`${clip}.iagen.erro`)), await ev(`${clip}.iagen.erro`));
     await gerar('teste #failed', 1);

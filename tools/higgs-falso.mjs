@@ -26,6 +26,7 @@ export function subir(porta = 18089) {
       log.push({ auth: req.headers.authorization || '', idem: req.headers['idempotency-key'] || '', body: b });
       if (/#401/.test(b.prompt)) return json(401, { detail: 'Invalid credentials' });
       if (/#402/.test(b.prompt)) return json(402, { detail: 'Not enough credits' });
+      if (/#creditos/.test(b.prompt)) return json(403, { detail: 'not_enough_credits' });   // o que a API respondeu de verdade em 2026-11-09
       if (!/^Key [^:]+:[^:]+$/.test(req.headers.authorization || '')) return json(401, { detail: 'missing key' });
       const id = 'req-' + (++seq);
       pedidos.set(id, { t0: Date.now(), b });
