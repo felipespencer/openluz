@@ -4,7 +4,7 @@ import { el, ICON } from './panel.js';
 import { EFFECTS } from './effects.js';
 import { AUDIO_FX } from './audio.js';
 import { SOURCES } from './sources.js';
-import { isVideoName, isImageName, mediaUrl } from './clips.js';
+import { isVideoName, isImageName, is3dName, mediaUrl } from './clips.js';
 import { isPrepared } from './player.js';
 
 const $ = (id) => document.getElementById(id);
@@ -62,7 +62,7 @@ export class Browser {
     for (const f of L.files) {
       if (!this.match(f.name)) continue;
       const r = el('div', 'item file'); r.draggable = true; r.dataset.help = f.name + '|Arraste para uma casa da grade. Duplo clique mostra na prévia.';
-      const ic = el('i', 'th'); if (isImageName(f.name)) ic.style.backgroundImage = 'url("' + mediaUrl(f.path) + '")'; else if (isVideoName(f.name)) ic.textContent = '▶'; else ic.textContent = '✎';
+      const ic = el('i', 'th'); if (isImageName(f.name)) ic.style.backgroundImage = 'url("' + mediaUrl(f.path) + '")'; else if (isVideoName(f.name)) ic.textContent = '▶'; else if (is3dName(f.name)) { ic.textContent = '◆'; ic.style.color = '#6fb3ff'; } else ic.textContent = '✎';
       r.append(ic, el('span', '', f.name), el('small', '', f.size > 1e6 ? (f.size / 1e6).toFixed(1) + ' MB' : Math.round(f.size / 1e3) + ' kB'));
       if (isVideoName(f.name) && !isPrepared(f.name) && this.c.prepareFile) {   // H.264 todo intra ao lado do original
         const prog = this.c.preparingFile(f.path);

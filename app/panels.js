@@ -5,7 +5,7 @@ import { FITS } from './engine.js';
 import { MIXER_OPTS, MIXER_OPT, mixerById, mixerColor } from './mixers.js';
 import { EFFECTS, effectById, mkFx } from './effects.js';
 import { sourceById } from './sources.js';
-import { mediaUrl } from './clips.js';
+import { mediaUrl, PARAMS_3D, info3d } from './clips.js';
 import { PLAY_MODES, AWAY_MODES, captureNavigate, renderText, textClip, playClip, pauseClip, seekClip, setRate, applyAudio, mediaOf, rebuildAudioFx, updateAudioFx } from './clips.js';
 import { AUTOPILOT } from './composition.js';
 import { SHAPES, BEATS, ANIM } from './beat.js';
@@ -479,6 +479,22 @@ export class Panels {
       const def = sourceById(clip.source);
       P.appendChild(this.phead(def.name, def.name + '|' + def.desc));
       for (const p of def.params) this.paramRows(P, clip, p, def.name + ' · ' + p.label + '|' + def.desc);
+    } else if (clip.kind === 'model3d') {
+      // modelo 3D: o que veio no arquivo, a animação dele e os controles (♪ na batida nos números)
+      const inf = info3d(clip), H = (t) => 'Modelo 3D · ' + t;
+      P.appendChild(this.phead('◆ Modelo 3D', H('O arquivo 3D desenhado ao vivo, com fundo transparente: fica por cima das camadas de baixo.')));
+      P.appendChild(this.prow('Arquivo', H('Formato, triângulos, materiais e animações que vieram no arquivo.'), el('span', 'pinfo', inf ? inf.fmt + ' · ' + inf.tri.toLocaleString('pt-BR') + ' triângulos · ' + inf.mats + ' materiais' : 'abrindo…')));
+      for (const p of PARAMS_3D) {
+        if (p.grupo) {
+          P.appendChild(this.phead(p.grupo, H(p.grupo)));
+          if (p.grupo === 'Animação do arquivo') {
+            const lista = inf && inf.anims.length ? inf.anims.map((n, i) => [String(i), n]) : [['0', '— o arquivo não tem animação —']];
+            P.appendChild(this.pselect('Animação', H('Qual animação do arquivo toca (GLB, FBX e DAE podem trazer várias).'), lista, String(clip.params.anim | 0), v => { clip.params.anim = +v; }));
+          }
+          continue;
+        }
+        this.paramRows(P, clip, p, H(p.label + '|' + p.help));
+      }
     } else if (clip.kind === 'text' && ehCartaz(clip.text)) {
       this.cartazRows(P, clip);
     } else if (clip.kind === 'text') {

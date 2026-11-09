@@ -10,6 +10,7 @@ import { cloneFx } from './effects.js';
 import { drawText, textDefaults, migrateText, ANIM_KEYS } from './text.js';
 import { animValue } from './beat.js';
 import { desenharCartaz, cartazPadrao, ehCartaz, animada, textoDe } from './cartaz.js';
+import * as M3 from './model3d.js';
 
 let seq = 1;
 export const nextId = () => seq++;
@@ -22,6 +23,8 @@ const base = (kind, name) => ({ id: seq++, name, kind, url: '', path: '', w: 0, 
 export const mediaUrl = (path) => 'app://projecionista/media/' + btoa(unescape(encodeURIComponent(path))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 export const isVideoName = (n) => /\.(mp4|webm|mov|m4v|mkv|ogv|avi)$/i.test(n);
 export const isImageName = (n) => /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(n);
+export const is3dName = M3.is3dName;
+M3.setMediaUrl(mediaUrl);
 
 // mede a mídia e tira a miniatura na proporção do próprio arquivo
 function probeMedia(clip) {
@@ -59,8 +62,9 @@ function probeMedia(clip) {
 // arquivo solto: com o caminho do disco (ponte do Electron) o clipe pode ser salvo na composição
 export function clipFromFile(file, pathOf) {
   const isVid = /^video\//.test(file.type) || isVideoName(file.name), isImg = /^image\//.test(file.type) || isImageName(file.name);
-  if (!isVid && !isImg) return Promise.reject(new Error('Solte vídeo ou imagem'));
   const path = pathOf ? (pathOf(file) || '') : '';
+  if (M3.is3dName(file.name)) return path ? model3dClip(path, file.name) : Promise.reject(new Error('Modelo 3D só abre na versão de computador'));
+  if (!isVid && !isImg) return Promise.reject(new Error('Solte vídeo, imagem ou modelo 3D'));
   const clip = base(isVid ? 'video' : 'image', file.name);
   clip.path = path; clip.url = path ? mediaUrl(path) : URL.createObjectURL(file);
   if (isAnimName(file.name)) return withGif(clip);
@@ -68,6 +72,7 @@ export function clipFromFile(file, pathOf) {
 }
 export function clipFromPath(path, name, desktop) {
   name = name || path.split(/[\\/]/).pop();
+  if (M3.is3dName(name) || (M3.is3dName(path) && !isVideoName(name) && !isImageName(name))) return model3dClip(path, name);
   if (!isVideoName(name) && !isImageName(name)) return Promise.reject(new Error('Não é vídeo nem imagem: ' + name));
   const clip = base(isVideoName(name) ? 'video' : 'image', name);
   clip.path = path; clip.url = mediaUrl(path);
@@ -116,6 +121,17 @@ export function sourceClip(id) {
   const c = base('source', def.name); c.source = id; c.params = {}; for (const p of def.params) c.params[p.key] = p.def;
   c.w = 1920; c.h = 1080; c.fit = 'stretch'; c.seed = Math.random() * 100; c.thumb = ''; return c;
 }
+// modelo 3D (model3d.js): lê o arquivo, monta a cena e desenha num canvas 2D que vira textura, como o texto
+export async function model3dClip(path, name) {
+  const c = base('model3d', name || path.split(/[\\/]/).pop()); c.path = path; c.url = mediaUrl(path);
+  c.params = M3.defaults(); c.w = M3.W; c.h = M3.H; c.fit = 'stretch';
+  c.el = document.createElement('canvas'); c.el.width = M3.W; c.el.height = M3.H;
+  let lido; try { lido = await M3.carregar(path); } catch (e) { throw new Error('Não consegui abrir o modelo ' + c.name + ': ' + (e && e.message || e)); }
+  M3.montar(c, lido); c.thumb = M3.miniatura(c, clock); return c;
+}
+export const tick3d = (c, now) => { if (c && c.kind === 'model3d' && c.m3) M3.tick(c, now, clock); };
+export const info3d = (c) => c && c.m3 ? c.m3.info : null;
+export const PARAMS_3D = M3.PARAMS;
 // texto: Text Block e Text Animator (text.js), desenhado num canvas 2D que vira textura
 export function textClip(text, animator = false, saved = null) {
   // animator: false = Text Block, true = Text Animator, 'cartaz' = Texto (editor no jeito do Canva, cartaz.js)
@@ -237,6 +253,7 @@ export function cloneClip(c) {
   if (c.kind === 'text') { n.text = JSON.parse(JSON.stringify(c.text)); n.animHist = null; n.el = document.createElement('canvas'); n.el.width = 1920; n.el.height = 1080; renderText(n); }
   if (c.kind === 'camera' || c.kind === 'capture') { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = c.stream; v.play().catch(() => { }); n.el = v; if (c.cap) { n.cap = { ...c.cap }; if (c.cap.key) webUse.set(c.cap.key, (webUse.get(c.cap.key) || 0) + 1); } }
   if (c.kind === 'lasermirror') { n.el = document.createElement('canvas'); n.el.width = n.el.height = 1080; }
+  if (c.kind === 'model3d') { n.params = { ...c.params }; n.m3 = null; n.el = document.createElement('canvas'); n.el.width = M3.W; n.el.height = M3.H; M3.carregar(c.path).then(l => M3.montar(n, l)).catch(() => { }); }   // cada casa tem a sua cena
   n.ap = { ...c.ap }; n.panim = JSON.parse(JSON.stringify(c.panim || {})); n.afx = (c.afx || []).map(f => ({ ...f, params: { ...f.params } })); n.srcNode = n.gainNode = n.panNode = null; n.afxNodes = [];
   return n;
 }
@@ -317,6 +334,7 @@ export function serializeClip(c) {
   if (c.kind === 'video' || c.kind === 'image') { if (!c.path) return { ...o, missing: true }; o.path = c.path; }
   if (c.kind === 'source') { o.source = c.source; o.params = c.params; }
   if (c.kind === 'text') o.text = c.text;
+  if (c.kind === 'model3d') { o.path = c.path; o.params = c.params; }
   if (c.iagen) o.iagen = { ...c.iagen, gerando: false, erro: '' };   // ✦ IA generativa: o pedido e as versões vão junto
   if (c.kind === 'camera') { o.deviceId = c.deviceId; }
   if (c.kind === 'capture') o.cap = { srcName: c.cap.srcName, url: c.cap.url, w: c.cap.w, h: c.cap.h, youtube: c.cap.youtube || undefined };
@@ -330,6 +348,7 @@ export async function deserializeClip(o, ctx) {
     // o tipo vem do arquivo: um clipe renomeado (sem extensão no nome) também abre; o nome volta pelo applyClipProps
     if (o.kind === 'video' || o.kind === 'image') { if (!o.path) return null; c = await clipFromPath(o.path, isVideoName(o.name || '') || isImageName(o.name || '') ? o.name : undefined); }
     else if (o.kind === 'source') c = sourceClip(o.source);
+    else if (o.kind === 'model3d') { if (!o.path) return null; c = await model3dClip(o.path, o.name); }
     else if (o.kind === 'text') c = textClip(null, ehCartaz(o.text) ? 'cartaz' : !!(o.text && o.text.animator), o.text || {});
     else if (o.kind === 'camera') { c = await cameraClip(o.deviceId, o.name); }
     else if (o.kind === 'capture') {
@@ -346,6 +365,7 @@ export async function deserializeClip(o, ctx) {
 // põe num clipe vivo o que foi salvo dele (nome, ajuste, efeitos, transporte, parâmetros…): ao abrir a composição e ao desfazer
 export function applyClipProps(c, o) {
   if (o.kind === 'source' && c.params) Object.assign(c.params, o.params || {});
+  if (o.kind === 'model3d' && c.params) Object.assign(c.params, o.params || {});
   if (o.kind === 'text' && c.text) { c.text = ehCartaz(o.text) ? JSON.parse(JSON.stringify(o.text)) : migrateText({ ...(o.text || {}) }); c.animHist = null; renderText(c); }
   c.name = o.name || c.name; c.fit = o.fit || c.fit; c.speed = o.speed || 1; c.panim = JSON.parse(JSON.stringify(o.panim || {})); c.afx = (o.afx || []).map(f => ({ ...f, params: { ...f.params } })); c.fx = (o.fx || []).map(f => cloneFx(f)); c.transform = Object.assign(IDENT_TR(), o.transform || {}); c.ap = Object.assign({ mode: 'layer', l: 0, c: 0, dur: 'clip', secs: 5 }, o.ap || {});
   if (o.iagen) c.iagen = JSON.parse(JSON.stringify(o.iagen));

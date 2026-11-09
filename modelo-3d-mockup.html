@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelos 3D</title>
+<style>
+  :root { --bg:#151515; --pan:#1f1f1f; --ln:#333; --tx:#ddd; --mut:#8b8b8b; --aqua:#7fd6c2; --lar:#ff8a2b; --azul:#6fb3ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#0c0c0c; color:var(--tx); font:12px "Segoe UI", system-ui, sans-serif; }
+  .nota { padding:8px 14px; color:var(--mut); border-bottom:1px solid #222; line-height:1.45; } .nota b { color:#eee; }
+  .app { display:grid; grid-template-columns:1fr 380px 260px; grid-template-rows:auto 1fr; gap:10px; padding:10px 14px; height:calc(100vh - 54px); min-height:680px; }
+  .box { background:var(--pan); border:1px solid var(--ln); border-radius:4px; padding:8px; }
+  h3 { margin:0 0 6px; font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; }
+  .grade { grid-column:1 / 3; }
+  .cells { display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; }
+  .cell { aspect-ratio:16/9; background:#111; border:1px solid #2a2a2a; border-radius:2px; position:relative; overflow:hidden; }
+  .cell.on { border-color:var(--azul); } .cell canvas { width:100%; height:100%; display:block; }
+  .cell .nm { position:absolute; left:0; right:0; bottom:0; font-size:10px; background:rgba(0,0,0,.6); padding:1px 4px; white-space:nowrap; overflow:hidden; }
+  .cell.drop { border-color:var(--azul); border-style:dashed; }
+  .fontes { grid-column:3; grid-row:1 / 3; overflow:auto; }
+  .grp { font-size:10.5px; color:var(--aqua); font-weight:700; letter-spacing:.06em; margin:10px 0 4px; }
+  .it { padding:5px 8px; border-radius:3px; cursor:pointer; display:flex; justify-content:space-between; } .it:hover { background:#2c2c2c; }
+  .it small { color:var(--mut); } .it.m3d { background:#1a2638; color:#d6e8ff; } .it.m3d:hover { background:#22324a; }
+  .it.m3d small { color:#8fb6e6; }
+  .tela { grid-column:1; position:relative; background:#000; border:1px solid var(--ln); border-radius:4px; overflow:hidden;
+          background-image:linear-gradient(45deg,#161616 25%,transparent 25%),linear-gradient(-45deg,#161616 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#161616 75%),linear-gradient(-45deg,transparent 75%,#161616 75%);
+          background-size:20px 20px; background-position:0 0,0 10px,10px -10px,-10px 0; }
+  .tela canvas { width:100%; height:100%; display:block; cursor:grab; } .tela canvas:active { cursor:grabbing; }
+  .tela .rot { position:absolute; left:8px; top:6px; color:var(--mut); font-size:11px; pointer-events:none; }
+  .tela .dica { position:absolute; right:8px; bottom:6px; color:#666; font-size:11px; pointer-events:none; }
+  .tela .bpm { position:absolute; left:8px; bottom:6px; display:flex; gap:4px; align-items:center; }
+  .tela .bpm i { width:9px; height:9px; border-radius:50%; background:#333; display:block; } .tela .bpm i.on { background:var(--lar); }
+  .painel { grid-column:2; overflow:auto; padding:0; }
+  .ph { font-weight:700; color:#d6e8ff; border-left:3px solid var(--azul); padding:6px 10px; background:#16202e; }
+  .ph small { color:#8fb6e6; font-weight:400; margin-left:6px; }
+  details { border-top:1px solid #2a2a2a; } summary { padding:6px 10px; cursor:pointer; font-weight:600; color:#cfcfcf; list-style:none; }
+  summary::before { content:"▾ "; color:var(--mut); } details:not([open]) summary::before { content:"▸ "; }
+  .sec { padding:2px 10px 8px; }
+  .row { display:grid; grid-template-columns:96px 1fr 44px 18px; gap:6px; align-items:center; margin:4px 0; }
+  .row > span:first-child { color:var(--mut); } .row output { color:#aaa; text-align:right; font-size:11px; }
+  .row .nota8 { cursor:pointer; color:#555; text-align:center; } .row .nota8.on { color:var(--lar); }
+  input[type=range] { width:100%; accent-color:var(--aqua); }
+  select { width:100%; background:#111; border:1px solid #3a3a3a; color:#eee; border-radius:3px; padding:4px 6px; font:inherit; }
+  .seg { display:flex; flex-wrap:wrap; gap:3px; grid-column:2 / 5; } .seg button { height:22px; padding:0 8px; border:0; border-radius:2px; background:#3a3a3a; color:#ddd; cursor:pointer; font:inherit; }
+  .seg button.on { background:var(--azul); color:#111; font-weight:600; }
+  .row.full { grid-template-columns:96px 1fr; } .row.full > *:last-child { grid-column:2; }
+  .info { color:var(--mut); line-height:1.6; } .info b { color:#ddd; font-weight:600; }
+  input[type=color] { width:100%; height:22px; border:1px solid #3a3a3a; background:#111; padding:0; }
+  .abrir { margin:6px 10px; display:flex; gap:6px; } .abrir label, .abrir button { flex:1; text-align:center; padding:6px; border:1px dashed #4a6280; border-radius:3px; color:#bcd5f2; cursor:pointer; background:none; font:inherit; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<div class="nota"><b>Maquete do clipe 3D</b> — o modelo entra como qualquer clipe: arraste o arquivo (.glb, .gltf, .obj, .fbx, .stl, .ply, .3mf, .dae) para uma casa, ou de <b>Arquivos 3D</b> em Fontes.
+Aqui dá para <b>abrir um modelo seu de verdade</b> (botão "Abrir modelo" ou soltar o arquivo na tela); sem arquivo, aparece um modelo de exemplo.
+Arraste na tela para girar a câmera, rodinha para aproximar. O <b>♪</b> liga o controle na batida (120 BPM aqui).</div>
+<div class="app">
+  <div class="box grade"><h3>Grade (camada 1)</h3><div class="cells" id="cells"></div></div>
+
+  <div class="tela" id="tela"><canvas id="cv"></canvas><div class="rot" id="rot">Prévia do clipe — fundo transparente</div>
+    <div class="bpm" id="bpm"><i></i><i></i><i></i><i></i><span class="mut" style="margin-left:4px;color:#777">120 BPM</span></div>
+    <div class="dica">arrastar = girar câmera · rodinha = zoom · botão direito = mover</div></div>
+
+  <div class="box painel" id="painel">
+    <div class="ph">◆ Modelo 3D <small id="nomeArq">exemplo.glb</small></div>
+    <div class="abrir"><label>Abrir modelo…<input type="file" id="arq" accept=".glb,.gltf,.obj,.stl,.ply,.fbx,.dae,.3mf" hidden></label><button id="trocar">Trocar mantendo os ajustes</button></div>
+    <details open><summary>Modelo</summary><div class="sec">
+      <div class="info" id="info">Formato <b>GLB</b> · <b>—</b> triângulos · <b>—</b> materiais · animações: <b>—</b></div>
+    </div></details>
+
+    <details open><summary>Movimento</summary><div class="sec">
+      <div class="row"><span>Girar sozinho</span><input type="range" id="autoRot" min="-2" max="2" step="0.01" value="0.5"><output></output><span class="nota8" data-p="autoRot">♪</span></div>
+      <div class="row full"><span>Eixo do giro</span><div class="seg" data-g="eixo"><button data-v="y" class="on">Em pé (Y)</button><button data-v="x">Cambalhota (X)</button><button data-v="z">Roda (Z)</button></div></div>
+      <div class="row"><span>Escala</span><input type="range" id="escala" min="0.1" max="3" step="0.01" value="1"><output></output><span class="nota8" data-p="escala">♪</span></div>
+      <div class="row"><span>Posição X</span><input type="range" id="px" min="-2" max="2" step="0.01" value="0"><output></output><span class="nota8" data-p="px">♪</span></div>
+      <div class="row"><span>Posição Y</span><input type="range" id="py" min="-2" max="2" step="0.01" value="0"><output></output><span class="nota8" data-p="py">♪</span></div>
+      <div class="row"><span>Pular na batida</span><input type="range" id="pulo" min="0" max="0.5" step="0.01" value="0"><output></output><span></span></div>
+    </div></details>
+
+    <details open><summary>Câmera</summary><div class="sec">
+      <div class="row full"><span>Lente</span><div class="seg" data-g="lente"><button data-v="persp" class="on">Perspectiva</button><button data-v="orto">Ortográfica (sem fuga)</button></div></div>
+      <div class="row"><span>Distância</span><input type="range" id="dist" min="1" max="12" step="0.01" value="4"><output></output><span class="nota8" data-p="dist">♪</span></div>
+      <div class="row"><span>Altura</span><input type="range" id="alt" min="-60" max="80" step="1" value="15"><output></output><span></span></div>
+      <div class="row"><span>Abertura</span><input type="range" id="fov" min="15" max="90" step="1" value="40"><output></output><span></span></div>
+      <div class="row full"><span></span><div class="seg"><button id="enquadrar">Enquadrar o modelo</button></div></div>
+    </div></details>
+
+    <details open><summary>Luz</summary><div class="sec">
+      <div class="row full"><span>Luz pronta</span><div class="seg" data-g="luz"><button data-v="estudio" class="on">Estúdio</button><button data-v="palco">Palco</button><button data-v="contra">Contraluz</button><button data-v="neon">Neon</button><button data-v="chapada">Chapada</button></div></div>
+      <div class="row"><span>Intensidade</span><input type="range" id="luzI" min="0" max="3" step="0.01" value="1"><output></output><span class="nota8" data-p="luzI">♪</span></div>
+      <div class="row"><span>Cor da luz</span><input type="color" id="luzCor" value="#ffffff"><span></span><span></span></div>
+    </div></details>
+
+    <details open><summary>Material</summary><div class="sec">
+      <div class="row full"><span>Aparência</span><div class="seg" data-g="mat"><button data-v="original" class="on">Original</button><button data-v="cor">Cor sólida</button><button data-v="arame">Arame</button><button data-v="contorno">Só contorno</button><button data-v="normal">Arco-íris</button><button data-v="branco">Branco p/ mapping</button></div></div>
+      <div class="row"><span>Cor</span><input type="color" id="matCor" value="#7fd6c2"><span></span><span></span></div>
+      <div class="row"><span>Brilho próprio</span><input type="range" id="emis" min="0" max="1" step="0.01" value="0"><output></output><span class="nota8" data-p="emis">♪</span></div>
+    </div></details>
+
+    <details open><summary>Animação do arquivo</summary><div class="sec">
+      <div class="row full"><span>Animação</span><select id="anim"><option>— o arquivo não tem animação —</option></select></div>
+      <div class="row"><span>Velocidade</span><input type="range" id="animV" min="0" max="3" step="0.01" value="1"><output></output><span></span></div>
+      <div class="row full"><span>Tempo</span><div class="seg" data-g="animT"><button data-v="livre" class="on">Livre</button><button data-v="batida">Um ciclo a cada 4 batidas</button></div></div>
+    </div></details>
+  </div>
+
+  <div class="box fontes">
+    <h3>Fontes</h3>
+    <div class="grp">ARQUIVOS 3D <span class="mut" style="font-weight:400">· Documentos\OpenLuz\3D</span></div>
+    <div class="it m3d" id="srcEx">exemplo.glb <small>GLB</small></div>
+    <div class="it m3d">cranio.obj <small>OBJ</small></div>
+    <div class="it m3d">bailarina.fbx <small>FBX · anim</small></div>
+    <div class="it m3d">peca.stl <small>STL</small></div>
+    <div class="grp">FONTES DE VÍDEO</div>
+    <div class="it">Test Card</div><div class="it">Texto</div><div class="it">Texto com IA</div><div class="it">✦ IA generativa</div>
+    <div class="grp">FORMATOS QUE ABREM</div>
+    <div class="info">GLB / GLTF (com animação e texturas)<br>OBJ (+ MTL e texturas na mesma pasta)<br>FBX (com animação)<br>STL · PLY · 3MF · DAE<br><span class="mut">Arquivo com animação mostra a lista em "Animação do arquivo".</span></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
+import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
+
+const cv = document.getElementById('cv'), tela = document.getElementById('tela');
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+const persp = new THREE.PerspectiveCamera(40, 16 / 9, 0.01, 1000), orto = new THREE.OrthographicCamera(-2, 2, 1.125, -1.125, 0.01, 1000);
+let cam = persp;
+const ctl = new OrbitControls(persp, cv); ctl.enableDamping = true;
+const pivo = new THREE.Group(); scene.add(pivo);
+let modelo = null, mixer = null, acoes = [], origMats = new Map();
+
+// luzes
+const amb = new THREE.HemisphereLight(0xffffff, 0x222233, 0.6), key = new THREE.DirectionalLight(0xffffff, 1.6), fill = new THREE.DirectionalLight(0xffffff, 0.5), back = new THREE.DirectionalLight(0xffffff, 0.8);
+key.position.set(3, 4, 5); fill.position.set(-4, 1, 2); back.position.set(0, 3, -5); scene.add(amb, key, fill, back);
+const LUZES = {
+  estudio: { amb: [0xffffff, 0x222233, .6], key: [0xffffff, 1.6], fill: [0xffffff, .5], back: [0xffffff, .8] },
+  palco:   { amb: [0x442244, 0x000000, .2], key: [0xfff1d6, 2.6], fill: [0x4060ff, .4], back: [0xff3080, 1.2] },
+  contra:  { amb: [0x111122, 0x000000, .15], key: [0xffffff, .2], fill: [0xffffff, .1], back: [0xffffff, 3.5] },
+  neon:    { amb: [0x200030, 0x001020, .3], key: [0xff2bd6, 2.2], fill: [0x00e5ff, 2.2], back: [0x7a2bff, 1.5] },
+  chapada: { amb: [0xffffff, 0xffffff, 2.2], key: [0xffffff, 0], fill: [0xffffff, 0], back: [0xffffff, 0] },
+};
+let luz = 'estudio';
+function aplicaLuz() { const L = LUZES[luz], I = val('luzI'), c = new THREE.Color(document.getElementById('luzCor').value);
+  amb.color.set(L.amb[0]).multiply(c); amb.groundColor.set(L.amb[1]); amb.intensity = L.amb[2] * I;
+  [[key, L.key], [fill, L.fill], [back, L.back]].forEach(([l, v]) => { l.color.set(v[0]).multiply(c); l.intensity = v[1] * I; }); }
+
+// modelo de exemplo: uma figura com partes e uma animação própria
+function exemplo() {
+  const g = new THREE.Group();
+  const m1 = new THREE.MeshStandardMaterial({ color: 0xd9a46b, roughness: .45, metalness: .3 }), m2 = new THREE.MeshStandardMaterial({ color: 0x3b6fd1, roughness: .3, metalness: .6 });
+  const nó = new THREE.Mesh(new THREE.TorusKnotGeometry(.55, .18, 220, 32), m1); g.add(nó);
+  for (let i = 0; i < 6; i++) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(.13, 1), m2); const a = i / 6 * Math.PI * 2; s.position.set(Math.cos(a) * 1.15, Math.sin(a * 2) * .2, Math.sin(a) * 1.15); s.name = 'satelite' + i; g.add(s); }
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.9, 1, .08, 64), m2); base.position.y = -.95; g.add(base);
+  const tracks = [new THREE.NumberKeyframeTrack('.rotation[y]', [0, 2], [0, Math.PI * 2])];
+  g.animations = [new THREE.AnimationClip('Satélites girando', 2, tracks), new THREE.AnimationClip('Parado', 1, [])];
+  g.userData.alvoAnim = g; return { obj: g, nome: 'exemplo.glb', fmt: 'GLB' };
+}
+
+function poe({ obj, nome, fmt, anims }) {
+  if (modelo) pivo.remove(modelo);
+  modelo = obj; origMats.clear();
+  const box = new THREE.Box3().setFromObject(obj), tam = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const s = 2 / Math.max(tam.x, tam.y, tam.z || 1); obj.scale.multiplyScalar(s); obj.position.sub(c.multiplyScalar(s));
+  pivo.add(obj);
+  let tri = 0, mats = new Set();
+  obj.traverse(o => { if (o.isMesh) { origMats.set(o, o.material); [].concat(o.material).forEach(m => mats.add(m)); const gg = o.geometry; tri += (gg.index ? gg.index.count : gg.attributes.position.count) / 3; } });
+  const lista = anims || obj.animations || [];
+  mixer = new THREE.AnimationMixer(obj.userData.alvoAnim ? obj.children.find(x => x.name === 'satelite0')?.parent || obj : obj);
+  acoes = lista.map(a => mixer.clipAction(a));
+  const sel = document.getElementById('anim');
+  sel.innerHTML = lista.length ? lista.map((a, i) => `<option value="${i}">${a.name || 'Animação ' + (i + 1)}</option>`).join('') : '<option>— o arquivo não tem animação —</option>';
+  if (acoes[0]) acoes[0].play();
+  document.getElementById('nomeArq').textContent = nome;
+  document.getElementById('info').innerHTML = `Formato <b>${fmt}</b> · <b>${Math.round(tri).toLocaleString('pt-BR')}</b> triângulos · <b>${mats.size}</b> materiais · animações: <b>${lista.length || 'nenhuma'}</b>`;
+  aplicaMat(); enquadrar(); desenhaCasa(nome);
+}
+document.getElementById('anim').onchange = (e) => { acoes.forEach(a => a.stop()); const a = acoes[+e.target.value]; if (a) a.play(); };
+
+// materiais
+let mat = 'original';
+function aplicaMat() { if (!modelo) return; const cor = new THREE.Color(document.getElementById('matCor').value), em = val('emis');
+  modelo.traverse(o => { if (!o.isMesh) return; const orig = origMats.get(o);
+    if (o.userData.linhas) { o.remove(o.userData.linhas); o.userData.linhas = null; }
+    if (mat === 'original') { o.material = orig; [].concat(orig).forEach(m => { if (m.emissive) { m.emissive.copy(m.color || cor); m.emissiveIntensity = em; } }); }
+    else if (mat === 'cor') o.material = new THREE.MeshStandardMaterial({ color: cor, roughness: .5, emissive: cor, emissiveIntensity: em });
+    else if (mat === 'arame') o.material = new THREE.MeshBasicMaterial({ color: cor, wireframe: true });
+    else if (mat === 'normal') o.material = new THREE.MeshNormalMaterial();
+    else if (mat === 'branco') o.material = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: em });
+    else if (mat === 'contorno') { o.material = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: true });
+      const l = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 25), new THREE.LineBasicMaterial({ color: cor })); o.add(l); o.userData.linhas = l; }
+  }); }
+
+function enquadrar() { const d = val('dist'), a = val('alt') * Math.PI / 180;
+  persp.position.set(0, Math.sin(a) * d, Math.cos(a) * d); ctl.target.set(0, 0, 0); persp.lookAt(0, 0, 0); ctl.update(); }
+
+// controles
+const val = (id) => +document.getElementById(id).value;
+const notas = new Set();
+document.querySelectorAll('input[type=range]').forEach(r => { const o = r.nextElementSibling; const up = () => { if (o && o.tagName === 'OUTPUT') o.textContent = (+r.value).toFixed(r.step < 1 ? 2 : 0); }; r.oninput = () => { up(); fala(r.id); }; up(); });
+function fala(id) { if (id === 'luzI') aplicaLuz(); if (id === 'emis') aplicaMat(); if (id === 'dist' || id === 'alt') enquadrar(); if (id === 'fov') { persp.fov = val('fov'); persp.updateProjectionMatrix(); } }
+document.getElementById('luzCor').oninput = aplicaLuz; document.getElementById('matCor').oninput = aplicaMat;
+document.querySelectorAll('.nota8').forEach(n => { if (!n.dataset.p) return; n.title = 'na batida'; n.onclick = () => { n.classList.toggle('on'); n.classList.contains('on') ? notas.add(n.dataset.p) : notas.delete(n.dataset.p); }; });
+const grupo = {}; document.querySelectorAll('.seg[data-g]').forEach(s => { grupo[s.dataset.g] = s.querySelector('.on')?.dataset.v; s.onclick = (e) => { const b = e.target.closest('button'); if (!b) return;
+  s.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); grupo[s.dataset.g] = b.dataset.v;
+  if (s.dataset.g === 'luz') { luz = b.dataset.v; aplicaLuz(); } if (s.dataset.g === 'mat') { mat = b.dataset.v; aplicaMat(); } if (s.dataset.g === 'lente') { cam = b.dataset.v === 'orto' ? orto : persp; } }; });
+document.getElementById('enquadrar').onclick = enquadrar;
+
+// abrir arquivo
+async function abre(file) {
+  const ext = file.name.split('.').pop().toLowerCase(), url = URL.createObjectURL(file); let r;
+  try {
+    if (ext === 'glb' || ext === 'gltf') { const g = await new GLTFLoader().loadAsync(url); r = { obj: g.scene, anims: g.animations, fmt: ext.toUpperCase() }; }
+    else if (ext === 'obj') r = { obj: await new OBJLoader().loadAsync(url), fmt: 'OBJ' };
+    else if (ext === 'fbx') { const o = await new FBXLoader().loadAsync(url); r = { obj: o, anims: o.animations, fmt: 'FBX' }; }
+    else if (ext === 'dae') { const d = await new ColladaLoader().loadAsync(url); r = { obj: d.scene, anims: d.scene.animations, fmt: 'DAE' }; }
+    else if (ext === '3mf') r = { obj: await new ThreeMFLoader().loadAsync(url), fmt: '3MF' };
+    else { const geo = await (ext === 'stl' ? new STLLoader() : new PLYLoader()).loadAsync(url); geo.computeVertexNormals();
+      r = { obj: new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: geo.attributes.color ? 0xffffff : 0xbbbbbb, vertexColors: !!geo.attributes.color, roughness: .5 })), fmt: ext.toUpperCase() }; }
+    r.nome = file.name; poe(r);
+  } catch (e) { document.getElementById('info').innerHTML = '<span style="color:#ff8a8a">Não consegui abrir: ' + (e.message || e) + '</span>'; }
+}
+document.getElementById('arq').onchange = (e) => e.target.files[0] && abre(e.target.files[0]);
+document.getElementById('trocar').onclick = () => document.getElementById('arq').click();
+tela.ondragover = (e) => { e.preventDefault(); }; tela.ondrop = (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) abre(f); };
+document.getElementById('srcEx').onclick = () => poe(exemplo());
+
+// grade: miniatura viva na casa 1
+const cells = document.getElementById('cells'); let casa;
+for (let i = 0; i < 8; i++) { const c = document.createElement('div'); c.className = 'cell' + (i === 0 ? ' on' : ''); if (i === 0) { casa = document.createElement('canvas'); c.appendChild(casa); c.insertAdjacentHTML('beforeend', '<div class="nm" id="nmCasa"></div>'); }
+  c.ondragover = (e) => { e.preventDefault(); c.classList.add('drop'); }; c.ondragleave = () => c.classList.remove('drop');
+  c.ondrop = (e) => { e.preventDefault(); c.classList.remove('drop'); const f = e.dataTransfer.files[0]; if (f) abre(f); }; cells.appendChild(c); }
+function desenhaCasa(n) { document.getElementById('nmCasa').textContent = '◆ ' + n; }
+
+// laço
+const relogio = new THREE.Clock(); const BPM = 120; const pontos = document.querySelectorAll('#bpm i');
+function tam() { const r = tela.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); persp.aspect = r.width / r.height; persp.updateProjectionMatrix();
+  const h = 1.6, w = h * persp.aspect; Object.assign(orto, { left: -w, right: w, top: h, bottom: -h }); orto.updateProjectionMatrix(); }
+addEventListener('resize', tam); tam();
+function laco() {
+  const dt = relogio.getDelta(), t = relogio.elapsedTime, B = t * BPM / 60, fase = B % 1, pulso = Math.exp(-fase * 6);
+  pontos.forEach((p, i) => p.classList.toggle('on', Math.floor(B) % 4 === i));
+  const m = (id, base) => notas.has(id) ? base * (1 + .35 * pulso) : base;
+  const eixo = grupo.eixo || 'y', vel = notas.has('autoRot') ? val('autoRot') * (1 + 2 * pulso) : val('autoRot');
+  pivo.rotation[eixo] += vel * dt;
+  const e = m('escala', val('escala')); pivo.scale.setScalar(e);
+  pivo.position.set(notas.has('px') ? val('px') * Math.sin(B * Math.PI / 2) : val('px'), (notas.has('py') ? val('py') * Math.sin(B * Math.PI / 2) : val('py')) + val('pulo') * pulso, 0);
+  if (notas.has('luzI')) { const k = 1 + 1.5 * pulso; [key, fill, back].forEach(l => l.intensity = (LUZES[luz][l === key ? 'key' : l === fill ? 'fill' : 'back'][1]) * val('luzI') * k); }
+  if (notas.has('emis') && modelo) modelo.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(mm => { if (mm.emissiveIntensity !== undefined) mm.emissiveIntensity = val('emis') * pulso; }); });
+  if (notas.has('dist')) { const d = val('dist') * (1 - .15 * pulso), dir = persp.position.clone().sub(ctl.target).normalize(); persp.position.copy(ctl.target).addScaledVector(dir, d); }
+  if (mixer) { const v = grupo.animT === 'batida' && acoes.find(a => a.isRunning()) ? (acoes.find(a => a.isRunning()).getClip().duration / (4 * 60 / BPM)) : val('animV'); mixer.update(dt * v); }
+  if (modelo && modelo.userData.alvoAnim) { modelo.children.forEach((s, i) => { if (s.name.startsWith('satelite')) { const a = i / 6 * Math.PI * 2 + (acoes[0]?.isRunning() ? acoes[0].time * Math.PI : 0); s.position.x = Math.cos(a) * 1.15; s.position.z = Math.sin(a) * 1.15; } }); }
+  orto.position.copy(persp.position); orto.quaternion.copy(persp.quaternion);
+  ctl.update(); renderer.render(scene, cam);
+  if (casa) { casa.width = 160; casa.height = 90; casa.getContext('2d').drawImage(cv, 0, 0, 160, 90); }
+  requestAnimationFrame(laco);
+}
+aplicaLuz(); poe(exemplo()); laco();
+</script>
+</body>
+</html>

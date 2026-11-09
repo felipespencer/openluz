@@ -825,6 +825,7 @@ function renderPreview() {
     const src = previewPath ? C.mediaUrl(previewPath) : '';
     if (clip && clip.kind === 'laser') { const im = el('img'); im.draggable = false; im.src = clip.thumb; p.appendChild(im); }
     else if (clip) p.appendChild(prevCanvas);
+    else if (src && C.is3dName(previewName)) p.appendChild(el('div', 'vazio', '◆ modelo 3D: arraste para uma casa para ver'));
     else if (src && C.isVideoName(previewName)) { const v = el('video'); v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.src = src; p.appendChild(v); }
     else if (src) { const im = el('img'); im.draggable = false; im.src = src; p.appendChild(im); }
   }
@@ -1578,7 +1579,8 @@ function loop() {
   loop.lastDraw = now; loop.frames = (loop.frames || 0) + 1;
   loop.total = (loop.total || 0) + 1;
   if (now - (loop.fpsAt || 0) >= 1) { if (!$('fpsBox').hidden) $('fpsBox').textContent = loop.frames + ' fps · ' + state.layers.filter(L => L.on >= 0).length + ' no ar · ' + COLS + ' colunas'; loop.frames = 0; loop.fpsAt = now; }
-  { const s = previewCell(), tn = now; for (const L of state.layers) C.tickText(liveClip(L), tn); if (s && s.clip) C.tickText(s.clip, tn); }   // Text Animator: valores animados chegando a cada pedaço com atraso
+  { const s = previewCell(), tn = now; for (const L of state.layers) C.tickText(liveClip(L), tn); if (s && s.clip) C.tickText(s.clip, tn); }
+  { const s = previewCell(); for (const L of state.layers) C.tick3d(liveClip(L), now); if (s && s.clip) C.tick3d(s.clip, now); }   // modelo 3D: a cena anda e é desenhada uma vez por quadro   // Text Animator: valores animados chegando a cada pedaço com atraso
   // espelho do laser: o desenho do LaserCube vai para a projeção
   { const s = previewCell(); for (const L of state.layers) { const c = liveClip(L); for (const m of [c, s && s.clip]) if (m && m.kind === 'lasermirror' && m.paintedAt !== now) { m.paintedAt = now; paintScan(m.el.getContext('2d'), 1080, 1080, laser.scanNow(now), false); m.rev++; } } }
   engine.render(state.layers, engine.neededLayers(state.screens), now);

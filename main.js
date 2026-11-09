@@ -52,8 +52,11 @@ let relaunching = false;
 for (const f of (process.env.PROJ_FLAGS || '').split(',').map(s => s.trim()).filter(Boolean)) { const [k, v] = f.split('='); if (v != null) app.commandLine.appendSwitch(k, v); else app.commandLine.appendSwitch(k); logLine('abriu', 'opção: --' + f); }
 
 const APP_DIR = path.join(__dirname, 'app');
-const MIME = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', mkv: 'video/x-matroska', ogv: 'video/ogg', avi: 'video/x-msvideo', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', avif: 'image/avif', svg: 'image/svg+xml' };
+const MIME = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', mkv: 'video/x-matroska', ogv: 'video/ogg', avi: 'video/x-msvideo', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', avif: 'image/avif', svg: 'image/svg+xml',
+  // modelos 3D e o que vem com eles (texturas, .bin do GLTF, .mtl do OBJ)
+  glb: 'model/gltf-binary', gltf: 'model/gltf+json', bin: 'application/octet-stream', obj: 'text/plain', mtl: 'text/plain', fbx: 'application/octet-stream', stl: 'model/stl', ply: 'application/octet-stream', '3mf': 'model/3mf', dae: 'model/vnd.collada+xml', tga: 'image/x-tga', ktx2: 'image/ktx2' };
 const MEDIA_EXT = new Set(Object.keys(MIME));
+const LIST_HIDE = new Set(['bin', 'mtl', 'tga', 'ktx2']);   // servidos (o modelo precisa), mas não aparecem como arquivo na lista
 // arquivos do disco são servidos em app://projecionista/media/<caminho em base64url>, com Range
 // (o vídeo precisa pular dentro do arquivo)
 function serveMedia(req, enc) {
@@ -84,7 +87,7 @@ function listDir(dir) {
     if (e.name.startsWith('.') || e.name.startsWith('$')) continue;
     const full = path.join(dir, e.name);
     if (e.isDirectory()) dirs.push({ name: e.name, path: full });
-    else if (e.isFile() && MEDIA_EXT.has(path.extname(e.name).slice(1).toLowerCase())) { let size = 0; try { size = fs.statSync(full).size; } catch { } files.push({ name: e.name, path: full, size }); }
+    else if (e.isFile() && MEDIA_EXT.has(path.extname(e.name).slice(1).toLowerCase()) && !LIST_HIDE.has(path.extname(e.name).slice(1).toLowerCase())) { let size = 0; try { size = fs.statSync(full).size; } catch { } files.push({ name: e.name, path: full, size }); }
   }
   const col = (a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true });
   return { dir, dirs: dirs.sort(col), files: files.sort(col) };

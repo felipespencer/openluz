@@ -221,7 +221,7 @@ export class Engine {
       else if (p.frame && e.rev !== p.frameId) { try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, p.frame); e.rev = p.frameId; } catch { } }
     } else if (clip.kind === 'video' || clip.kind === 'camera' || clip.kind === 'capture') {
       if (el.readyState >= 2) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, el);
-    } else if (clip.kind === 'text' || clip.kind === 'lasermirror') {
+    } else if (clip.kind === 'text' || clip.kind === 'lasermirror' || clip.kind === 'model3d') {
       if (e.rev !== clip.rev) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, el); e.rev = clip.rev; }
     } else if (!e.done && el.complete && el.naturalWidth) {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, el);

@@ -195,7 +195,7 @@ nos controles (giro, escala). Recurso só do OpenLuz (o Resolume não abre 3D se
 **Depends on:** nada
 
 **Plans:**
-- [ ] 10-01: a planejar (maquete do painel do clipe 3D primeiro)
+- [ ] 10-01: clipe 3D (maquete modelo-3d-mockup.html aprovada 2026-11-09; no checkpoint)
 
 ## Ideias para um marco futuro
 
