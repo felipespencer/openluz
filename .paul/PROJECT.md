@@ -49,6 +49,7 @@ fbarretto). Pasta local `OneDrive/Documentos/projecionista-pc`, remote `origin`.
 - [x] Tudo listado em "Feito" no `ROADMAP.md` da raiz, até a release 0.1.0 (Windows) de 2026-10-15
 - [x] Webcam virtual: a composição aparece como câmera no Google Meet, pela câmera do OBS — Fase 8
 - [x] Soft edge por degradê com alça, quatro por slice, nas abas Entrada e Saída (slice em trapézio ou malha) — Fase 7
+- [x] Câmera que segue o rosto: detecção local (YuNet, MIT) e recorte que acompanha a pessoa no clipe de câmera — Fase 11
 
 ### Active (In Progress)
 

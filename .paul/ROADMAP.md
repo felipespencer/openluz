@@ -37,7 +37,7 @@ Phases: 1 of 8 complete
 | 8 | Webcam virtual | 1/1 | ✅ Complete | 2026-11-02 |
 | 9 | Editor de texto | 2/3 | In progress (09-03 planejado) | - |
 | 10 | Modelos 3D | 0/1 | In progress (10-01 no checkpoint) | - |
-| 11 | Câmera que segue o rosto | 0/1 | Planning (11-01 criado) | - |
+| 11 | Câmera que segue o rosto | 1/1 | ✅ Complete | 2026-11-09 |
 
 ## Phase Details
 
@@ -199,14 +199,14 @@ nos controles (giro, escala). Recurso só do OpenLuz (o Resolume não abre 3D se
 **Plans:**
 - [ ] 10-01: clipe 3D (maquete modelo-3d-mockup.html aprovada 2026-11-09; no checkpoint)
 
-### Phase 11: Câmera que segue o rosto
+### Phase 11: Câmera que segue o rosto ✓ concluída (2026-11-09)
 
 **Goal:** o clipe de câmera ganha "Seguir rosto": detecção de rosto local (YuNet, MIT) e recorte suave acompanhando a pessoa.
 Pedido de 2026-11-09 ("Reconhecimento facial pra controlar câmera com crop, uma opção que aparece no clipe da câmera"). Só detecção, sem identificar quem é. Maquete antes.
 **Depends on:** nada
 
 **Plans:**
-- [ ] 11-01: maquete camera-rosto-mockup.html, detector + rastreio + recorte no clipe de câmera, rosto-check
+- [x] 11-01: Seguir rosto no clipe de câmera (YuNet na placa, recorte antes dos efeitos, rosto-check 21/21) — aprovado em 2026-11-09 com a beta.62
 
 ## Ideias para um marco futuro
 

@@ -21,14 +21,12 @@ status = "in_progress"
 plans_completed = 4
 
 [loop]
-position = "APPLY"
-plan = "09-03"
-plan_path = "phases/09-editor-de-texto/09-03-PLAN.md"
+position = "IDLE"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 9
+total_plans = 10
 total_phases = 0
 last_activity = "2026-11-05T03:10:00-03:00"
