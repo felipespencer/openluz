@@ -350,6 +350,17 @@ vec4 fx(vec2 uv){ vec2 A = vec2(blx, bly), B = vec2(brx, bry), C = vec2(trx, try
     glsl: `vec4 fx(vec2 uv){ float f = fract(uTime * fps); return f < max(0.02, fps / 60.0 * 0.9) ? tex(uv) : prv(uv); }` },
   { id: 'stripper', name: 'Stripper', desc: 'Faixas que andam e escondem partes da imagem.', params: [P('n', 'Faixas', 8, 1, 64, 1), P('width', 'Largura', 0.5, 0, 1), P('speed', 'Velocidade', 0.5, -5, 5, 0.05), P('vertical', 'Vertical', 1, 0, 1, 1), P('soft', 'Suavidade', 0.02, 0, 0.5)],
     glsl: `vec4 fx(vec2 uv){ float t = (vertical > 0.5 ? uv.x : uv.y) * n + uTime * speed; float f = fract(t); float k = smoothstep(width - soft, width + soft, f); return tex(uv) * k; }` },
+  // Strokes do Resolume 7.28, medido na bancada (tools/compare/sondas/strokes.py; Frequency 0, Feedback 0, imagem branca, Amount 100):
+  // pinceladas na horizontal, com a ponta esquerda rasgada; comprimento ≈ 160 px × Size em 1080 linhas, largura ≈ 0,41 do comprimento;
+  // Variation 0 deixa todas iguais e 1 espalha muito o tamanho (cobertura 2 % → 29 %); Rotation 0,25 = 90°. Com Frequency 0 as pinceladas
+  // ficam paradas até o Reset. O fundo é a saída anterior × Feedback (Feedback 0 = preto). O pincel é nosso, desenhado no shader:
+  // o Strokes_Brush.png do Resolume não vai no programa. As pinceladas são desenhadas pelo motor ({ strokes: true }, engine.strokesPass).
+  { id: 'strokes', name: 'Strokes', desc: 'A imagem é repintada com pinceladas: cada pincelada pega a cor do lugar onde cai e segue as bordas da imagem.', feedback: true, strokes: true,
+    params: [P('amount', 'Quantidade', 1024, 1, 5000, 1), P('edges', 'Só nas bordas', 0, 0, 1, 1), LIST('fmode', 'Modo da frequência', ['Hz', 'BPM'], ['Hz', 'BPM']), P('freq', 'Frequência', 60, 0, 360, 0.1),
+      LIST('smode', 'Modo do tamanho', ['Aleatório', 'Brilho'], ['Random', 'Brightness']), P('size', 'Tamanho', 0.2, 0, 1), P('vari', 'Variação', 0.1, 0, 1), P('swirl', 'Redemoinho', 0.3, 0, 1),
+      P('flow', 'Fluxo', 0.25, -1, 1), P('feedback', 'Feedback', 0.5, 0, 1), P('reset', 'Recomeçar', 0, 0, 1, 1), P('rot', 'Giro', 0, 0, 1)],
+    rparams: { Amount: 'amount', 'Edges Only': 'edges', 'Frequency Mode': 'fmode', Frequency: 'freq', 'Size Mode': 'smode', Size: 'size', Variation: 'vari', Swirl: 'swirl', Flow: 'flow', Feedback: 'feedback', Reset: 'reset', Rotation: 'rot' },
+    glsl: `vec4 fx(vec2 uv){ return prv(uv) * feedback; }` },
   { id: 'suckr', name: 'Suckr', desc: 'Suga a imagem para o centro, com giro.', params: [P('amount', 'Força', 0.5, -1, 1), P('twist', 'Giro', 1, -5, 5, 0.05), P('x', 'Centro X', 0, -1, 1), P('y', 'Centro Y', 0, -1, 1)],
     glsl: `vec4 fx(vec2 uv){ vec2 c0 = vec2(0.5 + x * 0.5, 0.5 + y * 0.5); vec2 p = (uv - c0) * vec2(ar(), 1.0); float d = length(p); p = rot2(p, twist * (1.0 - smoothstep(0.0, 0.8, d))); p *= 1.0 + amount * (1.0 - smoothstep(0.0, 0.8, d)); return texIn(c0 + p / vec2(ar(), 1.0)); }` },
   { id: 'terrain', name: 'Terrain', desc: 'Relevo: o brilho vira altura, com luz de lado.', params: [P('height', 'Altura', 1, 0, 4, 0.05), P('light', 'Ângulo da luz', 0.8, 0, 6.28, 0.05), P('amount', 'Quantidade', 1, 0, 1)],
