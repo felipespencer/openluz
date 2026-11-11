@@ -38,7 +38,7 @@ Phases: 1 of 8 complete
 | 9 | Editor de texto | 2/3 | In progress (09-03 planejado) | - |
 | 10 | Modelos 3D | 0/1 | In progress (10-01 no checkpoint) | - |
 | 11 | Câmera que segue o rosto | 1/1 | ✅ Complete | 2026-11-09 |
-| 12 | Revisão geral | 0/1 | Planning (12-01 criado) | - |
+| 12 | Revisão geral | 1/7 | In progress (12-01 fechado; consertos em seis lotes) | - |
 
 ## Phase Details
 
@@ -217,8 +217,13 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 **Depends on:** nada
 
 **Plans:**
-- [ ] 12-01: linha de base das baterias, revisão por área (só leitura) e lista priorizada de achados
-- [ ] 12-02 em diante: consertos escolhidos pelo Felipe na lista
+- [x] 12-01: linha de base das baterias, revisão por área (só leitura) e lista priorizada de achados — fechado em 2026-11-11 (85 achados, 7 reproduzidos)
+- [ ] 12-02: trava e saída que cai (achados 1, 34, 35, 51, 52, 80)
+- [ ] 12-03: salvar, abrir e desfazer (13, 14, 15, 17, 18, 19, 20)
+- [ ] 12-04: teclas e editores que descartam (30, 31, 32, 33, 69, 70)
+- [ ] 12-05: recorte, webcam e nativos (60, 61, 62, 63, 64)
+- [ ] 12-06: rede e sites (46, 47)
+- [ ] 12-07: gravação e Preparar (6, 7, 71)
 
 ## Ideias para um marco futuro
 

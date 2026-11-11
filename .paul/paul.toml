@@ -21,14 +21,14 @@ status = "in_progress"
 plans_completed = 4
 
 [loop]
-position = "PLAN"
-plan = "12-01"
-plan_path = "phases/12-revisao-geral/12-01-PLAN.md"
+position = "APPLY"
+plan = "12-02"
+plan_path = "phases/12-revisao-geral/12-02-PLAN.md"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 10
+total_plans = 11
 total_phases = 0
-last_activity = "2026-11-10T19:25:34-03:00"
+last_activity = "2026-11-11T10:25:00-03:00"
