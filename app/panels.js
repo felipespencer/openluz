@@ -104,7 +104,7 @@ export class Panels {
         { label: 'Basic', check: !a, fn: () => put(() => { dropAnim(holder, key); }) },
         { label: 'Timeline', check: !!(a && a.secs && a.shape !== 'fft'), fn: () => put(() => { holder.panim[key] = { shape: a && a.shape && a.shape !== 'fft' ? a.shape : 'saw', beats: (a && a.beats) || 4, secs: (a && a.secs) || 5, ...base() }; }) },
         { label: 'BPM Sync', check: !!(a && !a.secs && a.shape !== 'fft'), fn: () => put(() => { holder.panim[key] = { shape: forma(), beats: (a && a.beats) || 4, ...base() }; }) },
-        { label: 'FFT (som)', check: !!(a && a.shape === 'fft'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', band: (a && a.band) || 'bass', beats: (a && a.beats) || 4, ...base() }; }) },
+        { label: 'FFT (som)', check: !!(a && a.shape === 'fft'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', band: (a && a.band) || 'all', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; }) },   // padrão medido contra a Composition FFT do Resolume (sondas/fft-ajuste.py): espectro inteiro, ganho ~1,36
         '-',
         { label: 'Presets', sub: () => SHAPES.filter(([k]) => k !== 'fft').map(([k, t]) => ({ label: t, check: !!(a && a.shape === k), fn: () => put(() => { holder.panim[key] = { beats: (a && a.beats) || 4, secs: a && a.shape !== 'fft' ? a.secs : undefined, ...base(), shape: k }; }) })) },
       ], r.left, r.bottom + 2);

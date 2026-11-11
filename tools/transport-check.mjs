@@ -22,6 +22,8 @@ let falhas = 0; const check = (name, ok, info = '') => { if (!ok) falhas++; cons
 const P = 'window.projecionista';
 await send('Page.bringToFront'); await send('Emulation.setFocusEmulationEnabled', { enabled: true });
 await ev(`document.querySelectorAll('.dlgOver').forEach(d => d.remove()); 1`);
+// as seções dobradas ficam guardadas entre aberturas: o teste começa do padrão e devolve o que havia no fim
+const dobrasAntes = await ev(`(() => { const v = localStorage.getItem('openluz.folds'); ${P}.panels.folds = {}; return v; })()`);
 await ev(`(async () => { const p = ${P}; await p.putPath(0, 0, ${JSON.stringify(clipPath)}, 't.mp4'); await new Promise(r => setTimeout(r, 1500)); p.render(); p.panels.render(); return 1; })()`);
 await wait(500);
 const clip = `${P}.state.layers[0].clips[0]`;
@@ -112,6 +114,6 @@ await ev(`(() => { ${P}.trigger(0, 0); return 1; })()`); await wait(600);
 await press('▶'); await wait(500); await press('◀'); s = await st(); await wait(700); s2 = await st();
 check('no ar: ◀ toca para trás', s2.t < s.t - 0.2 || (s.t < 0.3 && s2.t <= s.t), JSON.stringify(s) + ' → ' + JSON.stringify(s2));
 await press('‖'); s = await st(); await wait(400); s2 = await st(); check('no ar: ‖ para', s.t === s2.t && !s2.playing, JSON.stringify(s2));
-await ev(`(() => { delete ${P}.panels.folds['clip/Cue Points']; localStorage.removeItem('openluz.folds'); return 1; })()`);
+await ev(`(() => { const v = ${JSON.stringify(dobrasAntes)}; if (v == null) localStorage.removeItem('openluz.folds'); else localStorage.setItem('openluz.folds', v); ${P}.panels.folds = null; ${P}.panels.render(); return 1; })()`);
 await ev(`(() => { ${P}.clearCell(0, 0); ${P}.render(); return 1; })()`);   // limpa a casa: as outras baterias contam com a grade vazia
 console.log(falhas ? `\n${falhas} FALHA(S)` : '\ntudo certo'); ws.close(); process.exit(falhas ? 1 : 0);

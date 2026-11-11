@@ -45,9 +45,19 @@ check('aparece a linha · Segundos', await ev(`[...document.querySelectorAll('#c
 { const v0 = await ev(`${P}.C ? 1 : 0`); const s1 = await ev(`(async () => { const B = ${P}.bpm, a = ${clip}.panim[${JSON.stringify(key)}]; const m = await import('./beat.js'); const x = m.animValue(a, B); await new Promise(r => setTimeout(r, 700)); return [x, m.animValue(a, B)]; })()`); check('Timeline: o valor anda sozinho com o tempo', s1[0] !== s1[1], JSON.stringify(s1)); }
 await escolhe('BPM Sync'); a = await an(); check('BPM Sync: ciclo em batidas, sem segundos', a && !a.secs && a.beats === 4, JSON.stringify(a));
 await escolhe('Presets', 'On Off'); a = await an(); check('Presets › On Off troca a forma', a && a.shape === 'onoff' && !a.secs, JSON.stringify(a));
-await escolhe('FFT (som)'); a = await an(); check('FFT (som): o valor segue o som', a && a.shape === 'fft' && !!a.band, JSON.stringify(a));
+await escolhe('FFT (som)'); a = await an(); check('FFT (som): espectro inteiro com ganho, como medido no Resolume', a && a.shape === 'fft' && a.band === 'all' && a.gain > 1, JSON.stringify(a));
 L = await linha(); await mouse('mouseMoved', 5, 5); await wait(200); check('animado: a engrenagem fica acesa mesmo sem o mouse', (await linha()).op === '1');
 await escolhe('Basic'); a = await an(); check('Basic tira a animação', !a, JSON.stringify(a));
+// FFT de verdade: um vídeo com som que pulsa (meio segundo forte, meio fraco) no ar; a Opacidade em FFT tem de subir e descer com ele
+{
+  const { execFileSync } = await import('node:child_process'); const fs = await import('node:fs'); const os = await import('node:os'); const path = await import('node:path');
+  const d = path.join(os.tmpdir(), 'ol-fft'); fs.mkdirSync(d, { recursive: true }); const f = path.join(d, 'pulso.mp4');
+  if (!fs.existsSync(f)) execFileSync(path.join(import.meta.dirname, 'ffmpeg', 'ffmpeg.exe'), ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=25:duration=10', '-f', 'lavfi', '-i', "anoisesrc=d=10:c=pink:a=0.8,volume='if(lt(mod(t,1),0.5),1,0.02)':eval=frame", '-pix_fmt', 'yuv420p', '-shortest', f]);
+  await ev(`(async () => { const p = ${P}; await p.putPath(1, 0, ${JSON.stringify(f.split(String.fromCharCode(92)).join('/'))}, 'pulso.mp4'); await new Promise(r => setTimeout(r, 1500)); p.trigger(1, 0); await new Promise(r => setTimeout(r, 1500)); const c = p.state.layers[1].clips[0]; c.panim = { '@opacity': { shape: 'fft', band: 'all', gain: 1.4, min: 0, max: 100 } }; return 1; })()`);
+  let mn = 9, mx = -1; for (let k = 0; k < 30; k++) { const o = await ev(`${P}.state.layers[1].clips[0].opacity`); mn = Math.min(mn, o); mx = Math.max(mx, o); await wait(80); }
+  check('FFT com som de verdade: a Opacidade sobe e desce com o som', mx - mn > 0.25, 'de ' + mn.toFixed(2) + ' a ' + mx.toFixed(2));
+  await ev(`(() => { const p = ${P}; p.clearCell(1, 0); p.state.selLayer = 0; p.state.sel = { l: 0, c: 0 }; p.render(); p.panels.render(); return 1; })()`); await wait(300);
+}
 // valores "de casa": Opacidade do clipe, Posição X do Transform e Master da camada também têm engrenagem e andam sozinhos
 {
   const gearDe = (pan, nome) => ev(`(() => { const row = [...document.querySelectorAll('${pan} .prow.hasGear')].find(r => r.firstChild.textContent.trim() === ${JSON.stringify(nome)}); if (!row) return null; row.scrollIntoView({ block: 'center' }); const r = row.getBoundingClientRect(), q = row.querySelector('.pgear').getBoundingClientRect(); return { row: [r.x + r.width / 2, r.y + r.height / 2], gear: [q.x + q.width / 2, q.y + q.height / 2] }; })()`);
