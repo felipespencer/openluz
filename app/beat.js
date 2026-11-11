@@ -28,10 +28,52 @@ export function shapeValue(shape, phase, cycle) {
     default: return 0;
   }
 }
+// estado de execução de cada animação (valor segurado na pausa, nível da FFT caindo): fica fora do objeto para não ir para o arquivo
+const RUN = new WeakMap();
 export function animValue(a, B) {
-  if (a.shape === 'fft') { const lv = B.audio ? (B.audio[a.band || 'bass'] || 0) : 0; return (a.min ?? 0) + ((a.max ?? 1) - (a.min ?? 0)) * Math.min(1, lv); }   // reação ao som: o nível da faixa
-  const beats = a.beats || 4, x = B.beat / beats, cycle = Math.floor(x), phase = x - cycle;
-  return (a.min ?? 0) + ((a.max ?? 1) - (a.min ?? 0)) * shapeValue(a.shape, phase, cycle);
+  let r = RUN.get(a); if (!r) RUN.set(a, r = {});
+  if (a.paused && r.v != null) return r.v;   // ‖ do mini-transporte: o valor fica onde parou
+  const lo = a.min ?? 0, hi = a.max ?? 1; let v;
+  if (a.shape === 'fft') {   // reação ao som: o nível da faixa, com ganho próprio e queda (quanto o nível pode cair por segundo)
+    let lv = (B.audio ? (B.audio[a.band || 'bass'] || 0) : 0) * (a.gain ?? 1);
+    if (a.fall > 0) { const now = performance.now(), dt = Math.min(0.2, (now - (r.t || now)) / 1000); r.t = now; lv = Math.max(lv, (r.lv || 0) - a.fall * dt); r.lv = lv; }
+    v = lo + (hi - lo) * Math.min(1, lv);
+  } else {
+    // modo Timeline da engrenagem do Resolume: o ciclo dura a.secs segundos, solto do BPM; senão dura a.beats batidas. a.speed multiplica
+    // o andamento e a.dir < 0 anda de trás para a frente
+    const beats = a.beats || 4, x = (a.secs ? performance.now() / 1000 / a.secs : B.beat / beats) * (a.speed ?? 1), cycle = Math.floor(x); let phase = x - cycle;
+    if (a.dir < 0) phase = 1 - phase;
+    v = lo + (hi - lo) * shapeValue(a.shape, phase, cycle);
+  }
+  r.v = v; return v;
+}
+// animação dos valores que não são parâmetro de efeito ou fonte: opacidade, velocidade, volume e Transform. Ficam em holder.panim com chave
+// começando por @ (não se confundem com as chaves dos parâmetros) e mínimo/máximo na unidade que o painel mostra
+export const ANIM_SET = {
+  '@x': (h, v) => { h.x = v / 100; }, '@y': (h, v) => { h.y = v / 100; }, '@scale': (h, v) => { h.scale = v / 100; }, '@rot': (h, v) => { h.rot = v; },
+  '@opacity': (h, v) => { h.opacity = v / 100; }, '@speed': (h, v) => { h.speed = Math.max(0.01, v); }, '@vol': (h, v) => { if (h.audio) h.audio.vol = v / 100; },
+};
+// o valor que o dono tinha antes de ser animado (na unidade do painel): é ele que vai para o arquivo e para o Ctrl+Z, não o valor do quadro
+export const ANIM_GET = {
+  '@x': (h) => h.x * 100, '@y': (h) => h.y * 100, '@scale': (h) => h.scale * 100, '@rot': (h) => h.rot,
+  '@opacity': (h) => (h.opacity ?? 1) * 100, '@speed': (h) => h.speed, '@vol': (h) => (h.audio ? h.audio.vol * 100 : 100),
+};
+const BASE = new WeakMap();
+// devolve ao dono os valores de base (chamado antes de salvar ou tirar o retrato do desfazer; no quadro seguinte a animação volta)
+export function restoreAnims(h) { const b = h && BASE.get(h); if (!b) return; for (const k in b) if (ANIM_SET[k]) ANIM_SET[k](h, b[k]); }
+// tira uma animação @: o valor volta para a base
+export function dropAnim(h, k) { const b = h && BASE.get(h); if (b && k in b) { if (ANIM_SET[k]) ANIM_SET[k](h, b[k]); delete b[k]; } if (h && h.panim) delete h.panim[k]; }
+// base de um valor animado (para o painel mostrar e mudar); set muda a base
+export const animBase = (h, k, set) => { const b = h && BASE.get(h); if (!b || !(k in b)) return undefined; if (set !== undefined) b[k] = set; return b[k]; };
+// aplica as animações @ de um dono (clipe, camada ou transform); devolve 1 se mexeu na velocidade, 2 no volume, 4 no resto (somados)
+export function applyAnims(h, B) {
+  const P = h && h.panim; let b = h && BASE.get(h);
+  if (b) for (const k in b) if (!P || !P[k] || !P[k].shape) delete b[k];   // a animação sumiu (desfazer, abrir outra composição): a base deixa de valer
+  if (!P) return 0; let n = 0;
+  for (const k in P) { const a = P[k], f = ANIM_SET[k]; if (!f || !a || !a.shape) continue;
+    if (!b) BASE.set(h, b = {}); if (!(k in b)) b[k] = ANIM_GET[k](h);
+    f(h, animValue(a, B)); n |= k === '@speed' ? 1 : k === '@vol' ? 2 : 4; }
+  return n;
 }
 export const setBpm = (B, v) => { if (isFinite(v)) B.bpm = Math.max(20, Math.min(500, Math.round(v * 10) / 10)); };
 // TAP: média dos intervalos entre os toques (2 no mínimo; mais de 2 s sem tocar recomeça)

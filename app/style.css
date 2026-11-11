@@ -415,25 +415,66 @@ body{ grid-template-rows:30px minmax(0,1fr) 5px var(--botH); }
 .browser .rrow select, .browser .rrow input{ height:22px; background:#1f1f1f; border:0; color:var(--rt); font:inherit; padding:0 4px; }
 /* linha do tempo do clipe, copiada do Transport do Resolume 7 (capturas de 2026-11-01): barra fina de 9 px, triângulos de entrada e
    saída nas pontas, cursor em forma de pino apontando para a barra, tempo pequeno no canto de cima, ◀ ‖ ▶ com o ativo em verde-menta */
-.rprops .tlwrap{ padding:0 14px 16px 11px; background:#1c1c1c; }
-.rprops .timeline{ position:relative; height:50px; cursor:pointer; user-select:none; }
+.rprops .tlwrap{ padding:0 14px 6px 11px; background:#1c1c1c; }
+.rprops .timeline{ position:relative; height:52px; cursor:pointer; user-select:none; touch-action:none; }
 .rprops .timeline .tbar{ position:absolute; left:0; right:0; bottom:0; height:9px; background:#262626; }   /* fora do IN–OUT: escuro */
 .rprops .timeline .range{ position:absolute; top:0; bottom:0; background:#3c3c3c; }   /* dentro do IN–OUT: claro */
 .rprops .timeline::before{ content:''; position:absolute; left:0; right:0; top:14px; bottom:-4px; }   /* a barra é fina, mas o clique pega uma faixa maior em volta */
+.rprops .timeline .wave{ position:absolute; left:6px; right:6px; bottom:11px; height:20px; background-size:100% 100%; background-repeat:no-repeat; opacity:.3; pointer-events:none; }   /* onda do áudio: apagada fora da faixa */
+.rprops .timeline .wave.on{ opacity:1; }
+.rprops .timeline .ticks{ position:absolute; left:6px; right:6px; bottom:10px; height:22px; pointer-events:none; } .rprops .timeline .ticks i{ position:absolute; top:0; bottom:0; width:1px; background:#e9e9e9; }   /* BPM Sync: um risco por batida */
 .rprops .timeline .head{ position:absolute; bottom:8px; width:12px; height:22px; margin-left:-6px; background:#4f9a84; clip-path:polygon(0 0,100% 0,100% 68%,50% 100%,0 68%); pointer-events:none; }
 .rprops .timeline .hnd{ position:absolute; bottom:0; width:6px; height:10px; background:#4f9a84; cursor:ew-resize; }   /* fora da faixa, com o lado reto encostado nela, como no Resolume */
 .rprops .timeline .hnd.in{ clip-path:polygon(100% 0,100% 100%,0 100%); margin-left:-6px; }
 .rprops .timeline .hnd.out{ clip-path:polygon(0 0,0 100%,100% 100%); }
-.rprops .timeline .lbl{ position:absolute; top:calc(100% + 3px); font-size:10px; line-height:12px; color:#6fcdb1; white-space:nowrap; pointer-events:none; font-variant-numeric:tabular-nums; }
-.rprops .timeline .lbl.out{ transform:translateX(-100%); }
-.rprops .timeline .ttxt{ position:absolute; right:0; top:4px; font-size:11px; color:#777; pointer-events:none; font-variant-numeric:tabular-nums; }
-.rprops .tbtns{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px 10px 14px; background:#1c1c1c; }
+.rprops .timeline .ttxt{ position:absolute; right:0; top:3px; font-size:11px; color:#777; pointer-events:none; font-variant-numeric:tabular-nums; }
+.rprops .timeline .tbub{ position:absolute; top:0; transform:translateX(-50%); display:flex; align-items:center; gap:2px; height:19px; padding:0 3px; background:#4f9a84; color:#fff; border-radius:2px; font-size:11px; font-variant-numeric:tabular-nums; z-index:3; cursor:default; white-space:nowrap; }   /* balão da agulha (botão direito) */
+.rprops .timeline .tbub b{ font-weight:400; padding:0 5px; } .rprops .timeline .tbub button{ border:0; background:none; color:#fff; font:inherit; font-size:10px; padding:0 3px; height:19px; cursor:pointer; } .rprops .timeline .tbub button:hover{ background:#3d7f6c; }
+.rprops .tbtns{ display:flex; justify-content:space-between; align-items:center; padding:8px 14px 10px 14px; background:#1c1c1c; }
 .rprops .tbtns .tg{ display:flex; gap:10px; align-items:center; }
 .rprops .tbtns .ib{ width:28px; height:24px; padding:0; border:0; border-radius:2px; background:none; color:#e6e6e6; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
 .rprops .tbtns .ib svg{ width:14px; height:14px; fill:currentColor; }
 .rprops .tbtns .ib:hover{ background:#2d2d2d; }
 .rprops .tbtns .ib.on{ background:#7dffd6; color:#0b0b0d; }
-.rprops .tbtns .ib.sm{ width:auto; min-width:26px; padding:0 4px; font-size:11px; color:#9a9a9a; } .rprops .tbtns .tg:last-child{ gap:2px; }
+.rprops .tbtns .tdd{ position:relative; display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 6px; border-radius:2px; color:#e6e6e6; cursor:pointer; } .rprops .tbtns .tdd:hover{ background:#3a3a3a; }
+.rprops .tbtns .tdd svg{ width:16px; height:16px; fill:currentColor; } .rprops .tbtns .tdd svg.car{ width:8px; height:8px; }
+.rprops .tbtns .tdd select{ position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.rprops .phead select.ttype{ flex:0 0 auto; height:20px; border:0; background:transparent; color:var(--rt); font:inherit; cursor:pointer; text-align:right; } .rprops .phead select.ttype option{ background:#2a2a2a; }
+.rprops .pv select.smode{ flex:0 0 auto; width:auto; margin-right:6px; }
+.rprops .chead{ position:relative; display:flex; align-items:center; gap:8px; height:34px; padding:0 8px; background:#2a2a2a; overflow:hidden; }
+.rprops .chead .cbg{ position:absolute; left:120px; right:0; top:0; bottom:0; background-size:cover; background-position:center; opacity:.55; filter:blur(1.5px); pointer-events:none; }
+.rprops .chead .cname{ position:relative; flex:0 1 190px; min-width:60px; height:24px; border:0; border-radius:4px; background:rgba(22,22,22,.86); color:#eee; font:inherit; padding:0 8px; }
+.rprops .chead .cname:focus{ outline:1px solid var(--teal); }
+.rprops .chead .cgear{ position:relative; margin-left:auto; width:24px; height:24px; border:0; border-radius:2px; background:rgba(22,22,22,.55); color:#e6e6e6; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; } .rprops .chead .cgear svg{ width:14px; height:14px; fill:currentColor; } .rprops .chead .cgear:hover{ background:#3a3a3a; }
+.rprops .phead.trk{ height:auto; min-height:46px; padding:5px 8px; align-items:flex-start; gap:8px; } .rprops .phead.trk .tri{ margin-top:6px; }
+.rprops .phead.trk.aud{ background:#5a3f4f; } .rprops .phead.trk.vid{ background:#2c5a4b; }
+.rprops .phead.trk .tth{ flex:0 0 50px; height:36px; border:1px solid rgba(255,255,255,.22); background:#1a1a1a center/contain no-repeat; }
+.rprops .phead.trk .tinf{ flex:1; min-width:0; display:flex; flex-direction:column; line-height:13px; font-size:11px; color:#c9c9c9; } .rprops .phead.trk .tinf span, .rprops .phead.trk .tinf small{ flex:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:11px; }
+.rprops .phead.trk .hx{ flex:none; width:20px; height:20px; border:0; background:none; color:#fff; font-size:13px; cursor:pointer; padding:0; } .rprops .phead.trk .hx:hover{ background:rgba(0,0,0,.3); }
+.rprops .phead.trk .hsel{ flex:none; position:relative; width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; } .rprops .phead.trk .hsel svg{ width:13px; height:13px; fill:currentColor; } .rprops .phead.trk .hsel select{ position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; } .rprops .phead.trk .hsel:hover{ background:rgba(0,0,0,.3); }
+.rprops .prow.hasGear{ position:relative; }
+.rprops .prow.hasGear > :first-child{ padding-left:20px; }   /* o lugar da engrenagem fica sempre reservado: nada se mexe quando ela aparece */
+.rprops .prow .pgear{ position:absolute; left:2px; top:4px; width:16px; height:16px; padding:0; border:0; background:none; color:#9a9a9a; cursor:pointer; opacity:0; display:inline-flex; align-items:center; justify-content:center; }   /* engrenagem do parâmetro: só aparece com o mouse na linha, como no Resolume */
+.rprops .prow .pgear svg{ width:12px; height:12px; fill:currentColor; } .rprops .prow:hover .pgear{ opacity:1; } .rprops .prow .pgear:hover{ color:#fff; } .rprops .prow .pgear.on{ opacity:1; color:var(--teal); }
+.rprops .abox{ padding:5px 12px 4px 102px; background:#1c1c1c; border-bottom:1px solid #1b1b1b; }
+.rprops .abar{ position:relative; height:18px; cursor:pointer; user-select:none; touch-action:none; } .rprops .abar::before{ content:''; position:absolute; left:0; right:0; bottom:0; height:8px; background:#262626; }
+.rprops .abar .range{ position:absolute; bottom:0; height:8px; background:#3c3c3c; } .rprops .abar .tk{ position:absolute; bottom:0; width:1px; height:8px; background:#6a6a6a; pointer-events:none; }
+.rprops .abar .hnd{ position:absolute; bottom:0; width:6px; height:9px; background:#4f9a84; cursor:ew-resize; } .rprops .abar .hnd.in{ clip-path:polygon(100% 0,100% 100%,0 100%); margin-left:-6px; } .rprops .abar .hnd.out{ clip-path:polygon(0 0,0 100%,100% 100%); }
+.rprops .abar .ahead{ position:absolute; top:1px; width:12px; height:8px; margin-left:-6px; background:#4f9a84; clip-path:polygon(0 0,100% 0,50% 100%); pointer-events:none; }
+.rprops .actl{ display:flex; align-items:center; gap:6px; padding-top:5px; }
+.rprops .actl .ib{ width:22px; height:20px; padding:0; border:0; border-radius:2px; background:none; color:#e6e6e6; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; } .rprops .actl .ib svg{ width:11px; height:11px; fill:currentColor; } .rprops .actl .ib:hover{ background:#2d2d2d; } .rprops .actl .ib.on{ background:#7dffd6; color:#0b0b0d; }
+.rprops .actl .asel{ height:20px; min-width:0; flex:0 1 150px; margin-left:6px; } .rprops .actl .ameter{ flex:1; height:8px; background:#262626; } .rprops .actl .ameter i{ display:block; height:100%; width:0; background:#4f9a84; }
+.rprops .folded{ display:none !important; }
+.rprops .phead.foldable{ cursor:pointer; } .rprops .phead .tri{ flex:0 0 auto; width:0; height:0; border-left:6px solid #8a8a8a; border-top:4px solid transparent; border-bottom:4px solid transparent; margin:0 1px 0 1px; }
+.rprops .phead .tri.open{ border-left:4px solid transparent; border-right:4px solid transparent; border-top:6px solid #8a8a8a; border-bottom:0; margin:0; }
+.rprops .cues{ display:flex; gap:4px; padding:10px 11px; background:#1c1c1c; }
+.rprops .cues .cue{ flex:1; display:flex; height:17px; min-width:0; } .rprops .cues .cue button{ border:0; padding:0; cursor:pointer; height:17px; }
+.rprops .cues .cset{ width:15px; flex:0 0 15px; background:#3a3a3a; border-radius:3px 0 0 3px; clip-path:polygon(0 0,62% 0,100% 50%,62% 100%,0 100%); }
+.rprops .cues .cjump{ flex:1; background:#3a3a3a; border-radius:0 3px 3px 0; margin-left:-5px; clip-path:polygon(0 0,100% 0,100% 100%,0 100%,6px 50%); }
+.rprops .cues .cue.on .cset{ background:#7dffd6; } .rprops .cues .cue.on .cjump{ background:#4a4a4a; } .rprops .cues .cue button:hover{ filter:brightness(1.25); }
+.rprops .bloop{ display:flex; gap:8px; align-items:center; padding:10px 8px; background:#1c1c1c; }
+.rprops .bloop .bseg{ flex:1; display:flex; background:#2e2e2e; border-radius:3px; overflow:hidden; } .rprops .bloop .bseg button{ flex:1; min-width:0; height:20px; border:0; padding:0; background:none; color:var(--rt); font:inherit; font-size:11px; cursor:pointer; }
+.rprops .bloop .bseg button.on, .rprops .bloop .catch.on{ background:#7dffd6; color:#0b0b0d; } .rprops .bloop .catch{ height:20px; border:0; border-radius:3px; background:#3a3a3a; color:var(--rt); font:inherit; font-size:10px; padding:0 6px; cursor:pointer; }
 .rprops .pv.tr .ib{ font-size:11px; padding:0 4px; min-width:30px; width:auto; }
 .rprops .pinfo.ok{ color:#6fe6c6; }
 .browser .flist .item button.ib.prep{ margin-left:auto; height:20px; min-width:24px; padding:0 5px; border:0; border-radius:2px; background:#3a3a3a; color:var(--rt); font:inherit; font-size:11px; cursor:pointer; } .browser .flist .item button.ib.prep:hover{ background:var(--teal); color:#111; }

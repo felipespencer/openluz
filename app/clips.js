@@ -109,6 +109,10 @@ export async function makeWave(clip) {
     const W = 160, H = 90, cy = 56, A = 15, dx = W / N; let path = '';
     pk.forEach((m, i) => { const h = Math.max(0.4, (m / top) * A); path += `M${(i * dx + dx / 2).toFixed(1)} ${(cy - h).toFixed(1)}v${(2 * h).toFixed(1)}`; });
     clip.wave = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="M0 ${cy}H${W}" stroke="#ff6fae" stroke-width=".5" opacity=".7"/><path d="${path}" stroke="#ff6fae" stroke-width="${(dx * 0.7).toFixed(2)}"/></svg>`);
+    // a mesma onda, mais fina e centrada, para a linha do tempo do painel Clipe (rosa apagado, como no Resolume)
+    const N2 = 300, st2 = Math.max(1, Math.floor(d.length / N2)); let p2 = '';
+    for (let i = 0; i < N2; i++) { let m = 0; for (let j = i * st2, e = Math.min(d.length, j + st2); j < e; j += 2) { const v = Math.abs(d[j]); if (v > m) m = v; } const h = Math.max(0.25, (m / top) * 9.5); p2 += `M${i + 0.5} ${(10 - h).toFixed(2)}v${(2 * h).toFixed(2)}`; }
+    clip.waveTl = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N2} 20" preserveAspectRatio="none"><path d="${p2}" stroke="#8e5f7c" stroke-width="1.05"/></svg>`);
     return true;
   } catch { return false; }
 }
@@ -117,6 +121,23 @@ export const mediaOf = (c) => c.player || c.el;
 // modos de reprodução e "ao voltar" (playmode e playmodeaway do Resolume)
 export const PLAY_MODES = [['loop', 'Loop'], ['bounce', 'Vai e volta'], ['random', 'Aleatório'], ['onceclear', 'Uma vez e limpa'], ['once', 'Uma vez e segura']];
 export const AWAY_MODES = [['restart', 'Recomeça'], ['continue', 'Continua'], ['relative', 'Relativo']];
+// Beat Looper do Resolume (só em BPM Sync), em batidas: Off 4 2 1 1/2 1/4 1/8 1/16 1/3 1/6
+export const BEATLOOPS = [[0, 'Off'], [4, '4'], [2, '2'], [1, '1'], [0.5, '1/2'], [0.25, '1/4'], [0.125, '1/8'], [0.0625, '1/16'], [1 / 3, '1/3'], [1 / 6, '1/6']];
+// batidas que o Resolume propõe ao passar para BPM Sync: a duração da faixa no BPM de agora, arredondada para a potência de 2 mais próxima
+export const autoBeats = (secs, bpm) => { const b = Math.max(0.25, (secs || 0) * (bpm || 120) / 60); return Math.max(1, Math.pow(2, Math.round(Math.log2(b)))); };
+// posição do clipe em batidas dentro do ciclo de BPM Sync (0..beats), contando o desvio deixado por um laço solto sem "alcança"
+const bpmPhase = (c) => { const n = c.tr.beats || 8; return (((clock ? clock.beat : 0) + (c.tr.beatOff || 0)) % n + n) % n; };
+// Beat Looper, medido no Resolume 7.28 pela API (tools/compare/sondas/clip-bpm.py): o laço de N batidas começa na batida em que a agulha
+// está (preso à grade do clipe, não ao instante do clique) e a agulha segue andando dentro dele. Ao soltar, o clipe segue de onde o
+// laço parou; com "Alcança" ligado ele volta para onde estaria se nunca tivesse entrado no laço
+const modp = (x, n) => ((x % n) + n) % n;
+const loopPhase = (c) => c.tr.loopAt + modp(bpmPhase(c) - c.tr.loopAt, c.tr.loop);
+export function setBeatLoop(c, n) {
+  const t = c.tr, was = t.loop || 0;
+  if (n > 0) { if (!(was > 0)) { const g = Math.min(n, 1); t.loopAt = Math.floor(bpmPhase(c) / g + 1e-6) * g; } t.loop = n; return; }
+  if (was > 0 && !t.catchUp && clock) t.beatOff = (t.beatOff || 0) + loopPhase(c) - bpmPhase(c);
+  t.loop = 0;
+}
 export function sourceClip(id) {
   const def = sourceById(id); if (!def) return null;
   const c = base('source', def.name); c.source = id; c.params = {}; for (const p of def.params) c.params[p.key] = p.def;
@@ -305,10 +326,12 @@ export function tickTransport(c, dt, speedMul = 1) {
     // BPM Sync: a faixa entre entrada e saída dura N batidas, presa à batida geral (o "hard sync" do Resolume)
     if (!clock.running) { if (!el.paused) el.pause(); return false; }
     const beats = t.beats || 8, cycle = beats * 60 / (clock.bpm * (1 + (clock.nudge || 0) / 100)), range = outP - inP;
-    const rate = Math.max(0.0625, Math.min(16, range / cycle));
+    const sp = c.speed > 0 ? c.speed : 1; if (sp !== 1 && c._lb != null) t.beatOff = (t.beatOff || 0) + (clock.beat - c._lb) * (sp - 1); c._lb = clock.beat;   // a Velocidade multiplica o andamento, como no Resolume
+    const rate = Math.max(0.0625, Math.min(16, range / cycle * sp));
     try { if (Math.abs(el.playbackRate - rate) > 0.001) el.playbackRate = rate; if (c.player && c.el && c.el !== el) c.el.playbackRate = rate; } catch { }
-    const target = inP + ((clock.beat / beats) % 1) * range;
-    if (Math.abs(el.currentTime - target) > 0.12) seekClip(c, target);
+    const ph = modp(t.loop > 0 ? loopPhase(c) : bpmPhase(c), beats);   // Beat Looper: fica dando voltas em N batidas
+    const target = inP + (ph / beats) * range;
+    if (Math.abs(el.currentTime - target) > (t.loop > 0 ? Math.min(0.12, t.loop / beats * range / 2) : 0.12)) seekClip(c, target);   // laço curto: a folga encolhe junto
     if (el.paused) el.play().catch(() => { });
     return false;
   }
@@ -332,7 +355,7 @@ export function releaseClip(c) { if (!c) return; stopClip(c); if (c.kind === 'ca
 // o que vai para o arquivo da composição
 export function serializeClip(c) {
   if (!c) return null;
-  const o = { kind: c.kind, name: c.name, fit: c.fit, speed: c.speed, fx: c.fx, transform: c.transform, ap: c.ap, tr: { in: c.tr.in, out: c.tr.out, mode: c.tr.mode, dir: c.tr.dir, sync: c.tr.sync, beats: c.tr.beats, away: c.tr.away }, audio: c.audio, panim: c.panim || {}, afx: c.afx || [], blend: c.blend, opacity: c.opacity, trig: c.trig, ignoreColumn: c.ignoreColumn };
+  const o = { kind: c.kind, name: c.name, fit: c.fit, speed: c.speed, fx: c.fx, transform: c.transform, ap: c.ap, tr: { in: c.tr.in, out: c.tr.out, mode: c.tr.mode, dir: c.tr.dir, sync: c.tr.sync, beats: c.tr.beats, away: c.tr.away, syncMode: c.tr.syncMode, beatsSet: c.tr.beatsSet, catchUp: c.tr.catchUp, cues: c.tr.cues ? [...c.tr.cues] : undefined }, audio: c.audio, panim: c.panim || {}, afx: c.afx || [], blend: c.blend, opacity: c.opacity, trig: c.trig, ignoreColumn: c.ignoreColumn, trans: c.trans ? { ...c.trans } : undefined };
   if (c.kind === 'video' || c.kind === 'image') { if (!c.path) return { ...o, missing: true }; o.path = c.path; }
   if (c.kind === 'source') { o.source = c.source; o.params = c.params; }
   if (c.kind === 'text') o.text = c.text;
@@ -372,6 +395,6 @@ export function applyClipProps(c, o) {
   if (o.kind === 'text' && c.text) { c.text = ehCartaz(o.text) ? JSON.parse(JSON.stringify(o.text)) : migrateText({ ...(o.text || {}) }); c.animHist = null; renderText(c); }
   c.name = o.name || c.name; c.fit = o.fit || c.fit; c.speed = o.speed || 1; c.panim = JSON.parse(JSON.stringify(o.panim || {})); c.afx = (o.afx || []).map(f => ({ ...f, params: { ...f.params } })); c.fx = (o.fx || []).map(f => cloneFx(f)); c.transform = Object.assign(IDENT_TR(), o.transform || {}); c.ap = Object.assign({ mode: 'layer', l: 0, c: 0, dur: 'clip', secs: 5 }, o.ap || {});
   if (o.iagen) c.iagen = JSON.parse(JSON.stringify(o.iagen));
-  if (o.tr) Object.assign(c.tr, o.tr, { playing: true }); if (!c.tr.out) c.tr.out = c.dur; Object.assign(c.audio, o.audio || {}); c.blend = o.blend || ''; c.opacity = o.opacity ?? 1; c.trig = o.trig || 'normal'; c.ignoreColumn = !!o.ignoreColumn;
+  if (o.tr) Object.assign(c.tr, o.tr, { playing: true }); if (!c.tr.out) c.tr.out = c.dur; Object.assign(c.audio, o.audio || {}); c.blend = o.blend || ''; c.opacity = o.opacity ?? 1; c.trig = o.trig || 'normal'; c.ignoreColumn = !!o.ignoreColumn; c.trans = o.trans ? { ...o.trans } : undefined;
   return c;
 }

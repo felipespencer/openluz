@@ -26,7 +26,7 @@ await ev(`(async () => { const p = ${P}; await p.putPath(0, 0, ${JSON.stringify(
 await wait(500);
 const clip = `${P}.state.layers[0].clips[0]`;
 const st = () => ev(`(() => { const c = ${clip}, v = c.el; return { playing: c.tr.playing, dir: c.tr.dir, t: +v.currentTime.toFixed(2), paused: v.paused, rate: v.playbackRate }; })()`);
-const btn = (txt) => ev(`(() => { const b = [...document.querySelectorAll('#clipPan .tbtns button')].find(x => x.dataset.k === ${JSON.stringify(txt)}); if (!b) return null; b.scrollIntoView({ block: 'center' }); const q = b.getBoundingClientRect(); return [q.x + q.width / 2, q.y + q.height / 2, q.width, q.height]; })()`);
+const btn = (txt) => ev(`(() => { const b = [...document.querySelectorAll('#clipPan .tbtns button, #clipPan .tbub button, #clipPan .cues button, #clipPan .bloop button')].find(x => x.dataset.k === ${JSON.stringify(txt)}); if (!b) return null; b.scrollIntoView({ block: 'center' }); const q = b.getBoundingClientRect(); return [q.x + q.width / 2, q.y + q.height / 2, q.width, q.height]; })()`);
 const press = async (txt) => { const q = await btn(txt); if (!q) throw new Error('botão ' + txt + ' não achado'); await click(q[0], q[1]); await wait(250); };
 
 // linha do tempo fina
@@ -41,12 +41,42 @@ await press('▶'); await wait(600); let s2 = await st(); check('▶ toca para a
 await press('‖'); s = await st();
 await press('◀'); await wait(700); s2 = await st(); check('◀ toca para trás (o tempo diminui)', s2.playing && s2.dir === -1 && s2.t < s.t + 0.01 && (s2.t !== s.t), JSON.stringify(s) + ' → ' + JSON.stringify(s2));
 await press('‖');
+// botão direito na linha do tempo abre o balão da agulha (como no Resolume): ir para as pontas e andar quadro a quadro
+await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: tl[0] + tl[2] * 0.5, y: tl[1] + 20, button: 'right', buttons: 2, clickCount: 1 }); await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: tl[0] + tl[2] * 0.5, y: tl[1] + 20, button: 'right', buttons: 0, clickCount: 1 }); await wait(250);
+check('botão direito abre o balão da agulha', await ev(`!!document.querySelector('#clipPan .timeline .tbub')`));
 await press('|◀'); s = await st(); check('|◀ vai para a entrada', s.t <= 0.05, JSON.stringify(s));
 await press('▶|'); s = await st(); check('▶| vai para a saída', s.t >= 11.5, JSON.stringify(s));
 await press('|◀'); await press('+1q'); s = await st(); check('+1q avança um quadro e pausa', s.t > 0.02 && s.t < 0.08 && s.playing === false, JSON.stringify(s));
 await press('−1q'); s2 = await st(); check('−1q volta um quadro', s2.t < s.t, JSON.stringify(s) + ' → ' + JSON.stringify(s2));
-// clicar na linha do tempo pula
-if (tl) { await click(tl[0] + tl[2] * 0.5, tl[1] + tl[3] / 2); await wait(250); s = await st(); check('clicar no meio da linha do tempo pula para o meio', Math.abs(s.t - 6) < 0.8, JSON.stringify(s)); }
+// como no Resolume (medido em 2026-11-10): clique parado não pula; arrastar na onda leva a agulha; arrastar na barra de baixo leva a ponta mais próxima
+const arrasta = async (f0, f1, y) => { const x0 = tl[0] + 6 + (tl[2] - 12) * f0, x1 = tl[0] + 6 + (tl[2] - 12) * f1; await mouse('mouseMoved', x0, y); await mouse('mousePressed', x0, y); for (let k = 1; k <= 6; k++) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x0 + (x1 - x0) * k / 6, y, button: 'left', buttons: 1 }); await mouse('mouseReleased', x1, y); await wait(250); };
+if (tl) {
+  s = await st(); await click(tl[0] + tl[2] * 0.5, tl[1] + 28); await wait(250); s2 = await st(); check('clique parado na linha do tempo não pula', Math.abs(s2.t - s.t) < 0.05, JSON.stringify(s) + ' → ' + JSON.stringify(s2));
+  check('o clique fecha o balão', !(await ev(`!!document.querySelector('#clipPan .timeline .tbub')`)));
+  await arrasta(0.2, 0.5, tl[1] + 28); s = await st(); check('arrastar na onda leva a agulha para o mouse', Math.abs(s.t - 6) < 0.3, JSON.stringify(s));
+  await arrasta(0.7, 0.9, tl[1] + tl[3] - 4); let io = await ev(`(() => ({ in: ${clip}.tr.in, out: ${clip}.tr.out }))()`); check('arrastar na barra perto do fim leva a saída', io.in === 0 && Math.abs(io.out - 10.8) < 0.3, JSON.stringify(io));
+  await arrasta(0.2, 0.1, tl[1] + tl[3] - 4); io = await ev(`(() => ({ in: ${clip}.tr.in, out: ${clip}.tr.out }))()`); check('arrastar na barra perto do começo leva a entrada', Math.abs(io.in - 1.2) < 0.3 && Math.abs(io.out - 10.8) < 0.3, JSON.stringify(io));
+  await ev(`(() => { const c = ${clip}; c.tr.in = 0; c.tr.out = c.dur; ${P}.panels.render(); return 1; })()`);
+  const onda = await ev(`(() => { const w = document.querySelector('#clipPan .timeline .wave.on'); return w ? getComputedStyle(w).backgroundImage.slice(0, 20) : null; })()`); console.log('      onda na linha do tempo:', onda);
+}
+// Cue Points: a setinha grava, o botão pula, botão vazio grava, botão direito apaga
+{ const d = await ev(`(() => { const h = document.querySelector('#clipPan .phead[data-fold="clip/Cue Points"]'); return h ? [!!document.querySelector('#clipPan .cues.folded'), h.getBoundingClientRect().x + 40, h.getBoundingClientRect().y + 10] : null; })()`); check('Cue Points nasce dobrado, como no Resolume', d && d[0] === true, JSON.stringify(d)); if (d && d[0]) { await ev(`document.querySelector('#clipPan .phead[data-fold="clip/Cue Points"]').scrollIntoView({ block: 'center' })`); const q = await ev(`(() => { const r = document.querySelector('#clipPan .phead[data-fold="clip/Cue Points"]').getBoundingClientRect(); return [r.x + 40, r.y + r.height / 2]; })()`); await click(q[0], q[1]); await wait(250); check('clicar no cabeçalho desdobra', await ev(`!document.querySelector('#clipPan .cues.folded')`)); } }
+await ev(`(() => { const c = ${clip}; c.tr.playing = false; c.el.pause(); c.el.currentTime = 4; ${P}.panels.render(); return 1; })()`); await wait(300);
+await press('cset1'); await ev(`(() => { ${clip}.el.currentTime = 9; ${P}.panels.render(); return 1; })()`); await wait(300); await press('cue1'); s = await st(); check('cue 1: a setinha grava e o botão pula de volta', Math.abs(s.t - 4) < 0.1, JSON.stringify(s));
+await ev(`(() => { ${clip}.el.currentTime = 7; ${P}.panels.render(); return 1; })()`); await wait(300); await press('cue2'); s = await ev(`${clip}.tr.cues`); check('botão de cue vazio grava', s[1] != null && Math.abs(s[1] - 7) < 0.1, JSON.stringify(s));
+{ const q = await btn('cue2'); await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: q[0], y: q[1], button: 'right', buttons: 2, clickCount: 1 }); await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: q[0], y: q[1], button: 'right', buttons: 0, clickCount: 1 }); await wait(250); s = await ev(`${clip}.tr.cues`); check('botão direito apaga o cue', s[1] == null && s[0] != null, JSON.stringify(s)); }
+// modo e "ao voltar" nos dois botões com ícone; tipo no cabeçalho
+const escolhe = (k, val) => ev(`(() => { const e = document.querySelector('#clipPan select[data-k="${k}"]'); if (!e) return null; e.value = '${val}'; e.dispatchEvent(new Event('change', { bubbles: true })); return 1; })()`);
+await escolhe('modo', 'bounce'); await escolhe('voltar', 'continue'); s = await ev(`(() => ({ m: ${clip}.tr.mode, a: ${clip}.tr.away }))()`); check('modo e ao voltar mudam pelos botões da direita', s.m === 'bounce' && s.a === 'continue', JSON.stringify(s)); await escolhe('modo', 'loop'); await escolhe('voltar', 'restart');
+// BPM Sync: batidas propostas pela duração, riscos de batida, Beat Looper
+await ev(`(() => { ${P}.trigger(0, 0); return 1; })()`); await wait(400); await press('▶'); await escolhe('tipo', 'bpm'); await wait(400);
+s = await ev(`(() => ({ sync: ${clip}.tr.sync, beats: ${clip}.tr.beats, bpm: ${P}.bpm.bpm, riscos: document.querySelectorAll('#clipPan .timeline .ticks i').length, looper: !!document.querySelector('#clipPan .bloop') }))()`);
+check('BPM Sync: batidas = duração no BPM, na potência de 2 mais próxima; riscos e Beat Looper aparecem', s.sync === 'bpm' && s.beats === Math.pow(2, Math.round(Math.log2(12 * s.bpm / 60))) && s.riscos > 1 && s.looper, JSON.stringify(s));
+await wait(1200); await press('loop1'); const a0 = await st(); let mn = 99, mx = -1; for (let k = 0; k < 12; k++) { await wait(150); const q = await st(); mn = Math.min(mn, q.t); mx = Math.max(mx, q.t); }
+{ const umaBatida = 12 / s.beats; check('Beat Looper 1: o clipe fica preso num laço de uma batida', mx - mn <= umaBatida + 0.25 && mx - mn > 0.05, JSON.stringify({ mn, mx, umaBatida, a0 })); }
+await press('loopOff'); await wait(700); s2 = await st(); check('Off solta o laço e o clipe segue', s2.playing && !s2.paused, JSON.stringify(s2));
+await escolhe('tipo', 'timeline'); await wait(300); s = await ev(`(() => ({ sync: ${clip}.tr.sync, looper: !!document.querySelector('#clipPan .bloop') }))()`); check('voltar para Linha do tempo esconde o Beat Looper', s.sync === 'timeline' && !s.looper, JSON.stringify(s));
+await press('‖');
 await press('▶'); await wait(400); s = await st(); check('tocar de novo depois de pular funciona', s.playing && !s.paused, JSON.stringify(s));
 
 // IN/OUT empurram a agulha, como no Resolume (conferido lá: IN além da agulha leva a agulha ao IN; OUT aquém dela leva ao OUT)
@@ -82,4 +112,6 @@ await ev(`(() => { ${P}.trigger(0, 0); return 1; })()`); await wait(600);
 await press('▶'); await wait(500); await press('◀'); s = await st(); await wait(700); s2 = await st();
 check('no ar: ◀ toca para trás', s2.t < s.t - 0.2 || (s.t < 0.3 && s2.t <= s.t), JSON.stringify(s) + ' → ' + JSON.stringify(s2));
 await press('‖'); s = await st(); await wait(400); s2 = await st(); check('no ar: ‖ para', s.t === s2.t && !s2.playing, JSON.stringify(s2));
+await ev(`(() => { delete ${P}.panels.folds['clip/Cue Points']; localStorage.removeItem('openluz.folds'); return 1; })()`);
+await ev(`(() => { ${P}.clearCell(0, 0); ${P}.render(); return 1; })()`);   // limpa a casa: as outras baterias contam com a grade vazia
 console.log(falhas ? `\n${falhas} FALHA(S)` : '\ntudo certo'); ws.close(); process.exit(falhas ? 1 : 0);

@@ -23,7 +23,7 @@ await ev(`document.querySelectorAll('.dlgOver').forEach(d => d.remove()); 1`);
 await ev(`(async () => { const p = ${P}; await p.putPath(0, 0, ${JSON.stringify(clipPath.split(String.fromCharCode(92)).join('/'))}, 't.mp4'); await new Promise(r => setTimeout(r, 1500)); const c = p.state.layers[0].clips[0]; c.transform = { x: 0, y: 0, scale: 1, rot: 0 }; p.panels.scaleOpen = false; p.panels.render(); return 1; })()`);
 await wait(400);
 const clip = `${P}.state.layers[0].clips[0]`;
-const rowOf = (label) => `[...document.querySelectorAll('#clipPan .prow')].find(r => r.querySelector('.pl') && r.querySelector('.pl').textContent.replace(/[▶▼]/g, '').trim() === ${JSON.stringify(label)} && !r.classList.contains('grp'))`;
+const rowOf = (label) => `[...document.querySelectorAll('#clipPan .prow')].find(r => r.querySelector('.pl') && r.querySelector('.pl').textContent.replace(/[▶▼]/g, '').trim() === ${JSON.stringify(label)} && !r.classList.contains('grp') && !r.querySelector('.pinfo'))`;   // .pinfo: Largura/Altura só de leitura do bloco de vídeo não contam
 const pt = (label, sel) => ev(`(() => { const r = ${rowOf(label)}; if (!r) return null; r.scrollIntoView({ block: 'center' }); const e = ${sel}; const q = e.getBoundingClientRect(); return [q.x + q.width / 2, q.y + q.height / 2]; })()`);
 const mais = async (label, vezes = 1) => { for (let i = 0; i < vezes; i++) { const q = await pt(label, `r.querySelectorAll('button.pm')[1]`); await click(q[0], q[1]); await wait(150); } };
 

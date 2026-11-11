@@ -26,7 +26,7 @@ import { WebcamOut } from './webcam.js';
 import { tickFace, marcaNaPrevia, desenharMarca } from './face.js';
 import { initSplitters } from './splitters.js';
 import { paintScan } from './laser-model.js';
-import { BPM, SNAPS, advance, tap, resync, setBpm, click, effBpm } from './beat.js';
+import { BPM, SNAPS, advance, tap, resync, setBpm, click, effBpm, applyAnims } from './beat.js';
 import { APC40 } from './apc40.js';
 import { AudioEngine, mkAudioFx } from './audio.js';
 import { Segmenter } from './segment.js';
@@ -239,9 +239,10 @@ function syncLaser() {
 function swapClip(L, col) {
   const old = liveClip(L), clip = L.clips[col]; L.ghost = null;
   if (L.prev && L.prev.clip !== clip) C.stopClip(L.prev.clip);
-  if (old && L.transition > 0 && old.kind !== 'laser' && clip.kind !== 'laser') {
-    const mode = L.transMode === 'random' ? randomMixer() : (L.transMode || 'alpha');
-    L.prev = { clip: old, t0: engine.time, dur: L.transition, mode, opt: { ...(L.transOpt || MIXER_OPT()) }, seed: Math.random() * 100 };
+  const own = clip.trans && clip.trans.own ? clip.trans : null, tDur = own ? (own.dur || 0) : L.transition, tMode = own ? own.mode : L.transMode;   // o clipe que entra pode ter transição própria
+  if (old && tDur > 0 && old.kind !== 'laser' && clip.kind !== 'laser') {
+    const mode = tMode === 'random' ? randomMixer() : (tMode || 'alpha');
+    L.prev = { clip: old, t0: engine.time, dur: tDur, mode, opt: { ...(L.transOpt || MIXER_OPT()) }, seed: Math.random() * 100 };
   } else { C.stopClip(old); L.prev = null; }
   L.on = col; C.startClip(clip, layerSpeed(L), awayStart(clip, old));
 }
@@ -1125,6 +1126,7 @@ async function loadComposition(json, name) {
 // Desfazer volta ao retrato anterior reaproveitando os clipes abertos (os arquivos não reabrem) e sem mexer no que está
 // no ar: qual casa toca em cada camada não entra no retrato. Saída avançada, Laser e Automape têm o desfazer deles enquanto abertos.
 const hist = { undo: [], redo: [], busy: false, max: 40 };
+state.compTransformRef = () => engine.compTransform;   // para o salvar devolver a base do Transform animado da composição
 const snapComp = () => serializeComposition(state, laser, COLS).replace(/"on":-?\d+/g, '"on":-1').replace(/"active":-?\d+/g, '"active":-1');
 const undoBlocked = () => hist.busy || ao.open || laser.open || !!document.querySelector('.dlgOver');
 function markUndo() {
@@ -1337,6 +1339,7 @@ async function aboutDialog() {
 // ---------- painéis e navegador ----------
 const panels = new Panels({
   state, engine, laser, toast, renderGrid: render, selectedClip, drag: () => drag, trigger, removeLayer, applySpeed,
+  clipMenu: (x, y) => menubar.context(clipMenuItems(), x, y), menu: (items, x, y) => menubar.context(items, x, y), clearSelected: () => { const s = selectedCell(); if (s) clearCell(state.layers.indexOf(s.L), s.idx); },
   prepare: (fmt) => { const s = selectedCell(); if (s) prepareClip(state.layers.indexOf(s.L), s.idx, fmt); }, preparing: (c) => preparingNow.has(c.path) ? preparingNow.get(c.path) : null,
   openLaser: (f) => { laser.sel = f; laser.show(); },
   selectedGroup, setLayerGroup, newGroup, removeGroup, addLayerToGroup, fadeTo, renderDecks, audio,
@@ -1568,6 +1571,11 @@ function loop() {
   seg.tick(state.layers, liveClip, now); if (seg.err && seg.err !== segErrShown) { segErrShown = seg.err; toast(seg.err); }
   if (now - (loop.apcAt || 0) > 0.2) { loop.apcAt = now; apc.refresh(); }
   for (const L of state.layers) if (L.prev && now - L.prev.t0 >= L.prev.dur) { if (L.clips[L.on] !== L.prev.clip) C.stopClip(L.prev.clip); L.prev = null; }
+  // engrenagem do parâmetro: opacidade, velocidade, volume e Transform animados (camadas, clipes no ar e o clipe selecionado)
+  { const animClip = (c, L) => { const r = applyAnims(c, state.bpm); applyAnims(c.transform, state.bpm); if (r & 1 && c.kind === 'video' && c.tr.sync !== 'bpm') C.setRate(c, layerSpeed(L)); if (r & 2) C.applyAudio(c); };
+    for (const L of state.layers) { applyAnims(L, state.bpm); applyAnims(L.transform, state.bpm); const c = liveClip(L); if (c) animClip(c, L); }
+    const s = selectedCell(); if (s && liveClip(s.L) !== s.clip) animClip(s.clip, s.L);
+    applyAnims(engine.compTransform, state.bpm); for (const g of state.groups || []) applyAnims(g.transform, state.bpm); }
   // transporte dos vídeos no ar: entrada/saída, modo e direção
   for (const L of state.layers) { const c = liveClip(L); if (c && c.kind === 'video') { if (C.tickTransport(c, dt, layerSpeed(L))) { c.endedAt = now; if (c.tr.mode === 'onceclear') clearAfterOnce.push(L); } } }
   // o clipe só selecionado (prévia, fora do ar) também obedece ao transporte: ◀, entrada/saída e modo; o "limpa" não tira nada do ar

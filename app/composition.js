@@ -1,5 +1,6 @@
 // A composição inteira num JSON: camadas, clipes (arquivos pelo caminho), efeitos, autopilot,
 // transformações, telas da saída avançada e quadros do laser.
+import { restoreAnims } from './beat.js';
 import { serializeClip, deserializeClip } from './clips.js';
 import * as M from './screens.js';
 import { serializeLaser, deserializeLaser } from './laser-model.js';
@@ -18,9 +19,13 @@ export const SETTINGS = () => ({ w: 1920, h: 1080, fps: 30, bg: '#000000', desc:
 // campos com _ são internos do motor (texturas, ponteiros; o _maskSrc do recorte aponta de volta para o clipe e fazia o JSON falhar: sem salvar nem autosalvar)
 const semInternos = (k, v) => (k[0] === '_' ? undefined : v);
 export function serializeComposition(state, laser, cols) {
+  // valores animados pela engrenagem: o que se guarda é a base, não o valor deste quadro (senão cada clique viraria um passo de desfazer)
+  for (const L of state.layers) { restoreAnims(L); restoreAnims(L.transform); for (const c of L.clips) if (c) { restoreAnims(c); restoreAnims(c.transform); } }
+  for (const g of state.groups || []) restoreAnims(g.transform);
+  if (state.compTransformRef) restoreAnims(state.compTransformRef());
   return JSON.stringify({
     v: 1, name: state.name || 'Composição', cols, colNames: state.colNames || {}, settings: state.settings, master: state.master, compBypass: !!state.compBypass, speed: state.speed, compFx: state.compFx, compTransform: state.compTransform, compAutopilot: state.compAutopilot,
-    layers: state.layers.map(L => ({ name: L.name, master: L.master ?? 1, volume: L.volume ?? 1, opacity: L.opacity, blend: L.blend, bypass: L.bypass, autopilot: L.autopilot, fx: L.fx, transform: L.transform, transition: L.transition, transMode: L.transMode, transOpt: L.transOpt, blendOpt: L.blendOpt, group: L.group ?? null, solo: !!L.solo, bus: L.bus || null, on: L.on, clips: L.clips.map(serializeClip) })),
+    layers: state.layers.map(L => ({ name: L.name, master: L.master ?? 1, volume: L.volume ?? 1, opacity: L.opacity, panim: L.panim, blend: L.blend, bypass: L.bypass, autopilot: L.autopilot, fx: L.fx, transform: L.transform, transition: L.transition, transMode: L.transMode, transOpt: L.transOpt, blendOpt: L.blendOpt, group: L.group ?? null, solo: !!L.solo, bus: L.bus || null, on: L.on, clips: L.clips.map(serializeClip) })),
     groups: state.groups || [], xfade: state.xfade || XFADE(), deck: state.deck || 0, keymap: keymapOrNull(state.keymap),
     bpm: state.bpm ? { bpm: state.bpm.bpm, snap: state.bpm.snap, metronome: !!state.bpm.metronome, nudgePct: state.bpm.nudgePct } : null, colSnap: state.colSnap || {}, audio: state.audioSettings || AUDIO_SETTINGS(),
     // os clipes das camadas são os do deck atual; os outros decks guardam as suas linhas (uma por camada)
@@ -50,7 +55,7 @@ export async function deserializeComposition(json, ctx) {
   for (const l of d.layers || []) {
     const L = ctx.mkLayer(l.name || 'Camada');
     L.master = l.master ?? 1; L.volume = l.volume ?? 1; L.opacity = l.opacity ?? 1; L.blend = l.blend || 'normal'; L.bypass = !!l.bypass; L.autopilot = Object.assign(AUTOPILOT(), l.autopilot || {});
-    L.fx = (l.fx || []).map(f => cloneFx(f)); L.transform = Object.assign({ x: 0, y: 0, scale: 1, rot: 0 }, l.transform || {}); L.transition = l.transition ?? 0; L.transMode = l.transMode || 'alpha'; L.transOpt = Object.assign(MIXER_OPT(), l.transOpt || {}); L.blendOpt = Object.assign(MIXER_OPT(), l.blendOpt || {}); L.group = l.group ?? null; L.solo = !!l.solo; L.bus = l.bus || null;
+    L.fx = (l.fx || []).map(f => cloneFx(f)); L.transform = Object.assign({ x: 0, y: 0, scale: 1, rot: 0 }, l.transform || {}); L.panim = l.panim ? JSON.parse(JSON.stringify(l.panim)) : undefined; L.transition = l.transition ?? 0; L.transMode = l.transMode || 'alpha'; L.transOpt = Object.assign(MIXER_OPT(), l.transOpt || {}); L.blendOpt = Object.assign(MIXER_OPT(), l.blendOpt || {}); L.group = l.group ?? null; L.solo = !!l.solo; L.bus = l.bus || null;
     for (let i = 0; i < L.clips.length; i++) {
       const o = (l.clips || [])[i];
       if (o && o.missing) { missing++; continue; }
