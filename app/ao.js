@@ -6,6 +6,7 @@
 import * as M from './screens.js';
 import { outlinePath, meshLinesPath, bbox, localToOut, outToLocal } from './warp.js';
 import { el, fmtN, ICON, propsKit } from './panel.js';
+import { confirmBox } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
@@ -793,11 +794,15 @@ export class AdvancedOutput {
     name = (name || '').trim();
     if (!name) { this.c.toast('Dê um nome ao preset'); return; }
     if (!this.c.presets) return;
+    // gravar por cima de OUTRO preset que já existe pede confirmação (o campo já vem com o nome do último carregado)
+    let nomes = []; try { nomes = this.c.presets.list ? await this.c.presets.list() : []; } catch { }
+    if (name !== this.presetName && nomes.some(n => String(n).toLowerCase() === name.toLowerCase()) && !(await confirmBox('Salvar preset', 'Já existe um preset chamado "' + name + '". Gravar por cima dele?'))) return;
     try { await this.c.presets.save(name, M.serialize(this.screens())); this.presetName = name; this.closeMenus(); await this.refreshPresets(); this.c.toast('Preset "' + name + '" salvo'); }
     catch (e) { this.c.toast('Não consegui salvar: ' + e.message); }
   }
   async deletePreset() {
     const name = this.presetName; this.closeMenus(); if (!name || !this.c.presets) return;
+    if (!(await confirmBox('Apagar preset', 'Apagar o preset "' + name + '"? O arquivo vai para a Lixeira.'))) return;
     await this.c.presets.remove(name); this.presetName = ''; await this.refreshPresets(); this.c.toast('Preset "' + name + '" apagado');
   }
 }

@@ -1,6 +1,7 @@
 // O painel de navegação da direita, como no Resolume: Arquivos · Composições · Efeitos ·
 // Fontes · Gravar, com a caixa de ajuda embaixo.
 import { el, ICON } from './panel.js';
+import { confirmBox } from './menus.js';
 import { EFFECTS } from './effects.js';
 import { AUDIO_FX } from './audio.js';
 import { SOURCES } from './sources.js';
@@ -27,7 +28,8 @@ export class Browser {
     this.render();
   }
   setTab(t) { this.tab = t; this.render(); }
-  savePrefs() { if (this.c.desktop) this.c.desktop.prefs.set({ favorites: this.favs, favFx: this.favFx, lastDir: this.dir }).catch(() => { }); }
+  // grava só o que é desta aba, por cima do que já está guardado (o processo principal grava o objeto inteiro: sem mesclar, as outras preferências sumiam)
+  savePrefs() { const P = this.c.desktop && this.c.desktop.prefs; if (!P) return; return P.get().then(p => P.set({ ...(p || {}), favorites: this.favs, favFx: this.favFx, lastDir: this.dir })).catch(() => { }); }
   render() {
     $('browserTabs').querySelectorAll('[data-tab]').forEach(t => t.classList.toggle('on', t.dataset.tab === this.tab));
     const P = $('browserPan'); P.textContent = ''; P.className = 'pbody browser ' + this.tab;
@@ -82,26 +84,32 @@ export class Browser {
   async renderComps(P) {
     const D = this.c.desktop, cur = this.c.comps.current();
     const bar = el('div', 'fbar');
-    const bNew = el('button', '', 'Nova'); bNew.dataset.help = 'Nova composição|Limpa a grade. O que não foi salvo se perde.'; bNew.onclick = () => this.c.comps.newComp();
+    const bNew = el('button', '', 'Nova'); bNew.dataset.help = 'Nova composição|Limpa a grade. O que não foi salvo se perde.'; bNew.onclick = () => this.c.comps.newComp(true);
     const bSave = el('button', '', 'Salvar'); bSave.dataset.help = 'Salvar|Grava a composição atual com o nome dela.'; bSave.onclick = () => cur ? this.c.comps.save(cur) : this.saveAs();
     const bAs = el('button', '', 'Salvar como…'); bAs.dataset.help = 'Salvar como|Grava com outro nome.'; bAs.onclick = () => this.saveAs();
     bar.append(bNew, bSave, bAs); P.appendChild(bar);
-    if (this.askName) { const row = el('div', 'fbar'); const i = el('input'); i.placeholder = 'nome da composição'; i.value = cur || ''; i.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter' && i.value.trim()) { this.askName = false; this.c.comps.save(i.value.trim()); } if (e.key === 'Escape') { this.askName = false; this.render(); } }; const ok = el('button', '', 'OK'); ok.onclick = () => { if (i.value.trim()) { this.askName = false; this.c.comps.save(i.value.trim()); } }; row.append(i, ok); P.appendChild(row); setTimeout(() => i.focus(), 0); }
+    if (this.askName) { const row = el('div', 'fbar'); const i = el('input'); i.placeholder = 'nome da composição'; i.value = cur || ''; i.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter' && i.value.trim()) { this.askName = false; this.saveNamed(i.value.trim()); } if (e.key === 'Escape') { this.askName = false; this.render(); } }; const ok = el('button', '', 'OK'); ok.onclick = () => { if (i.value.trim()) { this.askName = false; this.saveNamed(i.value.trim()); } }; row.append(i, ok); P.appendChild(row); setTimeout(() => i.focus(), 0); }
     this.searchBox(P);
     const list = el('div', 'flist'); P.appendChild(list);
     if (!D) { list.appendChild(el('div', 'vazio', 'Composições salvas precisam do programa instalado.')); return; }
     try { this.compList = await D.comps.list(); } catch { this.compList = []; }
     for (const c of this.compList) {
       if (!this.match(c.name)) continue;
-      const r = el('div', 'item comp' + (c.name === cur ? ' cur' : '')); r.dataset.help = c.name + '|Duplo clique abre. ✕ apaga.';
+      const r = el('div', 'item comp' + (c.name === cur ? ' cur' : '')); r.dataset.help = c.name + '|Duplo clique abre. ✕ apaga (pergunta antes; o arquivo vai para a Lixeira).';
       r.append(el('b', '', c.name), el('small', '', c.layers + (c.layers === 1 ? ' camada · ' : ' camadas · ') + fmtDate(c.mtime)));
-      const x = el('button', 'mini', '✕'); x.title = 'Apagar'; x.onclick = (e) => { e.stopPropagation(); D.comps.remove(c.name).then(() => this.render()); }; r.appendChild(x);
-      r.ondblclick = () => this.c.comps.open(c.name);
+      const x = el('button', 'mini', '✕'); x.title = 'Apagar'; x.onclick = async (e) => { e.stopPropagation(); if (!(await confirmBox('Apagar composição', 'Apagar "' + c.name + '"? O arquivo vai para a Lixeira.'))) return; await D.comps.remove(c.name); this.render(); }; r.appendChild(x);
+      r.ondblclick = () => this.c.comps.open(c.name, true);
       list.appendChild(r);
     }
     if (!this.compList.length) list.appendChild(el('div', 'vazio', 'Nenhuma composição salva. Monte a grade e clique em Salvar.'));
   }
   saveAs() { this.askName = true; this.render(); }
+  // Salvar como: gravar por cima de OUTRA composição que já existe pede confirmação
+  async saveNamed(name) {
+    name = name.replace(/^_+/, ''); const cur = this.c.comps.current();
+    if (name && name !== cur && (this.compList || []).some(c => c.name.toLowerCase() === name.toLowerCase()) && !(await confirmBox('Salvar como', 'Já existe uma composição chamada "' + name + '". Gravar por cima dela?'))) { this.render(); return; }
+    this.c.comps.save(name);
+  }
   // ---------- Efeitos ----------
   renderFx(P) {
     this.searchBox(P, 'Buscar|Filtra os efeitos pelo nome.');

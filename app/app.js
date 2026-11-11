@@ -82,16 +82,23 @@ engine.canvas.addEventListener('webglcontextlost', (e) => {
 let lastAutosave = '';
 async function autosave() {
   if (!D) return;
-  try { const j = serializeComposition(state, laser, COLS); if (j === lastAutosave) return; lastAutosave = j; await D.comps.save('_automatica', j); } catch (e) { logW('autosave', e.message); }
+  try {
+    const j = serializeComposition(state, laser, COLS);
+    // primeira rodada com o programa como abriu (sem clipes e sem nome): esse retrato não é gravado, para não passar por cima da
+    // composição automática da sessão anterior; qualquer mudança depois disso é gravada, mesmo com a grade vazia (só mapeamento, por exemplo)
+    if (autosave.vazia === undefined) autosave.vazia = state.name || state.layers.some(L => L.clips.some(Boolean)) ? null : j;
+    if (j === lastAutosave || j === autosave.vazia) return;
+    await D.comps.save('_automatica', j); lastAutosave = j; autosave.falhou = false;   // só conta como salvo depois de gravar
+  } catch (e) { logW('autosave', e.message); if (!autosave.falhou) { autosave.falhou = true; toast('Não consegui gravar a composição automática: ' + e.message); } }
 }
-setInterval(() => { if (state.layers.some(L => L.clips.some(Boolean))) autosave(); }, 30000);
+setInterval(autosave, 30000);
 addEventListener('beforeunload', () => { try { if (sessionStorage.getItem('projRecover')) return; } catch { } });
 (async () => {
   if (!D) return;
   let why = ''; try { why = sessionStorage.getItem('projRecover') || ''; sessionStorage.removeItem('projRecover'); } catch { }
   let crash = ''; try { crash = await D.log.lastCrash(); } catch { }
   if (!why && !crash) return;
-  try { const j = await D.comps.load('_automatica'); await loadComposition(j, state.name); toast('O programa reabriu depois de travar (' + (crash || 'placa de vídeo') + ') e recuperou a composição automática. Registro: Projecionista → Abrir o registro.'); }
+  try { const j = await D.comps.load('_automatica'); await loadComposition(j, state.name); zeraHist(); toast('O programa reabriu depois de travar (' + (crash || 'placa de vídeo') + ') e recuperou a composição automática. Registro: Projecionista → Abrir o registro.'); }
   catch { toast('O programa reabriu depois de travar' + (crash ? ': ' + crash : '') + '. Veja OpenLuz → Abrir o registro.'); }
 })();
 // a cada minuto: memória da janela e o que está no ar, para achar vazamentos
@@ -1091,11 +1098,29 @@ const comps = {
   current: () => state.name,
   async save(name) {
     if (!D) { toast('Salvar composição precisa do programa instalado'); return; }
-    try { state.name = name; await D.comps.save(name, serializeComposition(state, laser, COLS)); toast('Composição "' + name + '" salva'); renderScreens(); browser.render(); return true; } catch (e) { toast('Não consegui salvar: ' + e.message); return false; }
+    name = String(name || '').trim().replace(/^_+/, '');   // nome começando com _ é reservado (a lista esconde): sai o _ da frente
+    if (!name) { toast('Dê um nome à composição'); return false; }
+    const antes = state.name;
+    try { state.name = name; await D.comps.save(name, serializeComposition(state, laser, COLS)); marcaLimpo(); toast('Composição "' + name + '" salva'); renderScreens(); browser.render(); return true; }
+    catch (e) { state.name = antes; toast('Não consegui salvar: ' + e.message); return false; }
   },
-  async open(name) { if (!D) return; try { await loadComposition(await D.comps.load(name), name); toast('Composição "' + name + '" aberta'); } catch (e) { toast('Não consegui abrir: ' + e.message); } browser.render(); },
-  newComp() { resetComposition(); toast('Composição nova'); browser.render(); },
+  // perguntar: vem da interface (menu, Ctrl+N, botão, duplo clique). Com mudança não salva, pergunta antes de trocar a composição.
+  async open(name, perguntar) {
+    if (!D) return;
+    if (perguntar && sujo() && !(await confirmBox('Abrir composição', 'A composição atual tem mudanças que não foram salvas. Abrir "' + name + '" mesmo assim?'))) return;
+    try { await loadComposition(await D.comps.load(name), name); zeraHist(); marcaLimpo(); toast('Composição "' + name + '" aberta'); } catch (e) { toast('Não consegui abrir: ' + e.message); }
+    browser.render();
+  },
+  async newComp(perguntar) {
+    if (perguntar && sujo() && !(await confirmBox('Composição nova', 'A composição atual tem mudanças que não foram salvas. Começar uma nova mesmo assim?'))) return;
+    resetComposition(); zeraHist(); marcaLimpo(); toast('Composição nova'); browser.render();
+  },
 };
+// O desfazer não atravessa a troca de composição: senão o Ctrl+Z trazia a composição anterior com o nome da nova, e salvar gravava uma por cima da outra.
+function zeraHist() { try { hist.undo.length = 0; hist.redo.length = 0; } catch { } try { laser.hist.length = 0; laser.redoHist.length = 0; if (laser.open) laser.refresh(); } catch { } }
+// "sujo": a composição mudou desde o último salvar, abrir ou nova
+function marcaLimpo() { try { marcaLimpo.s = snapComp(); } catch { marcaLimpo.s = null; } }
+function sujo() { try { return marcaLimpo.s != null && snapComp() !== marcaLimpo.s; } catch { return false; } }
 // fechar o programa (X da janela): pergunta como o Resolume — salvar e fechar, fechar sem salvar ou cancelar
 function askClose() {
   const pergunta = () => [...document.querySelectorAll('.dlgOver')].some(d => d.textContent.includes('Fechar o OpenLuz'));
@@ -1166,7 +1191,8 @@ async function undoComp() {
   const redoTo = cur;
   while (hist.undo.length) {
     await restoreComp(hist.undo.pop()); const now = snapComp();
-    if (now !== cur) { hist.redo.push(redoTo); hist.undo.push(now); toast('Desfeito'); return; }
+    if (now !== cur) { hist.redo.push(redoTo); hist.undo.push(now); const telas = (j) => { try { return JSON.stringify(JSON.parse(j).screens); } catch { return ''; } };
+      toast(telas(now) !== telas(redoTo) ? 'Desfeito, incluindo o que foi feito na Saída avançada (Ctrl+Y refaz)' : 'Desfeito'); return; }
     cur = now;
   }
   toast('Nada para desfazer');
@@ -1459,9 +1485,9 @@ const menuDefs = () => [
   { label: 'Composição', items: () => [
     { label: 'Desfazer', key: 'Ctrl+Z', disabled: !canUndo(), fn: undoComp },
     { label: 'Refazer', key: 'Ctrl+Y', disabled: !hist.redo.length, fn: redoComp }, '-',
-    { label: 'Nova', key: 'Ctrl+N', fn: () => comps.newComp() },
+    { label: 'Nova', key: 'Ctrl+N', fn: () => comps.newComp(true) },
     { label: 'Abrir…', key: 'Ctrl+O', fn: () => { browser.setTab('comps'); toast('Duplo clique numa composição da lista para abrir'); } },
-    { label: 'Abrir recente', sub: () => (browser.compList || []).length ? browser.compList.map(n => ({ label: n, fn: () => comps.open(n) })) : [{ label: 'nenhuma salva', disabled: true }] },
+    { label: 'Abrir recente', sub: () => (browser.compList || []).length ? browser.compList.map(n => ({ label: n, fn: () => comps.open(n, true) })) : [{ label: 'nenhuma salva', disabled: true }] },
     { label: 'Salvar', key: 'Ctrl+S', fn: () => state.name ? comps.save(state.name) : browser.saveAs() },
     { label: 'Salvar como…', key: 'Ctrl+Shift+S', fn: () => { browser.setTab('comps'); browser.saveAs(); } }, '-',
     { label: 'Copiar efeitos', fn: () => { fxClipboard = fxCopy(engine.compFx); toast(fxClipboard.length + ' efeito(s) copiado(s)'); } },
@@ -1559,7 +1585,7 @@ const SHORTCUTS = [
   { combo: 'Ctrl+Z', keys: 'Ctrl+Z', what: 'Desfazer (a composição toda; Saída avançada, Laser e Automape desfazem o deles)', when: () => !ao.open && !laser.open, fn: undoComp },
   { combo: 'Ctrl+Y', keys: 'Ctrl+Y', what: 'Refazer', when: () => !ao.open && !laser.open, fn: redoComp },
   { combo: 'Ctrl+Shift+Z', keys: 'Ctrl+Shift+Z', what: 'Refazer', when: () => !ao.open && !laser.open, fn: redoComp },
-  { combo: 'Ctrl+N', keys: 'Ctrl+N', what: 'Composição nova', fn: () => comps.newComp() },
+  { combo: 'Ctrl+N', keys: 'Ctrl+N', what: 'Composição nova', fn: () => comps.newComp(true) },
   { combo: 'Ctrl+O', keys: 'Ctrl+O', what: 'Abrir composição (aba Composições)', fn: () => browser.setTab('comps') },
   { combo: 'Ctrl+S', keys: 'Ctrl+S', what: 'Salvar composição', fn: () => state.name ? comps.save(state.name) : (browser.setTab('comps'), browser.saveAs()) },
   { combo: 'Ctrl+Shift+S', keys: 'Ctrl+Shift+S', what: 'Salvar como…', fn: () => { browser.setTab('comps'); browser.saveAs(); } },
@@ -1650,6 +1676,7 @@ function frame() {
 const webcam = new WebcamOut(engine, D);
 buildBpmBar();
 loop();
+marcaLimpo();
 
 render();
 

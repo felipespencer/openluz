@@ -219,7 +219,8 @@ function createMain() {
   });
   win.webContents.on('before-input-event', (ev, input) => {
     if (input.type !== 'keyDown') return;
-    if (input.key === 'F5') { win.webContents.reloadIgnoringCache(); ev.preventDefault(); }
+    // F5 recarrega a janela só no programa de desenvolvimento: no instalado, um toque sem querer jogava fora a composição sem perguntar
+    if (input.key === 'F5') { if (!app.isPackaged) win.webContents.reloadIgnoringCache(); ev.preventDefault(); }
     else if (input.key === 'F12') { win.webContents.toggleDevTools(); ev.preventDefault(); }
   });
   // o X da janela de controle não fecha na hora: a página pergunta "salvar e fechar / fechar sem salvar / cancelar"
@@ -382,26 +383,30 @@ app.whenReady().then(async () => {
   logLine('abriu', 'OpenLuz ' + app.getVersion() + ' · Electron ' + process.versions.electron + ' · ' + process.platform + ' ' + process.arch + (app.isPackaged ? ' · instalado' : ' · desenvolvimento'));
   // diagnóstico: onde cada janela está de verdade (bounds em DIP, tela cheia, monitor que a contém)
   ipcMain.handle('windows', () => BrowserWindow.getAllWindows().map(w => ({ title: w.getTitle(), bounds: w.getBounds(), content: w.getContentBounds(), full: w.isFullScreen(), display: String(screen.getDisplayMatching(w.getBounds()).id) })));
+  // grava inteiro ou não grava: escreve num arquivo ao lado e troca o nome (queda de energia no meio não deixa o arquivo pela metade)
+  const writeAtomic = (file, text) => { const tmp = file + '.tmp'; fs.writeFileSync(tmp, text); fs.renameSync(tmp, file); };
+  // apagar manda para a Lixeira do Windows; se não der, apaga de vez
+  const paraLixeira = async (file) => { if (!fs.existsSync(file)) return; try { await shell.trashItem(file); } catch { try { fs.unlinkSync(file); } catch { } } };
   ipcMain.handle('presets:list', () => {
     try { return fs.readdirSync(PRESET_DIR()).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)).sort(); } catch { return []; }
   });
   ipcMain.handle('presets:load', (_e, name) => fs.readFileSync(presetFile(name), 'utf8'));
   ipcMain.handle('presets:save', (_e, name, json) => {
     if (typeof json !== 'string' || json.length > 4e6) throw new Error('preset inválido');
-    fs.mkdirSync(PRESET_DIR(), { recursive: true }); fs.writeFileSync(presetFile(name), json); return true;
+    fs.mkdirSync(PRESET_DIR(), { recursive: true }); writeAtomic(presetFile(name), json); return true;
   });
-  ipcMain.handle('presets:remove', (_e, name) => { try { fs.unlinkSync(presetFile(name)); } catch {} return true; });
+  ipcMain.handle('presets:remove', async (_e, name) => { await paraLixeira(presetFile(name)); return true; });
   // disco: pastas, preferências, composições e gravações
   ipcMain.handle('fs:roots', () => roots());
   ipcMain.handle('fs:list', (_e, dir) => listDir(String(dir)));
   ipcMain.handle('prefs:get', () => { try { return JSON.parse(fs.readFileSync(PREFS_FILE(), 'utf8')); } catch { return {}; } });
-  ipcMain.handle('prefs:set', (_e, p) => { fs.writeFileSync(PREFS_FILE(), JSON.stringify(p || {})); return true; });
+  ipcMain.handle('prefs:set', (_e, p) => { writeAtomic(PREFS_FILE(), JSON.stringify(p || {})); return true; });
   ipcMain.handle('comps:list', () => {
     try { return fs.readdirSync(COMP_DIR()).filter(f => f.endsWith('.json') && !f.startsWith('_')).map(f => { const full = path.join(COMP_DIR(), f); let layers = 0; try { layers = (JSON.parse(fs.readFileSync(full, 'utf8')).layers || []).length; } catch { } return { name: f.slice(0, -5), mtime: fs.statSync(full).mtimeMs, layers }; }).sort((a, b) => b.mtime - a.mtime); } catch { return []; }
   });
   ipcMain.handle('comps:load', (_e, name) => fs.readFileSync(path.join(COMP_DIR(), safeName(name) + '.json'), 'utf8'));
-  ipcMain.handle('comps:save', (_e, name, json) => { if (typeof json !== 'string' || json.length > 50e6) throw new Error('composição inválida'); fs.mkdirSync(COMP_DIR(), { recursive: true }); fs.writeFileSync(path.join(COMP_DIR(), safeName(name) + '.json'), json); return true; });
-  ipcMain.handle('comps:remove', (_e, name) => { try { fs.unlinkSync(path.join(COMP_DIR(), safeName(name) + '.json')); } catch { } return true; });
+  ipcMain.handle('comps:save', (_e, name, json) => { if (typeof json !== 'string' || json.length > 50e6) throw new Error('composição inválida'); fs.mkdirSync(COMP_DIR(), { recursive: true }); writeAtomic(path.join(COMP_DIR(), safeName(name) + '.json'), json); return true; });
+  ipcMain.handle('comps:remove', async (_e, name) => { await paraLixeira(path.join(COMP_DIR(), safeName(name) + '.json')); return true; });
   ipcMain.handle('rec:save', (_e, name, bytes, dir) => { const d = REC_DIR(dir); fs.mkdirSync(d, { recursive: true }); const full = path.join(d, safeName(name)); fs.writeFileSync(full, Buffer.from(bytes)); return { name: safeName(name), path: full, size: fs.statSync(full).size }; });
   ipcMain.handle('rec:list', (_e, dir) => { const d = REC_DIR(dir); try { return fs.readdirSync(d).filter(f => f.endsWith('.webm')).map(f => ({ name: f, path: path.join(d, f), size: fs.statSync(path.join(d, f)).size })); } catch { return []; } });
   ipcMain.handle('rec:show', (_e, p) => { shell.showItemInFolder(String(p)); return true; });
