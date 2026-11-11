@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('projDesktop', {
   windows: () => ipcRenderer.invoke('windows'),
   showOutputs: () => ipcRenderer.invoke('outputs:show'),
   // fechar: o processo principal segura o X e pergunta à página; a página responde com quit()
-  onCloseRequested: (fn) => ipcRenderer.on('app:closeRequested', () => fn()),
+  onCloseRequested: (fn) => ipcRenderer.on('app:closeRequested', () => { ipcRenderer.send('app:closeAck'); fn(); }),
   quit: () => ipcRenderer.invoke('app:quit'),
   info: () => ipcRenderer.invoke('app:info'),
   // Texto com IA (ia-main.js): a chave fica no processo principal; a página só pede e recebe o JSON

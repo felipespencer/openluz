@@ -13,12 +13,13 @@ export class EditorTexto {
   constructor(ctx) { this.ctx = ctx; this.open = false; }
 
   async abrir(clip) {
-    if (this.open) return;
+    if (this.open || this.abrindo) return;
+    this.abrindo = true;   // a lista de fontes demora na primeira vez: um segundo clique nesse meio-tempo não abre outro editor
     this.clip = clip; this.t = JSON.parse(JSON.stringify(clip.text)); this.sel = this.t.caixas.length ? this.t.caixas.length - 1 : -1;
     this.aba = 'estilos'; this.hist = [JSON.stringify(this.t)]; this.hi = 0; this.editando = -1; this.busca = '';
-    this.fontes = (await listFonts()).filter(f => !/emoji|symbol|wingding|webdings|marlett|mdl2|fluent|icons|math/i.test(f));
+    try { this.fontes = (await listFonts()).filter(f => !/emoji|symbol|wingding|webdings|marlett|mdl2|fluent|icons|math/i.test(f)); } catch (e) { this.abrindo = false; throw e; }
     this.fontes = [...PREFERIDAS.filter(f => this.fontes.includes(f)), ...this.fontes.filter(f => !PREFERIDAS.includes(f))];
-    this.open = true; this.montar(); this.tudo();
+    this.open = true; this.abrindo = false; this.montar(); this.tudo();
     const loop = () => { if (!this.open) return; this.palco(); this.raf = requestAnimationFrame(loop); }; loop();
   }
   fechar(aplicar) {

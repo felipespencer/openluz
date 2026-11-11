@@ -95,14 +95,14 @@ export class AdvancedOutput {
   // ---------- abrir e fechar ----------
   show() {
     this.open = true; $('ao').hidden = false;
-    this.snapshot = M.serialize(this.c.screens()); this.hist = []; this.redoHist = [];
+    this.snapshot = M.serialize(this.c.screens()); this.hist = []; this.redoHist = []; this.fechadas = new Set();
     const sc = this.c.screens()[0], sl = sc && sc.items.find(i => i.type === 'slice');
     this.sel = sc ? { screen: sc, item: sl || null } : null;
     this.refreshPresets();
     this.setTab('in'); this.layout(); this.refresh();
   }
   hide(cancel) {
-    if (cancel) this.c.setScreens(M.deserialize(this.snapshot));
+    if (cancel) this.c.setScreens(M.deserialize(this.snapshot), this.fechadas);
     this.open = false; $('ao').hidden = true; this.drawing = null; this.cursor = null; this.closeMenus();
     for (const sc of this.screens()) this.dropHelpers(sc); this.c.onChange();
   }
@@ -113,7 +113,7 @@ export class AdvancedOutput {
   pushUndo() { this.hist.push(this.snapState()); if (this.hist.length > 60) this.hist.shift(); this.redoHist = []; this.syncTools(); }
   snapState() { const s = this.screens(); return { json: M.serialize(s), si: s.indexOf(this.sel && this.sel.screen), ii: this.sel && this.sel.screen ? this.sel.screen.items.indexOf(this.sel.item) : -1 }; }
   restore(st) {
-    this.c.setScreens(M.deserialize(st.json));
+    this.c.setScreens(M.deserialize(st.json), this.fechadas);
     const s = this.screens(), sc = s[Math.max(0, st.si)] || s[0];
     this.sel = sc ? { screen: sc, item: sc.items[st.ii] || null } : null; this.selPt = -1;
     this.c.onChange(); this.layout(); this.refresh();
@@ -527,6 +527,9 @@ export class AdvancedOutput {
   removeScreen(sc) {
     const list = this.screens(); if (list.length <= 1) { this.c.toast('A última tela não pode ser apagada'); return; }
     this.pushUndo();
+    // a janela de saída da tela apagada fecha agora (senão fica órfã, parada no projetor); se o desfazer trouxer a tela, a saída reabre
+    if (sc.win && !sc.win.closed) { (this.fechadas || (this.fechadas = new Set())).add(sc.uid); sc.win.close(); }
+    sc.win = null; if (window.__projStreams) delete window.__projStreams[sc.id]; if (window.__projCanvas) delete window.__projCanvas[sc.id];
     list.splice(list.indexOf(sc), 1); const n = list[0]; this.sel = { screen: n, item: n.items[0] || null }; this.c.onChange(); this.layout(); this.refresh();
   }
 
@@ -575,7 +578,7 @@ export class AdvancedOutput {
     const devs = [['auto', 'Automático (projetor, se houver)'], ['window', 'Janela'], ...this.c.displays().map(d => [d.id, d.label + ' (' + d.w + '×' + d.h + ')'])];
     const setDev = (v) => { this.pushUndo(); if (this.c.setDevice) this.c.setDevice(sc, v); else { sc.device = v; const d = this.c.displays().find(x => x.id === v); if (d) M.resizeScreen(sc, d.w, d.h); } this.c.onChange(); this.layout(); this.refresh(); };
     return [{ label: 'Dispositivos de saída', disabled: true }, ...devs.map(([id, label]) => ({ label, check: sc.device === id, fn: () => setDev(id) })), '-',
-      { label: 'Duplicar', fn: () => { this.pushUndo(); const list = this.screens(), n = M.deserialize(M.serialize([sc]))[0]; n.name = sc.name.replace(/\s+\d+$/, '') + ' ' + (list.length + 1); list.splice(list.indexOf(sc) + 1, 0, n); this.sel = { screen: n, item: null }; this.c.onChange(); this.layout(); this.refresh(); } },
+      { label: 'Duplicar', fn: () => { this.pushUndo(); const list = this.screens(), n = M.deserialize(M.serialize([sc]))[0]; n.uid = M.newUid(); n.name = sc.name.replace(/\s+\d+$/, '') + ' ' + (list.length + 1); list.splice(list.indexOf(sc) + 1, 0, n); this.sel = { screen: n, item: null }; this.c.onChange(); this.layout(); this.refresh(); } },
       { label: 'Colar', disabled: !this.clip, fn: () => this.paste(sc, null) }];
   }
   // retângulo em que o item do menu age: entrada do slice (pixels da composição), caixa da saída, ou caixa da máscara

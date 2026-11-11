@@ -17,6 +17,9 @@ const click = async (sel) => {
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: r.x, y: r.y, button: 'left', buttons: 0, clickCount: 1 });
   await S(350);
 };
+// num programa recém-aberto o diálogo "Projetores" está na tela e o primeiro clique só o fecharia: fecha com Esc de verdade
+await send('Page.bringToFront'); await send('Emulation.setFocusEmulationEnabled', { enabled: true });
+for (let i = 0; i < 3 && await ev(`!!document.querySelector('.dlgOver')`); i++) { for (const type of ['rawKeyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await S(300); }
 const D = 'C:/Users/felip/OneDrive/Documentos/projecionista-pc/tools/compare/';
 // camada 1 = a de baixo (layers[n-1]); camada 2 logo acima
 await ev(`(async()=>{const P=window.projecionista; const n=P.state.layers.length; P.state.layers.forEach((L,i)=>{ for(let c=0;c<8;c++) if(L.clips[c]) P.clearCell(i,c); P.eject(i); });

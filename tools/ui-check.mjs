@@ -110,4 +110,5 @@ if (prep.vazia >= 0) {
 }
 const falhas = results.filter(r => !r.ok).length;
 console.log(`\n${results.length} verificações, ${falhas} falha(s) — ${falhas ? 'REPROVADO' : 'APROVADO'}`);
-process.exit(falhas ? 1 : 0);
+ws.close(); await wait(100);   // sair com o WebSocket aberto derruba o node no Windows (asserção do libuv) e o código de saída mente
+process.exitCode = falhas ? 1 : 0;

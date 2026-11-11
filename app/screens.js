@@ -10,8 +10,11 @@ import { meshFromRect, cornersFromRect, straightenHandles, resampleMesh, meshFro
 let seq = 1;
 export const nextId = () => seq++;
 
+// uid: a identidade da tela. O `id` muda a cada retrato refeito (desfazer, cancelar, preset); o uid vai junto no retrato,
+// e é por ele que a janela de saída continua com a tela certa quando outra tela entra ou sai da lista.
+export const newUid = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 export function mkScreen(name, opts = {}) {
-  return { id: seq++, name, device: opts.device || 'auto', w: opts.w || 1920, h: opts.h || 1080, enabled: true,
+  return { id: seq++, uid: newUid(), name, device: opts.device || 'auto', w: opts.w || 1920, h: opts.h || 1080, enabled: true,
     opacity: 1, color: { bright: 1, contrast: 1, r: 0, g: 0, b: 0 }, items: [], rev: 1 };
 }
 export function mkSlice(name, inRect, outRect) {
@@ -241,7 +244,7 @@ export function setInMask(slice, kind) {
 // ---------- salvar e abrir ----------
 export function serialize(screens) {
   return JSON.stringify({ v: 1, screens: screens.map(sc => ({
-    name: sc.name, device: sc.device, w: sc.w, h: sc.h, enabled: sc.enabled, opacity: sc.opacity, color: sc.color,
+    uid: sc.uid, name: sc.name, device: sc.device, w: sc.w, h: sc.h, enabled: sc.enabled, opacity: sc.opacity, color: sc.color,
     items: sc.items.map(it => it.type === 'slice'
       ? { type: 'slice', name: it.name, enabled: it.enabled, source: it.source, in: it.in, flip: it.flip,
           warp: { mode: it.warp.mode, curve: it.warp.curve, divX: it.warp.divX, divY: it.warp.divY, rot: it.warp.rot, pts: it.warp.pts },
@@ -253,6 +256,7 @@ export function deserialize(json) {
   const d = typeof json === 'string' ? JSON.parse(json) : json;
   return (d.screens || []).map(s => {
     const sc = mkScreen(s.name || 'Tela', { device: s.device, w: s.w, h: s.h });
+    if (s.uid) sc.uid = String(s.uid);   // arquivo antigo não tem: fica o uid novo do mkScreen e a tela casa pela ordem
     sc.enabled = s.enabled !== false; sc.opacity = s.opacity ?? 1; Object.assign(sc.color, s.color || {});
     for (const it of s.items || []) {
       if (it.type === 'mask') { const m = mkMask(it.name || 'Máscara', (it.pts || []).map(p => [+p[0], +p[1]])); m.enabled = it.enabled !== false; m.invert = !!it.invert; sc.items.push(m); continue; }

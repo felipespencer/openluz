@@ -259,7 +259,9 @@ function awayStart(clip, old) {
   return null;
 }
 const clearAfterOnce = [];   // camadas cujo clipe "uma vez e limpa" acabou neste quadro
-const pending = [];   // disparos esperando o Beat Snap: { li, col } ou { col, onlyGroup }, com a batida `at`
+const pending = [];   // disparos esperando o Beat Snap: { li, col, L } ou { col, onlyGroup }, com a batida `at`
+// a fila guarda a camada em si (L): se ela mudar de lugar o índice acompanha, se sumir (removida, desfazer, outra composição) o disparo sai da fila
+function prunePending() { for (let i = pending.length - 1; i >= 0; i--) { const q = pending[i]; if (q.li == null) continue; q.li = state.layers.indexOf(q.L); if (q.li < 0 || q.col >= COLS) pending.splice(i, 1); } }
 const snapOf = (col) => state.colSnap[col] ?? state.bpm.snap;
 function queueTrigger(q, snap) {
   const B = state.bpm; q.at = Math.ceil(B.beat / snap - 1e-6) * snap; if (q.at <= B.beat) q.at += snap;
@@ -267,11 +269,12 @@ function queueTrigger(q, snap) {
   pending.push(q); render();
 }
 function trigger(li, col, now) {
-  const L = state.layers[li], clip = L.clips[col];
+  const L = state.layers[li]; if (!L) return;   // camada que não existe mais (fila, teclado, APC40): nada a disparar
+  const clip = L.clips[col];
   state.selLayer = li; state.sel = { l: li, c: col };
   if (!clip) return eject(li);                 // casa vazia: a camada fica preta
   const snap = snapOf(col);
-  if (snap > 0 && !now && L.on !== col) return queueTrigger({ li, col }, snap);
+  if (snap > 0 && !now && L.on !== col) return queueTrigger({ li, col, L }, snap);
   if (L.on !== col) swapClip(L, col);
   else if (clip.kind === 'video') C.startClip(clip, layerSpeed(L));   // já no ar: clicar de novo recomeça do começo (regra de 2026-10-14)
   L.bypass = false;                            // disparar põe a camada no ar
@@ -427,6 +430,7 @@ function tickBeat() {
     if (B.metronome && B.running) click(inBar === 0);
   }
   if (pending.length) {
+    prunePending();
     const left = [];
     for (const q of pending) { if (B.beat >= q.at) { if (q.li != null) trigger(q.li, q.col, true); else triggerColumn(q.col, q.onlyGroup, true); } else left.push(q); }
     pending.length = 0; pending.push(...left);
@@ -611,7 +615,7 @@ function removeLayer(li) {
   if (L.ghost) C.stopClip(L.ghost);
   for (const row of rowsOf(L)) row.forEach(c => { if (c) { C.stopClip(c); dropClip(c); } });
   for (const d of state.decks) delete d.cells[L.id];
-  state.layers.splice(li, 1); if (state.sel) { if (state.sel.l === li) state.sel = null; else if (state.sel.l > li) state.sel.l--; } state.selLayer = Math.min(state.selLayer, state.layers.length - 1); pruneGroups(); render();
+  state.layers.splice(li, 1); if (state.sel) { if (state.sel.l === li) state.sel = null; else if (state.sel.l > li) state.sel.l--; } state.selLayer = Math.min(state.selLayer, state.layers.length - 1); pruneGroups(); prunePending(); render();
 }
 function applySpeed() { for (const L of state.layers) for (const c of [...L.clips, L.ghost]) if (c && c.kind === 'video' && c.el) C.setRate(c, layerSpeed(L)); }
 // a casa selecionada (clique no nome) ou, sem seleção, o que está no ar na camada selecionada
@@ -984,20 +988,32 @@ const helpers = {
 // existe na mesma posição da lista (mesmo id, mesma janela de saída, mesmo canvas adotado pela janela), e só o conteúdo
 // (nome, itens, cor, opacidade) é trocado. A janela só fecha e reabre quando muda o dispositivo ou o tamanho, ou quando
 // a tela some da lista.
-function setScreens(list) {
-  const old = state.screens, out = [], reabrir = [];
-  list.forEach((n, i) => {
-    const o = old[i], aberta = !!(o && o.win && !o.win.closed);
+// Casa cada tela nova com a antiga que é a MESMA tela (uid). O que sobra dos dois lados casa pela ordem: é o caso de abrir
+// outra composição ou um arquivo antigo, em que as telas são outras mas a saída do projetor deve continuar no ar.
+function casarTelas(list, old) {
+  const usadas = new Set(), par = new Map();
+  for (const n of list) { const o = old.find(x => x.uid === n.uid && !usadas.has(x)); if (o) { usadas.add(o); par.set(n, o); } }
+  const livres = old.filter(o => !usadas.has(o) && !list.some(n => n.uid === o.uid));
+  for (const n of list) { if (par.has(n)) continue; const o = livres.shift(); if (!o) break; usadas.add(o); par.set(n, o); }
+  return { par, sobras: old.filter(o => !usadas.has(o)) };
+}
+const fecharSaida = (o) => { if (o.win && !o.win.closed) o.win.close(); o.win = null; delete window.__projStreams[o.id]; delete window.__projCanvas[o.id]; };
+// abrir: uids de telas que tinham a saída aberta quando foram apagadas na Saída avançada; se voltarem (desfazer, cancelar), a saída reabre
+function setScreens(list, abrir) {
+  const old = state.screens, out = [], reabrir = [], { par, sobras } = casarTelas(list, old);
+  for (const n of list) {
+    const o = par.get(n), aberta = !!(o && o.win && !o.win.closed);
     if (o && o.device === n.device && o.w === n.w && o.h === n.h) {
-      o.name = n.name; o.enabled = n.enabled; o.opacity = n.opacity; o.color = n.color; o.items = n.items; o.rev = (o.rev || 0) + 1;
-      if (!n.enabled && aberta) { o.win.close(); o.win = null; delete window.__projStreams[o.id]; delete window.__projCanvas[o.id]; }
+      o.uid = n.uid; o.name = n.name; o.enabled = n.enabled; o.opacity = n.opacity; o.color = n.color; o.items = n.items; o.rev = (o.rev || 0) + 1;
+      if (!n.enabled && aberta) fecharSaida(o);
       out.push(o);
     } else {
-      if (aberta) { o.win.close(); o.win = null; delete window.__projStreams[o.id]; delete window.__projCanvas[o.id]; if (n.enabled) reabrir.push(n); }
+      if (aberta) { fecharSaida(o); if (n.enabled) reabrir.push(n); }
+      else if (!o && n.enabled && abrir && abrir.has(n.uid)) reabrir.push(n);
       out.push(n);
     }
-  });
-  for (let i = list.length; i < old.length; i++) { const o = old[i]; if (o.win && !o.win.closed) o.win.close(); delete window.__projStreams[o.id]; delete window.__projCanvas[o.id]; }
+  }
+  for (const o of sobras) fecharSaida(o);
   state.screens = out; renderScreens();
   if (reabrir.length) setTimeout(() => openOutputs(reabrir), 150);
 }
@@ -1082,7 +1098,9 @@ const comps = {
 };
 // fechar o programa (X da janela): pergunta como o Resolume — salvar e fechar, fechar sem salvar ou cancelar
 function askClose() {
-  if (document.querySelector('.dlgOver')) return;   // já há um diálogo na tela (ou a própria pergunta)
+  const pergunta = () => [...document.querySelectorAll('.dlgOver')].some(d => d.textContent.includes('Fechar o OpenLuz'));
+  if (pergunta()) return;   // a própria pergunta já está na tela
+  if (document.querySelector('.dlgOver')) { toast('Feche o diálogo aberto antes de sair do OpenLuz.'); return; }   // outro diálogo: avisa, em vez de o X não fazer nada
   const nome = state.name;
   openDialog({
     title: 'Fechar o OpenLuz', width: 460,
@@ -1190,9 +1208,9 @@ async function restoreComp(json) {
 }
 // troca as telas sem fechar as janelas de saída: a janela e o canvas passam para a tela de mesma posição
 function swapScreens(list) {
-  const old = state.screens;
-  list.forEach((sc, i) => { const o = old[i]; if (!o) return; sc.id = o.id; sc.win = o.win; sc.cv = o.cv; sc.ctx = o.ctx; });
-  for (let i = list.length; i < old.length; i++) { const o = old[i]; if (o.win && !o.win.closed) o.win.close(); }
+  const old = state.screens, { par, sobras } = casarTelas(list, old);
+  for (const sc of list) { const o = par.get(sc); if (!o) continue; sc.id = o.id; sc.win = o.win; sc.cv = o.cv; sc.ctx = o.ctx; }
+  for (const o of sobras) fecharSaida(o);
   state.screens = list; renderScreens(); if (ao.open) ao.layout();
 }
 // ---------- Configurações da composição ----------
@@ -1565,7 +1583,19 @@ installShortcuts(SHORTCUTS);
 })();
 
 // ---------- laço de desenho ----------
+// Um erro em qualquer etapa do quadro não pode parar o programa: vai para o registro (uma vez por mensagem a cada 10 s),
+// avisa na tela (uma vez por minuto) e o próximo quadro é agendado do mesmo jeito.
+const loopErros = new Map();
+function loopErro(e, onde) {
+  const msg = (onde ? onde + ': ' : '') + ((e && e.message) || String(e)), t = performance.now();
+  if (t - (loopErros.get(msg) ?? -1e9) > 10000) { loopErros.set(msg, t); logW('quadro', msg + (e && e.stack ? ' | ' + e.stack : '')); }
+  if (t - (loopErro.aviso ?? -1e9) > 60000) { loopErro.aviso = t; toast('Um erro ao desenhar foi registrado; a imagem pode falhar. Veja OpenLuz → Abrir o registro.'); }
+}
 function loop() {
+  try { frame(); } catch (e) { loopErro(e); }
+  requestAnimationFrame(loop);
+}
+function frame() {
   const now = performance.now() / 1000, dt = Math.min(0.1, now - (loop.last || now)); loop.last = now;
   advance(state.bpm, dt); tickBeat(); audio.tick(dt);
   if (state.bpm.micWanted && !audio.micAnalyser && !audio.micAsked) { audio.micAsked = true; audio.enableMic().then(ok => { if (!ok) toast(audio.err || 'Sem microfone'); }); }   // uma animação ouve o microfone (External FFT): liga uma vez
@@ -1587,7 +1617,7 @@ function loop() {
   tickXfade(now);
   panels.tick();
   // taxa de quadros da composição: desenha só quando passou 1/fps
-  if (now - (loop.lastDraw || 0) < 1 / state.settings.fps - 0.0015) { tickAutopilot(now); requestAnimationFrame(loop); return; }
+  if (now - (loop.lastDraw || 0) < 1 / state.settings.fps - 0.0015) { tickAutopilot(now); return; }
   loop.lastDraw = now; loop.frames = (loop.frames || 0) + 1;
   loop.total = (loop.total || 0) + 1;
   if (now - (loop.fpsAt || 0) >= 1) { if (!$('fpsBox').hidden) $('fpsBox').textContent = loop.frames + ' fps · ' + state.layers.filter(L => L.on >= 0).length + ' no ar · ' + COLS + ' colunas'; loop.frames = 0; loop.fpsAt = now; }
@@ -1611,13 +1641,11 @@ function loop() {
   for (const sc of state.screens) {
     const open = sc.win && !sc.win.closed;
     if (!open && !(ao.open && ao.curScreen() === sc)) continue;
-    screenCanvas(sc);
-    engine.renderScreen(sc, state.layers, state.screens);
-    engine.blit(sc.ctx, sc.w, sc.h);
+    try { screenCanvas(sc); engine.renderScreen(sc, state.layers, state.screens); engine.blit(sc.ctx, sc.w, sc.h); }
+    catch (e) { loopErro(e, 'tela ' + (sc.name || sc.id)); }   // o erro de uma tela não tira as outras do ar
   }
-  ao.frame();
+  try { ao.frame(); } catch (e) { loopErro(e, 'Saída avançada'); }
   tickAutopilot(now);
-  requestAnimationFrame(loop);
 }
 const webcam = new WebcamOut(engine, D);
 buildBpmBar();

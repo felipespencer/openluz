@@ -1,7 +1,7 @@
 // OpenLuz — processo principal (Electron).
 // Serve a pasta app/ por um esquema próprio (app://projecionista/), abre a janela de controle
 // e põe cada janela de saída no monitor que a tela pede.
-const { app, crashReporter, BrowserWindow, Menu, protocol, net, session, screen, ipcMain, shell, desktopCapturer, utilityProcess, MessageChannelMain } = require('electron');
+const { app, crashReporter, dialog, BrowserWindow, Menu, protocol, net, session, screen, ipcMain, shell, desktopCapturer, utilityProcess, MessageChannelMain } = require('electron');
 let fechando = false;   // a página já confirmou o fechamento (ou o app está saindo): o X fecha de verdade
 const { Readable } = require('node:stream');
 const { spawn } = require('node:child_process');
@@ -45,13 +45,25 @@ process.on('uncaughtException', (e) => { logLine('principal', (e && e.stack) || 
 process.on('unhandledRejection', (e) => { logLine('principal-promise', (e && e.stack) || e); });
 try { crashReporter.start({ submitURL: '', uploadToServer: false, compress: false }); } catch { }
 const RECOVER_FILE = () => path.join(app.getPath('userData'), 'recuperar.txt');
+const GPU_FILE = () => path.join(app.getPath('userData'), 'placa-caiu.txt');   // hora da última reabertura por queda da placa
 app.on('child-process-gone', (_e, d) => {
   logLine('processo', (d.type || '?') + ' ' + (d.name || '') + ' caiu: ' + d.reason + ' (código ' + d.exitCode + ')');
   if (d.type === 'GPU' && !process.env.PROJ_TEST && !relaunching) {
     // depois que o processo de GPU cai, o WebGL desta sessão não volta confiável: reabre o programa
     // inteiro (a janela já salvou a composição automática ao perder o contexto) e recupera ao abrir
-    relaunching = true; logLine('processo', 'reabrindo o programa por causa da placa de vídeo');
+    relaunching = true;
     try { fs.writeFileSync(RECOVER_FILE(), 'a placa de vídeo travou (' + d.reason + ' ' + d.exitCode + ')'); } catch { }
+    // segunda queda em menos de um minuto: reabrir de novo viraria um abre-e-fecha sem fim (e as saídas piscando no projetor)
+    let antes = 0; try { antes = +fs.readFileSync(GPU_FILE(), 'utf8') || 0; } catch { }
+    if (Date.now() - antes < 60000) {
+      logLine('processo', 'a placa de vídeo caiu duas vezes em menos de um minuto: o programa não reabre sozinho de novo');
+      try { fs.unlinkSync(GPU_FILE()); } catch { }
+      fechando = true;
+      dialog.showMessageBox({ type: 'error', title: 'OpenLuz', message: 'A placa de vídeo caiu duas vezes seguidas.', detail: 'O OpenLuz não vai reabrir sozinho de novo. Atualize o driver da placa de vídeo ou reinicie o computador e abra o programa outra vez; a composição automática volta na abertura.', buttons: ['Fechar'], noLink: true }).finally(() => app.exit(0));
+      return;
+    }
+    logLine('processo', 'reabrindo o programa por causa da placa de vídeo');
+    try { fs.writeFileSync(GPU_FILE(), String(Date.now())); } catch { }
     setTimeout(() => { app.relaunch(); app.exit(0); }, 1200);
   }
 });
@@ -212,7 +224,23 @@ function createMain() {
   });
   // o X da janela de controle não fecha na hora: a página pergunta "salvar e fechar / fechar sem salvar / cancelar"
   // (como o Resolume) e só então pede app:quit. No teste automático e ao sair pelo app.quit() o fechamento é direto.
-  win.on('close', (e) => { if (fechando || process.env.PROJ_TEST) return; e.preventDefault(); win.webContents.send('app:closeRequested'); });
+  // A página confirma que recebeu o pedido (app:closeAck, mandado pelo preload). Sem confirmação em 2 s (janela travada, ou a
+  // página nem chegou a carregar), quem pergunta é o processo principal: o X nunca fica sem saída.
+  let closeTimer = null, closeDlg = false;
+  const semResposta = () => {
+    closeTimer = null; if (closeDlg || fechando) return; closeDlg = true;
+    logLine('fechar', 'a janela não respondeu ao pedido de fechar em 2 s');
+    dialog.showMessageBox(win, { type: 'warning', title: 'OpenLuz', message: 'O OpenLuz não está respondendo.', detail: 'Fechar agora pode perder o que não foi salvo.', buttons: ['Esperar', 'Fechar mesmo assim'], defaultId: 0, cancelId: 0, noLink: true })
+      .then((r) => { closeDlg = false; if (r.response === 1) { logLine('fechar', 'fechado sem resposta da janela'); fechando = true; try { win.destroy(); } catch { } app.quit(); } }).catch(() => { closeDlg = false; });
+  };
+  win.on('close', (e) => {
+    if (fechando || process.env.PROJ_TEST) return; e.preventDefault();
+    if (closeDlg || closeTimer) return;
+    if (win.webContents.isCrashed()) return semResposta();
+    closeTimer = setTimeout(semResposta, 2000);
+    win.webContents.send('app:closeRequested');
+  });
+  ipcMain.on('app:closeAck', () => { clearTimeout(closeTimer); closeTimer = null; });
   ipcMain.handle('app:quit', () => { fechando = true; win.close(); });
   ipcMain.handle('app:info', () => ({ version: app.getVersion(), packaged: app.isPackaged }));
   require('./ia-main.js').instalar();   // Texto com IA: pedidos e chaves no processo principal
