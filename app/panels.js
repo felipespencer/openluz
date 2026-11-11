@@ -336,6 +336,8 @@ export class Panels {
     if (clip.waveTl) { wav0.style.backgroundImage = wav1.style.backgroundImage = 'url("' + clip.waveTl + '")'; }
     if (isBpm) { let n = Math.max(1, Math.round(t.beats || 8)); while (n > 48) n /= 2; let h = ''; for (let i = 0; i <= n; i++) h += '<i style="left:' + (i / n * 100).toFixed(3) + '%"></i>'; ticks.innerHTML = h; }
     bar.appendChild(range); tl.append(wav0, wav1, ticks, bar, head, hin, hout, txt);
+    // cada cue gravado deixa uma marca numerada na linha do tempo, no lugar em que foi gravado (não pega o mouse: o arrasto da linha continua igual)
+    const cueMarks = [0, 1, 2, 3, 4, 5].map(i => { const m = el('i', 'tcue'); m.dataset.k = 'tcue' + (i + 1); m.appendChild(el('b', '', String(i + 1))); m.hidden = true; tl.appendChild(m); return m; });
     // a escala (0 a 100%) começa e termina 6 px para dentro da barra, como no Resolume: os triângulos de entrada e saída ficam dentro
     // das pontas da barra e a agulha, no 100%, termina rente ao fim da barra
     const X = (f) => 'calc(6px + (100% - 12px) * ' + f + ')';
@@ -343,6 +345,7 @@ export class Panels {
     const step = 1 / ((clip.player && clip.player.fps) || 30);
     let bub = null;
     const place = () => { const f0 = t.in / dur, f1 = (t.out || dur) / dur, fh = Math.max(0, Math.min(1, v.currentTime / dur)); range.style.left = X(f0); range.style.width = 'calc((100% - 12px) * ' + Math.max(0, f1 - f0) + ')'; hin.style.left = X(f0); hout.style.left = X(f1); head.style.left = X(fh);
+      cueMarks.forEach((m, i) => { const c = (t.cues || [])[i]; m.hidden = c == null; if (c != null) { m.style.left = X(Math.max(0, Math.min(1, c / dur))); m.title = 'Cue ' + (i + 1) + ' · ' + fmtR(c); } });
       wav1.style.clipPath = 'inset(0 ' + ((1 - f1) * 100).toFixed(3) + '% 0 ' + (f0 * 100).toFixed(3) + '%)'; hin.title = 'Entrada ' + fmtR(t.in); hout.title = 'Saída ' + fmtR(t.out || dur); txt.textContent = fmtR(v.currentTime);
       if (bub) { bub.style.left = 'clamp(52px, ' + X(fh) + ', calc(100% - 52px))'; bub.querySelector('b').textContent = fmtR(v.currentTime); } };
     // como no Resolume: se o IN ou o OUT passam pela agulha, ela vem junto (é empurrada para a ponta); fora isso fica onde está
@@ -408,10 +411,11 @@ export class Panels {
     }
     // Cue Points: seis marcas. A setinha grava a posição da agulha; o botão grande pula para ela (vazio, grava). Medido no Resolume;
     // lá não achei como apagar, aqui é o botão direito.
-    P.appendChild(this.phead('Cue Points', 'Cue Points|Seis marcas no clipe. A setinha da esquerda grava a posição de agora; o botão ao lado pula para ela. Num botão vazio, o clique grava. Botão direito apaga.'));
+    P.appendChild(this.phead('Cue Points', 'Cue Points|Seis marcas no clipe. Num botão vazio, o clique grava a posição de agora: o botão acende com o tempo e a marca aparece na linha do tempo. Num botão gravado, o clique pula para a marca; a setinha da esquerda grava de novo no lugar de agora. Botão direito apaga.'));
     const cues = t.cues || (t.cues = [null, null, null, null, null, null]), cr = el('div', 'cues');
     cues.forEach((c0, i) => { const w = el('div', 'cue' + (c0 != null ? ' on' : '')), a = el('button', 'cset'), j = el('button', 'cjump'); a.type = j.type = 'button'; a.dataset.k = 'cset' + (i + 1); j.dataset.k = 'cue' + (i + 1);
       a.dataset.help = 'Gravar cue ' + (i + 1) + '|Grava aqui a posição da agulha.'; j.dataset.help = 'Cue ' + (i + 1) + (c0 != null ? ' · ' + fmtR(c0) : '') + '|Pula para a posição gravada. Vazio: grava. Botão direito apaga.';
+      j.textContent = c0 != null ? (i + 1) + ' · ' + fmtR(c0) : String(i + 1);
       a.onclick = () => chg(() => { cues[i] = v.currentTime; }); j.onclick = () => { if (cues[i] == null) chg(() => { cues[i] = v.currentTime; }); else { seekClip(clip, cues[i]); place(); } };
       w.oncontextmenu = (e) => { e.preventDefault(); chg(() => { cues[i] = null; }); }; w.append(a, j); cr.appendChild(w); });
     P.appendChild(cr);
