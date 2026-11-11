@@ -221,8 +221,8 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 **Plans:**
 - [x] 12-01: linha de base das baterias, revisão por área (só leitura) e lista priorizada de achados — fechado em 2026-11-11 (85 achados, 7 reproduzidos)
 - [x] 12-02: trava e saída que cai (achados 1, 34, 35, 51, 52, 80) — fechado em 2026-11-11 com a beta.66
-- [ ] 12-03: salvar, abrir e desfazer (13, 14, 15, 17, 18, 19, 20, 50) — aplicado em 2026-11-11 (beta.68 gerada); falta instalar e o aprovado
-- [ ] 12-04: teclas e editores que descartam (30, 31, 32, 33, 69, 70)
+- [ ] 12-03: salvar, abrir e desfazer (13, 14, 15, 17, 18, 19, 20, 50) — aplicado em 2026-11-11, na beta.69 instalada; falta o aprovado
+- [ ] 12-04: teclas e editores que descartam (30, 31, 32, 33, 69, 70) — aplicado em 2026-11-11, na beta.69 instalada; falta o aprovado
 - [ ] 12-05: recorte, webcam e nativos (60, 61, 62, 63, 64)
 - [ ] 12-06: rede e sites (46, 47)
 - [ ] 12-07: gravação e Preparar (6, 7, 71)
