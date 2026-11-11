@@ -570,6 +570,7 @@ export class Panels {
   async iaGerar(clip, o) {
     const D = window.projDesktop, st = clip.iagen; if (!D || !D.iaImg || st.gerando) return;
     if (!String(st.pedido || '').trim()) { st.erro = 'escreva o pedido primeiro'; this.render(); return; }
+    try {   // o que der errado no meio (imagem que não abre, arquivo que sumiu) não pode deixar o botão preso em "Gerando…"
     // uma imagem por pedido: a primeira já entra no clipe enquanto as outras chegam; serviço que limita ("1 a cada 45 s",
     // como o Pollinations sem chave) faz esperar com contagem na tela e tenta de novo
     const n = o.n || st.qtd, novas = [];
@@ -588,7 +589,8 @@ export class Panels {
       st.servico = r.servico; novas.push(...r.arquivos); st.versoes = [...r.arquivos, ...(st.versoes || [])].slice(0, 12); st.feitas = k + 1;
       if (k === 0) { const c2 = await this.iaEscolherImg(clip, 0); if (c2) clip = c2; } else { st.esc = (st.esc ?? 0) + 1; this.render(); }
     }
-    st.gerando = false; st.espera = 0; this.render();
+    } catch (e) { st.erro = (e && e.message) || String(e); }
+    finally { st.gerando = false; st.espera = 0; this.render(); }
   }
   async iaEscolherImg(clip, i) {
     const st = clip.iagen, p = st.versoes[i]; if (!p) return;

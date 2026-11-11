@@ -12,6 +12,8 @@ export class Segmenter {
     this.rvm = { 1: { W: 640, H: 384 }, 2: { W: 960, H: 544 }, ratio: 0.5, fps: 15 };                // WebGPU (reserva): Média, Alta (largura e altura múltiplas de 32: o grafo remendado exige)
     this.nat = { ppmattingv2: { 1: { W: 512, H: 512 } }, modnet_hrnet: { 2: { W: 640, H: 640 } }, fps: 32 };   // nativo: Média = PP-MattingV2 512², Alta = MODNet-HRNet 640² (os modelos do Medium e do High do Resolume 7.28; bancada de 2026-10-30 com 8 quadros do Felipe)   // cadência dos pedidos: acima dos 30 do vídeo porque o tick (30 Hz) com a trava de 1/fps dava só ~24; os pedidos em voo (3) é que limitam           // nativo: Média = MODNet-HRNet 480², Alta = MODNet-HRNet 640² (na bancada foi o que mais bateu com o Medium e o High do Resolume 7.28)
     this.nextId = 1; this.pending = new Map(); this.worker = null;
+    this.natFails = 0;   // sem valor inicial, o ++ dava NaN e a queda para a reserva nunca disparava antes da primeira máscara
+    this.reaberturas = 0;
   }
   quality(f) { return f.params ? Math.round(f.params.quality ?? 1) : 1; }
   // que modelo roda para este efeito: nativo → fast / modnet / rvm; WebGPU → fast / precise (RVM)
@@ -39,11 +41,24 @@ export class Segmenter {
     this.worker.onerror = (e) => { this.err = 'Tirar o fundo (worker): ' + (e.message || e); for (const f of this.pending.values()) { f._segBusy = false; f._segInflight = 0; } this.pending.clear(); };
     this.worker.postMessage({ type: 'hello' });
     // porta para o processo nativo (só no programa instalado/Electron): chega por window.postMessage e vai inteira para o worker
+    this.pedirPorta();
+  }
+  pedirPorta() {
     const D = window.projDesktop;
     if (D && D.segPort) {
       const onMsg = (e) => { if (e.source === window && e.data && e.data.type === 'seg:port' && e.ports && e.ports[0]) { window.removeEventListener('message', onMsg); this.worker.postMessage({ type: 'port' }, [e.ports[0]]); } };
       window.addEventListener('message', onMsg); D.segPort();
     }
+  }
+  // O processo nativo morreu (aviso do processo principal): solta os pedidos que esperavam por ele e pede a porta de novo, o que
+  // sobe outro processo. Enquanto ele não volta (ou se cair mais de 3 vezes na sessão), a reserva pela WebGPU segura a máscara.
+  nativoSaiu() {
+    if (!this.worker) return;
+    for (const f of this.pending.values()) { f._segBusy = false; f._segInflight = 0; } this.pending.clear();
+    this.native = false; this.natFails = 0; this.worker.postMessage({ type: 'nativoSaiu' });
+    if (++this.reaberturas > 3) { this.err = 'O processo de tirar o fundo caiu várias vezes; seguindo pela WebGPU'; return; }
+    this.err = 'O processo de tirar o fundo parou; reabrindo (a máscara segue pela WebGPU enquanto isso)';
+    this.pedirPorta();
   }
   frameOf(c) {
     if (c.player && c.player.frame) return c.player.frame;

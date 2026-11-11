@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('projDesktop', {
   // webcam virtual: a porta do processo que escreve na câmera do OBS, do mesmo jeito que a do recorte; e o site para baixar o OBS
   webcamPort: () => { ipcRenderer.once('webcam:port', (e) => { window.postMessage({ type: 'webcam:port' }, '*', e.ports); }); ipcRenderer.send('webcam:port'); },
   webcamObsSite: () => ipcRenderer.invoke('webcam:obsSite'),
+  // um processo nativo (recorte, rosto, webcam) morreu: a janela solta o que esperava dele e pede a porta de novo
+  onNativoSaiu: (fn) => ipcRenderer.on('nativo:saiu', (_e, qual) => fn(qual)),
   // caminho no disco de um arquivo solto na janela (para salvar a composição por caminho)
   pathOf: (file) => { try { return webUtils.getPathForFile(file) || ''; } catch { return ''; } },
   fs: { roots: () => ipcRenderer.invoke('fs:roots'), list: (dir) => ipcRenderer.invoke('fs:list', dir) },

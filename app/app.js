@@ -23,7 +23,7 @@ import { KeyMap } from './keymap.js';
 import { EditorTexto } from './text-editor.js';
 import { Automape } from './automape.js';
 import { WebcamOut } from './webcam.js';
-import { tickFace, marcaNaPrevia, desenharMarca } from './face.js';
+import { tickFace, marcaNaPrevia, desenharMarca, nativoSaiu as rostoSaiu } from './face.js';
 import { initSplitters } from './splitters.js';
 import { paintScan } from './laser-model.js';
 import { BPM, SNAPS, advance, tap, resync, setBpm, click, effBpm, applyAnims } from './beat.js';
@@ -1677,6 +1677,12 @@ function frame() {
   tickAutopilot(now);
 }
 const webcam = new WebcamOut(engine, D);
+// um processo nativo morreu: cada peça solta o que esperava e se refaz; a webcam avisa, porque ela para de verdade
+if (D && D.onNativoSaiu) D.onNativoSaiu((qual) => {
+  if (qual === 'seg') seg.nativoSaiu();
+  else if (qual === 'face') rostoSaiu();
+  else if (qual === 'webcam' && webcam.nativoSaiu()) toast('A webcam virtual parou. Ligue de novo em Saída › Webcam virtual.');
+});
 buildBpmBar();
 loop();
 marcaLimpo();

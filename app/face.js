@@ -21,6 +21,8 @@ export const faceSerial = (f) => f ? { on: !!f.on, params: { ...f.params }, pani
 let port = null, pedindo = false, err = '', ep = '', nextId = 1;
 const espera = new Map();   // id do pedido → clipe
 export const stats = { ms: 0, porSeg: 0, n: 0, t0: 0, ep: '', err: '' };
+// o processo do detector morreu: solta quem esperava resposta; o próximo quadro pede a porta de novo (e sobe outro processo)
+export function nativoSaiu() { port = null; pedindo = false; for (const c of espera.values()) c._faceBusy = false; espera.clear(); stats.err = 'o detector de rosto parou; reabrindo'; }
 function abrir() {
   if (port || pedindo) return; const D = window.projDesktop; if (!D || !D.facePort) { stats.err = 'só no programa do Windows'; return; }
   pedindo = true;

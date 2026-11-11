@@ -8,22 +8,40 @@ export class WebcamOut {
   async ligar() {
     if (this.on) return { ok: true };
     if (!this.disponivel) return { ok: false, motivo: 'nativo', erro: 'só na versão instalada' };
-    if (!this.port) await this.abrirPorta();
-    const r = await new Promise((res) => { this.esperaStatus = res; this.port.postMessage({ type: 'ligar', W: CAM_W, H: CAM_H }); });
+    try { if (!this.port) await this.abrirPorta(); } catch (e) { return { ok: false, motivo: 'nativo', erro: e.message }; }
+    const r = await this.pede({ type: 'ligar', W: CAM_W, H: CAM_H }, 10000);
     this.on = !!r.ok; this.enviados = 0; this.pulados = 0; this.ocupado = false; this.ult = 0;
     return r;
   }
   async desligar() {
     if (!this.on) return;
     this.on = false; if (this.rd) { this.engine.cancelReadClipFrame(this.rd); this.rd = null; }
-    await new Promise((res) => { this.esperaStatus = res; this.port.postMessage({ type: 'desligar' }); });
+    if (this.port) await this.pede({ type: 'desligar' }, 4000);
+  }
+  // pergunta ao processo e espera o 'status'; se ele não responder no prazo (ou morrer no meio), a espera acaba com erro em vez de ficar pendurada
+  pede(msg, prazo) {
+    return new Promise((res) => {
+      const fim = (m) => { clearTimeout(t); if (this.esperaStatus === fim) this.esperaStatus = null; res(m); };
+      const t = setTimeout(() => fim({ ok: false, motivo: 'nativo', erro: 'o processo da webcam não respondeu' }), prazo);
+      this.esperaStatus = fim;
+      try { this.port.postMessage(msg); } catch (e) { fim({ ok: false, motivo: 'nativo', erro: e.message }); }
+    });
+  }
+  // o processo que escreve na câmera morreu (aviso do processo principal): a webcam passa a desligada de verdade (antes o menu seguia
+  // dizendo "ligada" com a câmera congelada, e desligar ou ligar de novo ficava pendurado). Devolve se estava ligada.
+  nativoSaiu() {
+    const estava = this.on; this.on = false; this.port = null; this.ocupado = false;
+    if (this.rd) { this.engine.cancelReadClipFrame(this.rd); this.rd = null; }
+    if (this.esperaStatus) this.esperaStatus({ ok: false, motivo: 'nativo', erro: 'o processo da webcam parou' });
+    return estava;
   }
   abrirPorta() {
-    return new Promise((res) => {
+    return new Promise((res, rej) => {
+      const t = setTimeout(() => { window.removeEventListener('message', onMsg); rej(new Error('o processo da webcam não abriu')); }, 10000);
       const onMsg = (e) => {
         if (e.source !== window || !e.data || e.data.type !== 'webcam:port' || !e.ports || !e.ports[0]) return;
-        window.removeEventListener('message', onMsg); this.port = e.ports[0];
-        this.port.onmessage = (ev) => { const m = ev.data; if (m.type === 'feito') this.ocupado = false; else if (m.type === 'status' && this.esperaStatus) { const f = this.esperaStatus; this.esperaStatus = null; f(m); } };
+        clearTimeout(t); window.removeEventListener('message', onMsg); this.port = e.ports[0];
+        this.port.onmessage = (ev) => { const m = ev.data; if (m.type === 'feito') this.ocupado = false; else if (m.type === 'status' && this.esperaStatus) this.esperaStatus(m); };
         res();
       };
       window.addEventListener('message', onMsg); this.D.webcamPort();
@@ -31,7 +49,7 @@ export class WebcamOut {
   }
   // chamada no fim de cada quadro do programa, depois de engine.render
   tick() {
-    if (!this.on) return;
+    if (!this.on || !this.port) return;
     const now = performance.now();
     if (this.rd) {
       if (!this.buf) this.buf = new Uint8Array(CAM_W * CAM_H * 3 / 2);

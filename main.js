@@ -440,7 +440,7 @@ app.whenReady().then(async () => {
   let segProc = null;
   ipcMain.on('seg:port', (e) => {
     try {
-      if (!segProc) { segProc = utilityProcess.fork(path.join(__dirname, 'app', 'seg-native.js'), [], { serviceName: 'OpenLuz segmentação' }); segProc.on('exit', () => { segProc = null; }); }
+      if (!segProc) { segProc = utilityProcess.fork(path.join(__dirname, 'app', 'seg-native.js'), [], { serviceName: 'OpenLuz segmentação' }); segProc.on('exit', (code) => { segProc = null; logLine('processo', 'OpenLuz segmentação saiu (código ' + code + ')'); if (!fechando && !win.isDestroyed()) win.webContents.send('nativo:saiu', 'seg'); }); }
       const { port1, port2 } = new MessageChannelMain();
       segProc.postMessage({ type: 'port' }, [port1]);
       e.sender.postMessage('seg:port', null, [port2]);
@@ -450,7 +450,7 @@ app.whenReady().then(async () => {
   let faceProc = null;
   ipcMain.on('face:port', (e) => {
     try {
-      if (!faceProc) { faceProc = utilityProcess.fork(path.join(__dirname, 'app', 'face-native.js'), [], { serviceName: 'OpenLuz rosto' }); faceProc.on('exit', () => { faceProc = null; }); }
+      if (!faceProc) { faceProc = utilityProcess.fork(path.join(__dirname, 'app', 'face-native.js'), [], { serviceName: 'OpenLuz rosto' }); faceProc.on('exit', (code) => { faceProc = null; logLine('processo', 'OpenLuz rosto saiu (código ' + code + ')'); if (!fechando && !win.isDestroyed()) win.webContents.send('nativo:saiu', 'face'); }); }
       const { port1, port2 } = new MessageChannelMain();
       faceProc.postMessage({ type: 'port' }, [port1]);
       e.sender.postMessage('face:port', null, [port2]);
@@ -460,7 +460,7 @@ app.whenReady().then(async () => {
   let camProc = null;
   ipcMain.on('webcam:port', (e) => {
     try {
-      if (!camProc) { camProc = utilityProcess.fork(path.join(__dirname, 'app', 'webcam-native.js'), [], { serviceName: 'OpenLuz webcam' }); camProc.on('exit', () => { camProc = null; }); }
+      if (!camProc) { camProc = utilityProcess.fork(path.join(__dirname, 'app', 'webcam-native.js'), [], { serviceName: 'OpenLuz webcam' }); camProc.on('exit', (code) => { camProc = null; logLine('processo', 'OpenLuz webcam saiu (código ' + code + ')'); if (!fechando && !win.isDestroyed()) win.webContents.send('nativo:saiu', 'webcam'); }); }
       const { port1, port2 } = new MessageChannelMain();
       camProc.postMessage({ type: 'port' }, [port1]);
       e.sender.postMessage('webcam:port', null, [port2]);

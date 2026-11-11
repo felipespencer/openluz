@@ -53,8 +53,11 @@ function tensor(bitmap, W, H, k, b) {
 function dropRec(e) { if (e.rec) for (const k in e.rec) if (e.rec[k] && e.rec[k].dispose) e.rec[k].dispose(); e.rec = null; }
 
 async function run(msg) {
-  const { id, bitmap, W, H, kind, q, ratio, params, reset } = msg;
-  let e = st.get(id); if (!e) { e = { rec: null, q: -1, acc: null }; st.set(id, e); }
+  const { id, fx, bitmap, W, H, kind, q, ratio, params, reset } = msg;
+  // a memória (quadro pendente, suavidade no tempo, estado do RVM) é do EFEITO (fx). Guardada pelo número do pedido, cada quadro
+  // nascia sem memória: a reserva nunca devolvia máscara e ainda deixava um estado para trás a cada pedido.
+  const chave = fx ?? id;
+  let e = st.get(chave); if (!e) { e = { rec: null, q: -1, acc: null }; st.set(chave, e); }
   if (reset) { dropRec(e); e.acc = null; }
   if (reset) e.pend = null;
   let prob; const T = { t0: performance.now() }; let outP;
@@ -227,6 +230,7 @@ onmessage = async (ev) => {
     nativePort.onmessage = (e2) => { const r = e2.data; if (!r) return; if (r.type === 'ready') { nativeOk = !!r.ok; postMessage({ type: 'native', ok: nativeOk, ep: r.ep, err: r.err }); return; } postMessage(r, r.mask ? [r.mask.buffer] : []); };
     nativePort.postMessage({ type: 'hello' }); return;
   }
+  if (msg.type === 'nativoSaiu') { nativePort = null; nativeOk = false; return; }   // o processo nativo morreu: até a porta nova chegar, tudo roda aqui
   if (msg.type === 'run' && msg.native && nativePort && nativeOk) {   // nativo: só os pixels RGBA, já no tamanho do modelo
     const { bitmap, W, H } = msg; const tw0 = performance.now(); let rgba;
     if (msg.rgba) rgba = msg.rgba;   // já veio pronto da placa
@@ -239,6 +243,7 @@ onmessage = async (ev) => {
   if (msg.type === 'drop') { const e = st.get(msg.id); if (e) { dropRec(e); e.pend = null; st.delete(msg.id); } return; }
   if (msg.type !== 'run') return;
   if (msg.kind !== 'fast' && msg.kind !== 'precise') msg.kind = 'precise';   // sem o nativo, o RVM pela WebGPU faz as vezes das qualidades Média e Alta
+  if (!msg.bitmap) { postMessage({ type: 'skip', id: msg.id }); return; }   // quadro preparado para o nativo (só pixels) que chegou depois de ele sair: este é pulado, o próximo já vem como imagem
   if (busy) { msg.bitmap.close(); postMessage({ type: 'skip', id: msg.id }); return; }
   busy = true;
   try {
