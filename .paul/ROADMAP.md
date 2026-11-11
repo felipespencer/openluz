@@ -38,7 +38,7 @@ Phases: 1 of 8 complete
 | 9 | Editor de texto | 2/3 | In progress (09-03 planejado) | - |
 | 10 | Modelos 3D | 0/1 | In progress (10-01 no checkpoint) | - |
 | 11 | Câmera que segue o rosto | 1/1 | ✅ Complete | 2026-11-09 |
-| 12 | Revisão geral | 1/7 | In progress (12-01 fechado; consertos em seis lotes) | - |
+| 12 | Revisão geral | 2/7 | In progress (12-01 fechado; consertos em seis lotes) | - |
 
 ## Phase Details
 
@@ -116,8 +116,10 @@ por QR; como carregar plugins de uma pasta com segurança; simulação de fluido
 - Os quatro plugins de física
 - Teste automático e verificação com eventos reais por CDP
 
+**Pedido de 2026-11-11 (muda a forma da fase):** o celular deixa de ser uma página só com quatro modos e passa a ser VÁRIAS FONTES em Fontes, uma por papel, e pode haver vários celulares ao mesmo tempo, cada um ligado a uma fonte: **Celular (câmera)** (já existe), **Celular (drumpad)** (pads que disparam clipes), **Celular (controladora)** (sliders e outros controles que o Felipe escolhe e liga ao que quiser) e **Celular (desenho)** (o dedo desenha; o desenho é um clipe, "tem o script lá" na maquete). Palavras dele: "Vão ter vários celulares diferentes em fontes, não só um." A maquete `plugins-celular-mockup.html` precisa ser refeita nesse formato antes de construir. Entra junto o achado 46 da revisão geral: cada celular se liga com um endereço próprio e com chave, e o servidor só aceita quem foi chamado.
+
 **Plans:**
-- [ ] 03-01: maquete `plugins-celular-mockup.html` (feita, falta aprovação do Felipe)
+- [ ] 03-01: maquete `plugins-celular-mockup.html` (feita no formato antigo de quatro modos; refazer como várias fontes, pedido de 2026-11-11, e aprovar)
 - [ ] 03-02+: a definir em /paul:plan (sistema de plugins; abrir plugins FFGL de terceiros na versão Windows, com teste de desempenho antes; celular pela rede; plugins de física; clipe de desenho)
 
 ### Phase 4: Provas no equipamento (laser e APC40)
@@ -218,8 +220,8 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 
 **Plans:**
 - [x] 12-01: linha de base das baterias, revisão por área (só leitura) e lista priorizada de achados — fechado em 2026-11-11 (85 achados, 7 reproduzidos)
-- [ ] 12-02: trava e saída que cai (achados 1, 34, 35, 51, 52, 80)
-- [ ] 12-03: salvar, abrir e desfazer (13, 14, 15, 17, 18, 19, 20)
+- [x] 12-02: trava e saída que cai (achados 1, 34, 35, 51, 52, 80) — fechado em 2026-11-11 com a beta.66
+- [ ] 12-03: salvar, abrir e desfazer (13, 14, 15, 17, 18, 19, 20, 50) — aplicado em 2026-11-11 (beta.68 gerada); falta instalar e o aprovado
 - [ ] 12-04: teclas e editores que descartam (30, 31, 32, 33, 69, 70)
 - [ ] 12-05: recorte, webcam e nativos (60, 61, 62, 63, 64)
 - [ ] 12-06: rede e sites (46, 47)

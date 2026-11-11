@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenLuz · Celular em várias fontes (maquete)</title>
+<style>
+:root{ --bg:#1b1c1f; --bg2:#232428; --bg3:#2c2d32; --line:#3a3b41; --txt:#d6d7db; --dim:#8b8d95; --ghost:#5a5c64;
+  --menta:#7dffd6; --rosa:#ff2d95; --ambar:#ffb02e; --azul:#59a8ff; color-scheme:dark; }
+*{ box-sizing:border-box; }
+html,body{ margin:0; }
+body{ background:#0f1012; color:var(--txt); font:13px/1.35 "Segoe UI",system-ui,sans-serif; -webkit-user-select:none; user-select:none; }
+button{ font:inherit; color:inherit; background:var(--bg3); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+h1{ font-size:15px; margin:0; font-weight:700; } h1 b{ color:var(--menta); }
+.topo{ display:flex; gap:14px; align-items:baseline; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--bg); flex-wrap:wrap; }
+.topo span{ color:var(--dim); font-size:12px; }
+.tudo{ display:grid; grid-template-columns:minmax(420px, 1fr) minmax(0, 1.5fr); gap:0; min-height:calc(100vh - 44px); }
+@media (max-width:1000px){ .tudo{ grid-template-columns:1fr; } }
+
+/* ---------- o programa (lado esquerdo) ---------- */
+.pc{ background:var(--bg); border-right:1px solid var(--line); padding:14px 16px; display:flex; flex-direction:column; gap:14px; }
+.rot{ color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
+.grade{ display:grid; grid-template-columns:86px repeat(6, 1fr); gap:3px; }
+.grade .lay{ background:var(--bg2); border-radius:3px; padding:5px 6px; font-size:11px; display:flex; flex-direction:column; gap:4px; justify-content:center; }
+.grade .lay .op{ height:5px; border-radius:3px; background:#111; overflow:hidden; } .grade .lay .op i{ display:block; height:100%; background:var(--menta); width:100%; }
+.casa{ aspect-ratio:16/10; background:#15161a; border:1px solid #26272c; border-radius:3px; position:relative; overflow:hidden; font-size:10px; color:var(--dim); display:flex; align-items:flex-end; padding:2px 4px; }
+.casa.cheia{ background:linear-gradient(135deg, var(--c1,#333), var(--c2,#111)); color:#fff; }
+.casa.noar{ outline:2px solid var(--menta); outline-offset:-2px; }
+.casa canvas{ position:absolute; inset:0; width:100%; height:100%; }
+.casa .selo{ position:absolute; top:2px; right:3px; font-size:9px; background:rgba(0,0,0,.6); border-radius:3px; padding:0 3px; color:var(--menta); }
+.mestre{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim); } .mestre .op{ flex:1; height:6px; background:#111; border-radius:3px; overflow:hidden; } .mestre .op i{ display:block; height:100%; width:100%; background:var(--ambar); }
+.fontes{ display:flex; flex-direction:column; gap:6px; }
+.fonte{ background:var(--bg2); border:1px solid var(--line); border-radius:5px; padding:8px 10px; display:grid; grid-template-columns:28px 1fr auto; gap:4px 10px; align-items:center; }
+.fonte .ic{ width:28px; height:28px; border-radius:6px; display:grid; place-items:center; font-size:15px; background:var(--bg3); }
+.fonte b{ font-size:13px; } .fonte small{ color:var(--dim); display:block; font-size:11px; }
+.fonte .ligados{ grid-column:2 / 4; display:flex; gap:5px; flex-wrap:wrap; }
+.chip{ font-size:11px; background:#16261f; color:var(--menta); border:1px solid #2c5446; border-radius:20px; padding:1px 8px; }
+.chip.off{ background:var(--bg3); color:var(--dim); border-color:var(--line); }
+.ligar{ border-color:#2c5446; color:var(--menta); padding:4px 9px; font-size:12px; }
+.cartao{ background:#101114; border:1px solid var(--line); border-radius:6px; padding:12px; display:none; grid-template-columns:96px 1fr; gap:12px; align-items:center; }
+.cartao.on{ display:grid; }
+.qr{ width:96px; height:96px; background:#fff; border-radius:4px; display:grid; grid-template-columns:repeat(12,1fr); padding:6px; }
+.qr i{ background:#000; } .qr i.b{ background:#fff; }
+.cartao code{ display:block; background:#000; border-radius:4px; padding:5px 7px; color:var(--menta); font:12px Consolas, monospace; margin:5px 0; word-break:break-all; }
+.cartao p{ margin:0; color:var(--dim); font-size:12px; }
+.nota{ color:var(--dim); font-size:12px; border-left:2px solid var(--line); padding-left:10px; }
+.nota b{ color:var(--txt); }
+
+/* ---------- os celulares (lado direito) ---------- */
+.fones{ padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:18px; align-content:start; }
+.fone{ display:flex; flex-direction:column; gap:6px; align-items:center; }
+.fone .tit{ font-size:12px; color:var(--dim); text-align:center; } .fone .tit b{ color:var(--txt); display:block; font-size:13px; }
+.tela{ width:100%; max-width:270px; aspect-ratio:9/17.5; background:#000; border:3px solid #2e2f34; border-radius:30px; box-shadow:0 0 0 6px #151618; padding:12px 10px; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.cab{ display:flex; align-items:center; gap:6px; font-size:12px; } .cab b{ font-weight:800; letter-spacing:.05em; } .cab b i{ color:var(--menta); font-style:normal; }
+.cab .con{ margin-left:auto; color:var(--menta); font-size:11px; display:flex; gap:4px; align-items:center; } .cab .con::before{ content:''; width:6px; height:6px; border-radius:50%; background:var(--menta); }
+.abas{ display:flex; gap:4px; } .abas button{ flex:1; height:26px; border-radius:7px; background:#1d1e22; border-color:#33343a; font-size:11px; } .abas button.on{ background:var(--rosa); border-color:var(--rosa); color:#fff; }
+.pads{ flex:1; display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.pad{ border-radius:10px; background:linear-gradient(135deg, var(--c1,#2a2b30), var(--c2,#1a1b1f)); border:1px solid #33343a; font-size:10px; color:#fff; display:flex; align-items:flex-end; padding:4px 5px; touch-action:manipulation; }
+.pad.vazio{ background:#131417; color:#444; } .pad.noar{ outline:3px solid var(--menta); outline-offset:-3px; }
+.linha{ display:flex; gap:5px; } .linha button{ flex:1; height:34px; border-radius:9px; background:#1d1e22; border-color:#33343a; font-size:12px; font-weight:600; }
+.linha button.perigo{ color:var(--ambar); border-color:#5b4416; }
+.sliders{ flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; min-height:0; }
+.sl{ display:flex; flex-direction:column; align-items:center; gap:4px; min-height:0; }
+.sl .trilho{ flex:1; width:100%; background:#141518; border:1px solid #2c2d33; border-radius:9px; position:relative; touch-action:none; min-height:60px; overflow:hidden; }
+.sl .trilho i{ position:absolute; left:0; right:0; bottom:0; background:var(--cor, var(--menta)); opacity:.85; }
+.sl .nome{ font-size:10px; color:var(--dim); text-align:center; line-height:1.15; height:23px; overflow:hidden; }
+.sl .eng{ width:100%; height:20px; font-size:11px; border-radius:6px; background:#1d1e22; border-color:#33343a; padding:0; }
+.lista{ position:absolute; inset:auto 8px 8px 8px; background:#1d1e22; border:1px solid #44454c; border-radius:10px; padding:6px; display:none; flex-direction:column; gap:3px; z-index:3; max-height:60%; overflow:auto; }
+.lista.on{ display:flex; } .lista button{ text-align:left; padding:6px 8px; border:0; background:transparent; font-size:12px; border-radius:6px; } .lista button:hover{ background:#2c2d33; }
+.lista .t{ color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.08em; padding:2px 8px; }
+.tela.rel{ position:relative; }
+.papel{ flex:1; border-radius:10px; background:#000; border:1px solid #333; touch-action:none; width:100%; min-height:0; }
+.cores{ display:flex; gap:6px; justify-content:space-between; } .cores span{ flex:1; aspect-ratio:1; border-radius:50%; border:2px solid transparent; } .cores span.on{ border-color:#fff; }
+.visor{ flex:1; border-radius:10px; position:relative; overflow:hidden; background:#111; }
+.visor canvas{ width:100%; height:100%; display:block; }
+.visor .inf{ position:absolute; left:8px; bottom:8px; font-size:10px; background:rgba(0,0,0,.6); border-radius:5px; padding:2px 6px; color:var(--menta); }
+.dica{ color:#777; font-size:10px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="topo"><h1>Open<b>Luz</b> · Celular em várias fontes</h1><span>maquete para aprovar antes de construir · toque nos pads, arraste os sliders, desenhe: o lado esquerdo responde</span></div>
+<div class="tudo">
+
+<div class="pc">
+  <div>
+    <div class="rot">A grade do programa</div>
+    <div class="grade" id="grade"></div>
+    <div class="mestre" style="margin-top:8px"><span>Master</span><div class="op"><i id="opMaster"></i></div><span id="bpmTxt">120 BPM</span></div>
+  </div>
+  <div>
+    <div class="rot">Fontes › Celular</div>
+    <div class="fontes" id="fontes"></div>
+  </div>
+  <div class="cartao" id="cartao">
+    <div class="qr" id="qr"></div>
+    <div><b id="cartTit"></b><code id="cartUrl"></code><p>Cada celular entra pelo endereço da fonte dele, com uma chave. Sem a chave o programa não aceita, e só fica aberto enquanto você estiver ligando o celular.</p></div>
+  </div>
+  <div class="nota">
+    <b>Como fica.</b> Cada papel do celular é uma fonte em Fontes. Arrastou a fonte para a grade (ou clicou em "ligar celular"), aparece o QR daquela fonte. Dá para ter vários celulares ao mesmo tempo, cada um numa fonte: um de pads, outro de sliders, outro desenhando, outro de câmera.<br><br>
+    <b>Drumpad</b> não ocupa casa: ele dispara as casas que já existem. <b>Controladora</b> também não: cada slider aponta para um controle que você escolhe no ⚙. <b>Desenho</b> e <b>Câmera</b> viram clipe numa casa, como qualquer fonte.
+  </div>
+</div>
+
+<div class="fones">
+  <div class="fone"><div class="tit"><b>Celular (drumpad)</b>pads que disparam os clipes</div>
+    <div class="tela">
+      <div class="cab"><b>Open<i>Luz</i></b> pads<span class="con">ligado</span></div>
+      <div class="abas" id="padAbas"></div>
+      <div class="pads" id="pads"></div>
+      <div class="linha"><button id="colAnt">◀ coluna</button><button id="colProx">coluna ▶</button></div>
+      <div class="linha"><button class="perigo" id="apagar">■ tirar do ar</button><button id="tap">TAP</button></div>
+    </div>
+  </div>
+
+  <div class="fone"><div class="tit"><b>Celular (controladora)</b>sliders e botões que você escolhe</div>
+    <div class="tela rel" id="telaCtl">
+      <div class="cab"><b>Open<i>Luz</i></b> controle<span class="con">ligado</span></div>
+      <div class="sliders" id="sliders"></div>
+      <div class="linha"><button id="b1">Blackout</button><button id="b2">Test Card</button></div>
+      <div class="dica">⚙ escolhe o que cada slider controla</div>
+      <div class="lista" id="lista"></div>
+    </div>
+  </div>
+
+  <div class="fone"><div class="tit"><b>Celular (desenho)</b>o dedo desenha; vira clipe</div>
+    <div class="tela">
+      <div class="cab"><b>Open<i>Luz</i></b> desenho<span class="con">ligado</span></div>
+      <canvas class="papel" id="papel" width="320" height="420"></canvas>
+      <div class="cores" id="cores"></div>
+      <div class="linha"><button id="fino">traço fino</button><button id="grosso">grosso</button></div>
+      <div class="linha"><button id="some">some aos poucos: não</button><button class="perigo" id="limpar">limpar</button></div>
+    </div>
+  </div>
+
+  <div class="fone"><div class="tit"><b>Celular (câmera)</b>já existe; fica igual</div>
+    <div class="tela">
+      <div class="cab"><b>Open<i>Luz</i></b> câmera<span class="con">ligado</span></div>
+      <div class="visor"><canvas id="cam" width="160" height="280"></canvas><div class="inf">enviando 960×540</div></div>
+      <div class="linha"><button id="virar">virar câmera</button><button class="perigo">parar</button></div>
+      <div class="dica">a imagem entra na casa "Câmera do celular"</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const CORES = [['#ff2d95','#5b1140'],['#59a8ff','#12305c'],['#7dffd6','#14483b'],['#ffb02e','#5c3a08'],['#b98cff','#34205e'],['#ff6b4a','#5a1c10']];
+const camadas = [
+  { nome: 'Camada 3', op: 1, on: -1, clipes: ['Texto', null, 'Desenho', null, 'Laser', null] },
+  { nome: 'Camada 2', op: 1, on: 1, clipes: ['Fumaça', 'Linhas', null, 'Câmera do celular', null, 'Glitch'] },
+  { nome: 'Camada 1', op: 1, on: 0, clipes: ['Fundo A', 'Fundo B', 'Loop 3', 'Loop 4', null, null] },
+];
+let master = 1, bpm = 120;
+const desenhoCasa = { l: 0, c: 2 }, camCasa = { l: 1, c: 3 };
+
+// ---------- grade ----------
+function grade() {
+  const g = $('grade'); g.textContent = '';
+  camadas.forEach((L, li) => {
+    const lay = document.createElement('div'); lay.className = 'lay'; lay.innerHTML = '<span>' + L.nome + '</span><div class="op"><i style="width:' + (L.op * 100) + '%"></i></div>'; g.appendChild(lay);
+    L.clipes.forEach((n, ci) => {
+      const d = document.createElement('div'); d.className = 'casa' + (n ? ' cheia' : '') + (L.on === ci ? ' noar' : '');
+      if (n) { const k = CORES[(li * 2 + ci) % CORES.length]; d.style.setProperty('--c1', k[0]); d.style.setProperty('--c2', k[1]); d.append(n); }
+      if (li === desenhoCasa.l && ci === desenhoCasa.c) { const c = document.createElement('canvas'); c.width = 160; c.height = 100; c.id = 'espelho'; d.style.background = '#000'; d.prepend(c); const s = document.createElement('span'); s.className = 'selo'; s.textContent = 'celular'; d.appendChild(s); }
+      if (li === camCasa.l && ci === camCasa.c) { const c = document.createElement('canvas'); c.width = 160; c.height = 100; c.id = 'camEsp'; d.prepend(c); const s = document.createElement('span'); s.className = 'selo'; s.textContent = 'celular'; d.appendChild(s); }
+      g.appendChild(d);
+    });
+  });
+  $('opMaster').style.width = master * 100 + '%'; $('bpmTxt').textContent = Math.round(bpm) + ' BPM';
+  espelha();
+}
+
+// ---------- fontes ----------
+const FONTES = [
+  { id: 'cam', ic: '📷', nome: 'Celular (câmera)', sub: 'a câmera do celular vira clipe', ligados: ['Moto G de Felipe'], rota: 'camera' },
+  { id: 'pads', ic: '▦', nome: 'Celular (drumpad)', sub: 'pads que disparam as casas da grade', ligados: ['iPhone da Dani'], rota: 'pads' },
+  { id: 'ctl', ic: '🎚', nome: 'Celular (controladora)', sub: 'sliders e botões que você liga ao que quiser', ligados: ['Tablet do palco'], rota: 'controle' },
+  { id: 'des', ic: '✎', nome: 'Celular (desenho)', sub: 'o dedo desenha; o desenho é um clipe', ligados: ['Moto G de Felipe 2'], rota: 'desenho' },
+];
+function fontes() {
+  const f = $('fontes'); f.textContent = '';
+  for (const s of FONTES) {
+    const d = document.createElement('div'); d.className = 'fonte';
+    d.innerHTML = '<div class="ic">' + s.ic + '</div><div><b>' + s.nome + '</b><small>' + s.sub + '</small></div>';
+    const b = document.createElement('button'); b.className = 'ligar'; b.textContent = '＋ ligar celular'; b.onclick = () => cartao(s); d.appendChild(b);
+    const l = document.createElement('div'); l.className = 'ligados'; l.innerHTML = s.ligados.map(n => '<span class="chip">● ' + n + '</span>').join('') + '<span class="chip off">vários celulares podem entrar na mesma fonte</span>'; d.appendChild(l);
+    f.appendChild(d);
+  }
+}
+function cartao(s) {
+  const chave = Math.random().toString(16).slice(2, 6).toUpperCase() + '-' + Math.random().toString(16).slice(2, 6).toUpperCase();
+  $('cartTit').textContent = 'Ligar um celular em ' + s.nome; $('cartUrl').textContent = 'https://192.168.15.20:8443/' + s.rota + '?k=' + chave;
+  const q = $('qr'); q.textContent = ''; let seed = 0; for (const ch of chave) seed += ch.charCodeAt(0);
+  for (let i = 0; i < 144; i++) { const e = document.createElement('i'); const x = i % 12, y = Math.floor(i / 12), canto = (x < 3 && y < 3) || (x > 8 && y < 3) || (x < 3 && y > 8); seed = (seed * 73 + 41) % 997; if (!canto && seed % 2) e.className = 'b'; q.appendChild(e); }
+  $('cartao').classList.add('on');
+}
+
+// ---------- drumpad ----------
+let padL = 2;
+function pads() {
+  const a = $('padAbas'); a.textContent = '';
+  camadas.forEach((L, li) => { const b = document.createElement('button'); b.textContent = L.nome; if (li === padL) b.className = 'on'; b.onclick = () => { padL = li; pads(); }; a.appendChild(b); });
+  const p = $('pads'); p.textContent = ''; const L = camadas[padL];
+  L.clipes.forEach((n, ci) => { const b = document.createElement('div'); b.className = 'pad' + (n ? '' : ' vazio') + (L.on === ci ? ' noar' : ''); if (n) { const k = CORES[(padL * 2 + ci) % CORES.length]; b.style.setProperty('--c1', k[0]); b.style.setProperty('--c2', k[1]); } b.textContent = n || (ci + 1);
+    b.onpointerdown = () => { L.on = n ? ci : -1; pads(); grade(); }; p.appendChild(b); });
+}
+$('apagar').onclick = () => { camadas[padL].on = -1; pads(); grade(); };
+const coluna = (d) => { const cur = Math.max(0, camadas[2].on); const c = (cur + d + 6) % 6; camadas.forEach(L => { L.on = L.clipes[c] ? c : -1; }); pads(); grade(); };
+$('colAnt').onclick = () => coluna(-1); $('colProx').onclick = () => coluna(1);
+let taps = []; $('tap').onclick = () => { const t = performance.now(); taps = taps.filter(x => t - x < 3000); taps.push(t); if (taps.length > 1) { bpm = 60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)); grade(); } };
+
+// ---------- controladora ----------
+const ALVOS = [
+  { g: 'Composição', nome: 'Master', get: () => master, set: (v) => { master = v; }, cor: '#ffb02e' },
+  { g: 'Camadas', nome: 'Opacidade Camada 1', get: () => camadas[2].op, set: (v) => { camadas[2].op = v; } },
+  { g: 'Camadas', nome: 'Opacidade Camada 2', get: () => camadas[1].op, set: (v) => { camadas[1].op = v; } },
+  { g: 'Camadas', nome: 'Opacidade Camada 3', get: () => camadas[0].op, set: (v) => { camadas[0].op = v; } },
+  { g: 'Clipe no ar', nome: 'Velocidade do clipe', get: () => 0.5, set: () => { }, cor: '#59a8ff' },
+  { g: 'Efeitos', nome: 'Trails · Feedback', get: () => 0.3, set: () => { }, cor: '#b98cff' },
+  { g: 'Efeitos', nome: 'Delay RGB · Atraso', get: () => 0.3, set: () => { }, cor: '#b98cff' },
+  { g: 'Composição', nome: 'Crossfader', get: () => 0.5, set: () => { }, cor: '#ff2d95' },
+];
+const slots = [0, 1, 2, 3]; const valores = [1, 1, 1, 1];
+function sliders() {
+  const s = $('sliders'); s.textContent = '';
+  slots.forEach((ai, k) => { const A = ALVOS[ai], w = document.createElement('div'); w.className = 'sl';
+    const t = document.createElement('div'); t.className = 'trilho'; const f = document.createElement('i'); f.style.height = valores[k] * 100 + '%'; if (A.cor) f.style.setProperty('--cor', A.cor); t.appendChild(f);
+    const mexe = (e) => { const r = t.getBoundingClientRect(); const v = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height)); valores[k] = v; f.style.height = v * 100 + '%'; A.set(v); grade(); };
+    t.onpointerdown = (e) => { t.setPointerCapture(e.pointerId); mexe(e); t.onpointermove = mexe; }; t.onpointerup = () => { t.onpointermove = null; };
+    const n = document.createElement('div'); n.className = 'nome'; n.textContent = A.nome;
+    const g = document.createElement('button'); g.className = 'eng'; g.textContent = '⚙'; g.onclick = () => escolher(k);
+    w.append(t, n, g); s.appendChild(w); });
+}
+function escolher(k) {
+  const l = $('lista'); l.textContent = ''; let grupo = '';
+  ALVOS.forEach((A, i) => { if (A.g !== grupo) { grupo = A.g; const t = document.createElement('div'); t.className = 't'; t.textContent = grupo; l.appendChild(t); }
+    const b = document.createElement('button'); b.textContent = A.nome; b.onclick = () => { slots[k] = i; valores[k] = A.get(); l.classList.remove('on'); sliders(); }; l.appendChild(b); });
+  l.classList.add('on');
+}
+let black = false; $('b1').onclick = () => { black = !black; $('b1').style.color = black ? 'var(--ambar)' : ''; master = black ? 0 : valores[slots.indexOf(0)] ?? 1; grade(); };
+$('b2').onclick = () => { $('b2').style.color = $('b2').style.color ? '' : 'var(--menta)'; };
+
+// ---------- desenho ----------
+const papel = $('papel'), px = papel.getContext('2d'); let cor = '#7dffd6', esp = 5, some = false, ult = null;
+const PALETA = ['#7dffd6', '#ff2d95', '#ffb02e', '#59a8ff', '#ffffff'];
+PALETA.forEach((c, i) => { const s = document.createElement('span'); s.style.background = c; if (!i) s.className = 'on'; s.onclick = () => { cor = c; $('cores').querySelectorAll('span').forEach(x => x.classList.toggle('on', x === s)); }; $('cores').appendChild(s); });
+const pt = (e) => { const r = papel.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * papel.width, (e.clientY - r.top) / r.height * papel.height]; };
+papel.onpointerdown = (e) => { papel.setPointerCapture(e.pointerId); ult = pt(e); };
+papel.onpointermove = (e) => { if (!ult) return; const p = pt(e); px.strokeStyle = cor; px.lineWidth = esp; px.lineCap = 'round'; px.beginPath(); px.moveTo(ult[0], ult[1]); px.lineTo(p[0], p[1]); px.stroke(); ult = p; espelha(); };
+papel.onpointerup = () => { ult = null; };
+$('fino').onclick = () => { esp = 3; }; $('grosso').onclick = () => { esp = 12; };
+$('limpar').onclick = () => { px.clearRect(0, 0, papel.width, papel.height); espelha(); };
+$('some').onclick = () => { some = !some; $('some').textContent = 'some aos poucos: ' + (some ? 'sim' : 'não'); };
+function espelha() { const e = $('espelho'); if (!e) return; const x = e.getContext('2d'); x.clearRect(0, 0, e.width, e.height); x.drawImage(papel, 0, 0, e.width, e.height); }
+setInterval(() => { if (!some) return; px.globalCompositeOperation = 'destination-out'; px.fillStyle = 'rgba(0,0,0,.06)'; px.fillRect(0, 0, papel.width, papel.height); px.globalCompositeOperation = 'source-over'; espelha(); }, 80);
+
+// ---------- câmera (imagem de mentira) ----------
+let frente = false; $('virar').onclick = () => { frente = !frente; };
+function cam(t) {
+  for (const id of ['cam', 'camEsp']) { const c = $(id); if (!c) continue; const x = c.getContext('2d'), w = c.width, h = c.height;
+    const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, frente ? '#3b2a4f' : '#1d3b4f'); g.addColorStop(1, frente ? '#a0527a' : '#5fa8a0'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.fillStyle = 'rgba(255,255,255,.75)'; x.beginPath(); x.arc(w / 2 + Math.sin(t / 900) * w * 0.2, h * 0.42, Math.min(w, h) * 0.16, 0, 7); x.fill();
+    x.fillRect(w / 2 + Math.sin(t / 900) * w * 0.2 - Math.min(w, h) * 0.22, h * 0.6, Math.min(w, h) * 0.44, h * 0.4); }
+  requestAnimationFrame(cam);
+}
+
+grade(); fontes(); pads(); sliders(); requestAnimationFrame(cam);
+</script>
+</body>
+</html>
