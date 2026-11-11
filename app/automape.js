@@ -375,7 +375,8 @@ export class Automape {
   // ---------- abrir e fechar ----------
   open(step) {
     if (this.dlg) { this.go(step || 0); return; }
-    this.S = this.freshState(); this.UNDO = []; this.REDO = [];
+    const volta = step == null && this.guardado && this.S && !!this.S.photo;   // fechou no meio (Esc, clique fora, Cancelar) com foto carregada
+    if (!volta) { this.S = this.freshState(); this.UNDO = []; this.REDO = []; }
     const d = openDialog({
       title: 'Automape', width: 800, cls: 'automape',
       build: (body) => { body.innerHTML = '<div id="wizHead"><span class="step" id="wStep"></span><span class="ttl" id="wTitle"></span><span class="dots" id="wDots"></span></div><div id="wizBody"></div><div class="wtip" id="wTip"></div>'; },
@@ -388,9 +389,10 @@ export class Automape {
     d.body.addEventListener('dragover', (e) => { e.preventDefault(); const z = this.$('wDrop'); if (z) z.classList.add('over'); });
     d.body.addEventListener('dragleave', () => { const z = this.$('wDrop'); if (z) z.classList.remove('over'); });
     d.body.addEventListener('drop', (e) => { e.preventDefault(); const z = this.$('wDrop'); if (z) z.classList.remove('over'); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) this.readFile(f); });
-    this.go(step || 0);
+    if (volta) { this.go(this.passoGuardado || 0); this.toast('Automape: continuando de onde você parou. Para recomeçar, volte ao passo da foto e escolha outra.'); }
+    else this.go(step || 0);
   }
-  onClosed() { this.dlg = null; if (this.c.gridOn() && this.ligouMalha) this.c.setGrid(false); this.ligouMalha = false; }   // a malha ligada pelo menu Saída fica
+  onClosed() { this.guardado = !this.criou; this.passoGuardado = this.step; this.criou = false; this.dlg = null; if (this.c.gridOn() && this.ligouMalha) this.c.setGrid(false); this.ligouMalha = false; }   // a malha ligada pelo menu Saída fica
   close() { if (this.dlg) this.dlg.close(); }
 
   // ---------- passos ----------
@@ -410,7 +412,7 @@ export class Automape {
   }
   create() {
     if (!this.S.result.length) { this.toast('Nada marcado para criar'); return; }
-    const r = this.c.create(this.S.result); this.toast('Criado na Saída avançada: ' + this.resultWords()); this.close(); return r;
+    const r = this.c.create(this.S.result); this.toast('Criado na Saída avançada: ' + this.resultWords()); this.criou = true; this.close(); return r;
   }
   STEPS() {
     const self = this, c = this.c;

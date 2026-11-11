@@ -84,7 +84,7 @@ check('Ctrl+Shift+Z também refaz na Saída avançada', await ev(`${P}.screens()
 
 // Esc cancela (volta ao retrato de quando abriu) e a saída continua
 const focoAntesEsc = await ev(`document.activeElement ? document.activeElement.tagName + (document.activeElement.id ? '#' + document.activeElement.id : '') : 'nenhum'`);
-for (let i = 0; i < 3 && await ev(`${P}.ao.open`); i++) { await key('Escape', 'Escape', 27); await wait(400); }   // a primeira tecla depois de muito Runtime.evaluate às vezes se perde (flake do CDP): até três Esc
+for (let i = 0; i < 3 && await ev(`${P}.ao.open`); i++) { await key('Escape', 'Escape', 27); await wait(400); if (await ev(`!!document.querySelector('.dlgOver')`)) { await key('Enter', 'Enter', 13); await wait(400); } }   // com mudanças, o Esc pergunta: Enter confirma. A primeira tecla depois de muito Runtime.evaluate às vezes se perde (flake do CDP): até três Esc
 check('Esc fecha a Saída avançada cancelando', await ev(`!${P}.ao.open`) && await ev(`${P}.screens()[0].items[0].name`) === nomeAntes, `open=${await ev(`${P}.ao.open`)} nome=${await ev(`${P}.screens()[0].items[0].name`)} foco antes do Esc=${focoAntesEsc}`);
 if (await ev(`${P}.ao.open`)) await ev(`${P}.ao.hide(true); 1`);
 check('Esc mantém a saída no ar', await noAr() === 1 && await janelasSaida() === 1, `outWins=${await noAr()} janelas=${await janelasSaida()}`);

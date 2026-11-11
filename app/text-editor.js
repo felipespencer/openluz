@@ -57,7 +57,7 @@ export class EditorTexto {
     this.onKey = (e) => {
       if (!this.open) return;
       const emTexto = this.editando >= 0 || /INPUT|SELECT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName);
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (this.editando >= 0) this.fimEdicao(); else this.fechar(false); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (this.editando >= 0) this.fimEdicao(); else if (emTexto) document.activeElement.blur(); else this.fechar(false); return; }   // num campo (buscar fonte, tamanho), Esc só sai do campo
       if (emTexto) { e.stopPropagation(); return; }
       if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); e.stopPropagation(); this.desfaz(e.shiftKey ? 1 : -1); return; }
       if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); e.stopPropagation(); this.desfaz(1); return; }

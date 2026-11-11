@@ -151,8 +151,13 @@ export class AdvancedOutput {
   key(e) {
     if (!this.open || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (this.c.menuOpen && this.c.menuOpen()) return;   // com o menu do botão direito aberto, Esc fecha só o menu
+    if (document.querySelector('.dlgOver')) return;   // com um diálogo por cima (Automape, uma pergunta), as teclas são dele
     if (e.key === ' ') { this.space = true; e.preventDefault(); }
-    else if (e.key === 'Escape') { if (this.drawing) { this.drawing = null; this.draw(); } else this.hide(true); }
+    else if (e.key === 'Escape') {
+      if (this.drawing) { this.drawing = null; this.draw(); }
+      else if (this.hist.length) confirmBox('Saída avançada', 'Sair sem guardar o que foi feito nas telas nesta sessão?').then((ok) => { if (ok && this.open) this.hide(true); });   // o botão Cancelar continua direto
+      else this.hide(true);
+    }
     else if (e.key === 't' || e.key === 'T') { if (this.tab === 'out') this.setMode(this.mode === 'move' ? 'pts' : 'move'); }
     else if (e.key === 'Enter' && this.drawing) this.finishDrawing();
     else if (e.key.startsWith('Arrow') && this.sel && this.sel.item && !this.drawing) { this.nudge(e.key, e.shiftKey ? 10 : 1, e.altKey); e.preventDefault(); }

@@ -105,7 +105,7 @@ if (quer('telas')) {
   check('botão direito na tela › Duplicar: três telas, as duas saídas seguem as mesmas', e.n === 3 && e.marcas.replace(/-,?|,-/g, '') === 'A,B', JSON.stringify(e));
   await key('z', 2); await wait(900); e = await estado();
   check('Ctrl+Z depois de duplicar: as duas saídas continuam abertas e são as mesmas janelas', e.n === 2 && e.marcas === 'A,B', JSON.stringify(e));
-  await duplicarA(); await key('Escape'); await wait(900); e = await estado();
+  await duplicarA(); await key('Escape'); await wait(500); if (await ev(`!!document.querySelector('.dlgOver')`)) await key('Enter'); await wait(900); e = await estado();   // com mudanças, o Esc pergunta: Enter confirma
   check('Cancelar (Esc) depois de duplicar: as duas saídas continuam abertas e são as mesmas janelas', e.n === 2 && e.marcas === 'A,B' && !(await ev(`${P}.ao.open`)), JSON.stringify(e));
   await ev(`${P}.ao.show(); 1`); await wait(700);
   { const r = await ev(`(()=>{ const row=[...document.querySelectorAll('#aoList .row.screen')].find(x=>x.querySelector('.nm').textContent.trim()==='Tela B'); if(!row) return null; const b=row.querySelector('.x').getBoundingClientRect(); return {x:b.x+b.width/2,y:b.y+b.height/2}; })()`); await clickXY(r.x, r.y); await wait(700); }

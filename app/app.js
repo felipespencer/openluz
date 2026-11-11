@@ -604,6 +604,7 @@ function syncOverlay() {
 // O Automape criou o mapa: cada item vira máscara ou slice (4 cantos + máscara de entrada com o contorno) na primeira tela
 function automapeCreate(result) {
   const sc = state.screens[0]; if (!sc) return 0;
+  if (ao.open) ao.pushUndo();   // com o editor já aberto: um Ctrl+Z tira o que o Automape criou, e o Cancelar continua voltando ao começo da sessão
   const kx = sc.w / state.settings.w, ky = sc.h / state.settings.h;   // o Automape trabalha em px da composição; a tela pode ter outro tamanho
   let n = 0;
   for (const it of result) {
@@ -615,7 +616,7 @@ function automapeCreate(result) {
     if (it.inMask) sl.inMask = { pts: it.inMask.pts.map(p => [p[0], p[1]]), invert: false, rev: 1 };
     M.touch(sl); sc.items.push(sl); n++;
   }
-  M.touch(sc); renderScreens(); ao.show(); return n;
+  M.touch(sc); renderScreens(); if (ao.open) { ao.c.onChange(); ao.layout(); ao.refresh(); } else ao.show(); return n;
 }
 function removeLayer(li) {
   const L = state.layers[li]; if (state.layers.length <= 1) return;
@@ -1587,7 +1588,7 @@ const SHORTCUTS = [
   { combo: 'Ctrl+Shift+Z', keys: 'Ctrl+Shift+Z', what: 'Refazer', when: () => !ao.open && !laser.open, fn: redoComp },
   { combo: 'Ctrl+N', keys: 'Ctrl+N', what: 'Composição nova', fn: () => comps.newComp(true) },
   { combo: 'Ctrl+O', keys: 'Ctrl+O', what: 'Abrir composição (aba Composições)', fn: () => browser.setTab('comps') },
-  { combo: 'Ctrl+S', keys: 'Ctrl+S', what: 'Salvar composição', fn: () => state.name ? comps.save(state.name) : (browser.setTab('comps'), browser.saveAs()) },
+  { combo: 'Ctrl+S', keys: 'Ctrl+S', what: 'Salvar composição', sempre: true, fn: () => state.name ? comps.save(state.name) : (browser.setTab('comps'), browser.saveAs()) },
   { combo: 'Ctrl+Shift+S', keys: 'Ctrl+Shift+S', what: 'Salvar como…', fn: () => { browser.setTab('comps'); browser.saveAs(); } },
   { combo: 'Ctrl+Shift+C', keys: 'Ctrl+Shift+C', what: 'Configurações da composição', fn: settingsDialog },
   { combo: 'Ctrl+,', keys: 'Ctrl+,', what: 'Preferências', fn: preferencesDialog },
@@ -1597,9 +1598,11 @@ const SHORTCUTS = [
   { combo: 'Delete', keys: 'Delete', what: 'Limpar a casa selecionada', fn: () => { const s = selectedCell(); if (s) clearCell(state.layers.indexOf(s.L), s.idx); } },
   { combo: 'Enter', keys: 'Enter', what: 'Disparar a casa selecionada', fn: () => { if (state.sel) trigger(state.sel.l, state.sel.c); } },
   { combo: 'Escape', keys: 'Esc', what: 'Tirar do ar a camada selecionada', when: () => !ao.open && !laser.open, fn: () => eject(selL()) },
-  { combo: 'Ctrl+Q', keys: 'Ctrl+Q', what: 'Sair', fn: () => window.close() },
+  { combo: 'Ctrl+Q', keys: 'Ctrl+Q', what: 'Sair', sempre: true, fn: () => window.close() },
 ];
-installShortcuts(SHORTCUTS);
+// com a Saída avançada, o Laser ou o editor de texto abertos, Delete, Enter, Ctrl+N, Ctrl+X/C/V e os outros atalhos da grade ficam de fora
+// (antes, Delete na Saída avançada apagava o slice E o clipe selecionado na grade)
+installShortcuts(SHORTCUTS, () => ao.open || laser.open || !!(textEditor && textEditor.open));
 
 // ---------- divisórias ----------
 (async () => {

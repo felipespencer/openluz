@@ -192,7 +192,7 @@ check('serialize/deserialize preserva o degradê ajustado e o arredondado padrã
 }
 // 10. Esc cancela a Saída avançada e restaura o que havia ao abrir (sem o degradê de teste)
 // a primeira tecla depois de muito Runtime.evaluate às vezes se perde (flake conhecido do CDP): até três Esc, conferindo entre eles
-for (let i = 0; i < 3 && await ev(`${P}.ao.open`); i++) { await key('Escape', 'Escape', 27); await wait(300); }
+for (let i = 0; i < 3 && await ev(`${P}.ao.open`); i++) { await key('Escape', 'Escape', 27); await wait(300); if (await ev(`!!document.querySelector('.dlgOver')`)) { await key('Enter', 'Enter', 13); await wait(300); } }   // com mudanças, o Esc pergunta: Enter confirma
 check('Esc fecha a Saída avançada cancelando', !await ev(`${P}.ao.open`) && await manual() === 0, `open=${await ev(`${P}.ao.open`)} manual=${await manual()}`);
 
 // volta ao estado de antes (fechando as janelas de saída que as telas de teste abriram, para a próxima suíte começar limpa)

@@ -13,7 +13,7 @@ export class Menubar {
     // clicar fora fecha (a camada transparente que cobre a tela é "fora"; só os menus em si são "dentro")
     addEventListener('pointerdown', (e) => { if (this.open >= 0 && !this.root.contains(e.target) && !(this.layer && e.target !== this.layer && this.layer.contains(e.target))) this.close(); });
     addEventListener('wheel', () => { if (this.open >= 0) this.close(); }, { passive: true });
-    addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.open >= 0) { this.close(); e.stopPropagation(); } });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.open >= 0) { this.close(); e.stopImmediatePropagation(); e.preventDefault(); } });
     addEventListener('blur', () => this.close());
   }
   render() {
@@ -67,6 +67,7 @@ export class Menubar {
 }
 
 // ---------- diálogos ----------
+let teclaDoDialogo = -1;   // a tecla que fechou um diálogo não vale também como atalho do programa
 // build(body, K, redo) monta o conteúdo com o kit de propriedades; buttons: [{ label, fn, primary }]
 export function openDialog({ title, build, buttons, width = 460, cls = '' }) {
   const ov = el('div', 'dlgOver'), dlg = el('div', 'dlg ' + cls); dlg.style.width = width + 'px';
@@ -77,7 +78,7 @@ export function openDialog({ title, build, buttons, width = 460, cls = '' }) {
   const redo = () => { body.textContent = ''; build(body, K, redo); };
   redo();
   for (const b of buttons) { const bt = el('button', b.primary ? 'primary' : '', b.label); bt.type = 'button'; bt.onclick = () => { if (!b.fn || b.fn() !== false) close(); }; foot.appendChild(bt); }
-  const onKey = (e) => { if (e.key === 'Escape') { close(); e.stopPropagation(); } if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) { const p = buttons.find(b => b.primary); if (p) { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (!p.fn || p.fn() !== false) close(); } } };
+  const onKey = (e) => { if (e.key === 'Escape') { teclaDoDialogo = e.timeStamp; close(); e.stopPropagation(); } if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) { teclaDoDialogo = e.timeStamp; const a = document.activeElement; if (a && a.tagName === 'BUTTON' && foot.contains(a)) return; const p = buttons.find(b => b.primary); if (p) { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); if (!p.fn || p.fn() !== false) close(); } } };
   addEventListener('keydown', onKey, true);
   dlg.append(head, body, foot); ov.appendChild(dlg); document.body.appendChild(ov);
   ov.onpointerdown = (e) => { if (e.target === ov) close(); };
@@ -107,13 +108,16 @@ export function confirmBox(title, text) {
 
 // ---------- atalhos de teclado ----------
 // lista: [{ keys, what, fn }]; o diálogo "Atalhos → Teclado…" mostra a mesma lista que funciona
-export function installShortcuts(list) {
+// ocupado(): há um editor de tela inteira aberto por cima da grade; só os atalhos marcados com `sempre` continuam valendo
+export function installShortcuts(list, ocupado) {
   addEventListener('keydown', (e) => {
+    if (e.timeStamp === teclaDoDialogo) return;
     // campos de texto ficam com as teclas; um controle deslizante ou caixa de marcar com foco não rouba os atalhos
     const t = e.target; if (t && ((t.tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button', 'color'].includes(t.type)) || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
-    if (document.querySelector('.dlgOver')) return;
+    if (document.querySelector('.dlgOver') || document.querySelector('.menuLayer .menu')) return;
+    const tomado = !!(ocupado && ocupado());
     const combo = (e.ctrlKey ? 'Ctrl+' : '') + (e.shiftKey ? 'Shift+' : '') + (e.altKey ? 'Alt+' : '') + (e.key.length === 1 ? e.key.toUpperCase() : e.key);
-    const s = list.find(x => x.combo === combo && (!x.when || x.when()));
+    const s = list.find(x => x.combo === combo && (!x.when || x.when()) && (!tomado || x.sempre));
     if (s) { e.preventDefault(); s.fn(); }
   });
 }
