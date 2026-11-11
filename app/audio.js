@@ -115,6 +115,23 @@ export class AudioEngine {
     this.settings.source = src;
     if (src === 'mic' && !(await this.enableMic())) this.settings.source = 'comp';
   }
+  // o espectro que a engrenagem mostra vai de 20 Hz a 12 kHz em escala logarítmica; f0 e f1 (0..1) são posições nesse eixo
+  specOf(src) { const mic = (src || this.settings.source) === 'mic'; return mic ? [this.micAnalyser, this.micBuf] : [this.analyser, this.buf]; }
+  // nível (0..1, já com o ganho geral) do pedaço do espectro entre f0 e f1; o pedaço inteiro dá o mesmo que a faixa "Tudo"
+  bandLevel(src, f0, f1) {
+    const [an, buf] = this.specOf(src); if (!an || !buf) return 0;
+    const hz = this.ctx.sampleRate / an.fftSize, F = (f) => 20 * Math.pow(600, Math.max(0, Math.min(1, f)));
+    let a = Math.max(0, Math.floor(F(Math.min(f0, f1)) / hz)), b = Math.min(buf.length - 1, Math.ceil(F(Math.max(f0, f1)) / hz)); if (b < a) b = a;
+    let sum = 0; for (let i = a; i <= b; i++) sum += buf[i];
+    return sum / (b - a + 1) / 255 * this.settings.gain;
+  }
+  // n barras (0..1) do espectro, para o desenho
+  spectrum(src, n, out) {
+    const [an, buf] = this.specOf(src); out = out || new Float32Array(n); if (!an || !buf) { out.fill(0); return out; }
+    const hz = this.ctx.sampleRate / an.fftSize, F = (f) => 20 * Math.pow(600, f);
+    for (let k = 0; k < n; k++) { const a = Math.max(0, Math.floor(F(k / n) / hz)), b = Math.max(a, Math.min(buf.length - 1, Math.ceil(F((k + 1) / n) / hz) - 1)); let m = 0; for (let i = a; i <= b; i++) if (buf[i] > m) m = buf[i]; out[k] = m / 255; }
+    return out;
+  }
   // a cada quadro: lê a FFT e atualiza os níveis com ganho e queda (fallback, em unidades por segundo)
   tick(dt) {
     const g = this.settings.gain, fall = this.settings.fallback * dt;

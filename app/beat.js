@@ -37,9 +37,16 @@ export function animValue(a, B) {
   if (a.shape === 'fft') {   // reação ao som: o nível da faixa, com ganho próprio e queda (quanto o nível pode cair por segundo)
     if (a.src === 'mic') B.micWanted = true;   // quem cuida do som liga o microfone quando alguém pede
     const au = a.src && B.audioBy ? B.audioBy[a.src] : B.audio;   // a.src: 'comp' (som dos clipes) ou 'mic'; sem src, a fonte geral
-    let lv = (au ? (au[a.band || 'bass'] || 0) : 0) * (a.gain ?? 1);
-    if (a.fall > 0) { const now = performance.now(), dt = Math.min(0.2, (now - (r.t || now)) / 1000); r.t = now; lv = Math.max(lv, (r.lv || 0) - a.fall * dt); r.lv = lv; }
-    v = lo + (hi - lo) * Math.min(1, lv);
+    // a.f0/a.f1: pedaço do espectro escolhido no painel (0..1); sem eles, a faixa antiga por nome (a.band)
+    let lv = (a.f0 != null && B.audioBand ? B.audioBand(a.src, a.f0, a.f1 ?? 1) : (au ? (au[a.band || 'bass'] || 0) : 0)) * (a.gain ?? 1);
+    const now = performance.now(), dt = Math.min(0.2, (now - (r.t || now)) / 1000); r.t = now;
+    if (a.fall > 0) { lv = Math.max(lv, (r.lv || 0) - a.fall * dt); r.lv = lv; }
+    lv = Math.min(1, lv);
+    // os quatro modos do Resolume 7.28 (medidos em 2026-11-10, sondas/clip-fft.py): ▶ o valor é o nível; ◀ é o nível ao contrário;
+    // + e − o som EMPURRA o valor para a frente ou para trás (um nível de 0,5 anda meia faixa por segundo) e dá a volta
+    const m = a.fmode || 'fwd'; let f;
+    if (m === 'inc' || m === 'dec') { r.acc = (((r.acc ?? 0) + (m === 'inc' ? lv : -lv) * dt) % 1 + 1) % 1; f = r.acc; } else f = m === 'back' ? 1 - lv : lv;
+    v = lo + (hi - lo) * f;
   } else {
     // modo Timeline da engrenagem do Resolume: o ciclo dura a.secs segundos, solto do BPM; senão dura a.beats batidas. a.speed multiplica
     // o andamento e a.dir < 0 anda de trás para a frente

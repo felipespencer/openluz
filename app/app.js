@@ -104,7 +104,7 @@ const seg = new Segmenter(engine); let segErrShown = '';
 // o worker e o processo nativo do recorte sobem logo depois do programa abrir (e aquecem os modelos no DirectML), para o
 // Background Removal recortar desde o primeiro quadro em vez de ficar ~5 s sem máscara (Felipe, 2026-10-30)
 setTimeout(() => { try { seg.start(); } catch (e) { console.warn('recorte: não subiu na abertura', e); } }, 2000);
-const audio = new AudioEngine(); C.setAudioEngine(audio); state.audioSettings = audio.settings; state.bpm.audio = audio.levels; state.bpm.audioBy = { comp: audio.compLevels, mic: audio.micLevels };   // a FFT entra nas animações pelo relógio
+const audio = new AudioEngine(); C.setAudioEngine(audio); state.audioSettings = audio.settings; state.bpm.audio = audio.levels; state.bpm.audioBy = { comp: audio.compLevels, mic: audio.micLevels }; state.bpm.audioBand = (src, f0, f1) => audio.bandLevel(src, f0, f1);   // a FFT entra nas animações pelo relógio
 const monCanvas = document.createElement('canvas'); monCanvas.width = COMP_W; monCanvas.height = COMP_H;
 $('outScr').appendChild(monCanvas);
 const monCtx = monCanvas.getContext('2d');

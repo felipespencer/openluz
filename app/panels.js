@@ -105,8 +105,8 @@ export class Panels {
         { label: 'Timeline', check: !!(a && a.secs && a.shape !== 'fft'), fn: () => put(() => { holder.panim[key] = { shape: a && a.shape && a.shape !== 'fft' ? a.shape : 'saw', beats: (a && a.beats) || 4, secs: (a && a.secs) || 5, ...base() }; }) },
         { label: 'BPM Sync', check: !!(a && !a.secs && a.shape !== 'fft'), fn: () => put(() => { holder.panim[key] = { shape: forma(), beats: (a && a.beats) || 4, ...base() }; }) },
         // as duas fontes de som do Resolume: Composition FFT (o som dos clipes) e External FFT (microfone ou entrada da placa)
-        { label: 'Composition FFT', check: !!(a && a.shape === 'fft' && a.src !== 'mic'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', src: 'comp', band: (a && a.band) || 'all', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; }) },   // padrão medido contra o Resolume (sondas/fft-ajuste.py): espectro inteiro, ganho ~1,36
-        { label: 'External FFT (microfone)', check: !!(a && a.shape === 'fft' && a.src === 'mic'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', src: 'mic', band: (a && a.band) || 'all', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; const AU = this.ctx.audio; if (AU && AU.enableMic) AU.enableMic().then(ok => { if (!ok && this.ctx.toast) this.ctx.toast(AU.err || 'Sem microfone'); this.render(); }); }) },
+        { label: 'Composition FFT', check: !!(a && a.shape === 'fft' && a.src !== 'mic'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', src: 'comp', f0: (a && a.f0) ?? 0, f1: (a && a.f1) ?? 1, fmode: (a && a.fmode) || 'fwd', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; }) },   // padrão medido contra o Resolume (sondas/fft-ajuste.py): espectro inteiro, ganho ~1,36
+        { label: 'External FFT (microfone)', check: !!(a && a.shape === 'fft' && a.src === 'mic'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', src: 'mic', f0: (a && a.f0) ?? 0, f1: (a && a.f1) ?? 1, fmode: (a && a.fmode) || 'fwd', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; const AU = this.ctx.audio; if (AU && AU.enableMic) AU.enableMic().then(ok => { if (!ok && this.ctx.toast) this.ctx.toast(AU.err || 'Sem microfone'); this.render(); }); }) },
         '-',
         { label: 'Presets', sub: () => SHAPES.filter(([k]) => k !== 'fft').map(([k, t]) => ({ label: t, check: !!(a && a.shape === k), fn: () => put(() => { holder.panim[key] = { beats: (a && a.beats) || 4, secs: a && a.shape !== 'fft' ? a.secs : undefined, ...base(), shape: k }; }) })) },
       ], r.left, r.bottom + 2);
@@ -134,7 +134,7 @@ export class Panels {
     const X = (f) => 'calc(6px + (100% - 12px) * ' + f + ')';
     let meter = null;
     const place = () => { const f0 = fr(a.min), f1 = fr(a.max); range.style.left = X(Math.min(f0, f1)); range.style.width = 'calc((100% - 12px) * ' + Math.abs(f1 - f0) + ')'; hin.style.left = X(f0); hout.style.left = X(f1); hin.title = 'Mínimo ' + fmt(a.min); hout.title = 'Máximo ' + fmt(a.max);
-      head.style.left = X(fr(animValue(a, B))); if (meter) { const au = a.src && B.audioBy ? B.audioBy[a.src] : B.audio; meter.style.width = Math.round(Math.min(1, (au ? (au[a.band || 'bass'] || 0) : 0) * (a.gain ?? 1)) * 100) + '%'; } };
+      head.style.left = X(fr(animValue(a, B))); if (meter) { const au = a.src && B.audioBy ? B.audioBy[a.src] : B.audio, lv = a.f0 != null && B.audioBand ? B.audioBand(a.src, a.f0, a.f1 ?? 1) : (au ? (au[a.band || 'bass'] || 0) : 0); meter.style.width = Math.round(Math.min(1, lv * (a.gain ?? 1)) * 100) + '%'; } };
     bar.onpointerdown = (e) => {
       if (e.button !== 0) return; e.preventDefault(); bar.setPointerCapture(e.pointerId); this.pushUndo();
       const r = bar.getBoundingClientRect(), val = (ev) => { const f = Math.max(0, Math.min(1, (ev.clientX - r.left - 6) / Math.max(1, r.width - 12))); return Math.round((o.min + f * span) / stp) * stp; };
@@ -146,15 +146,37 @@ export class Panels {
     const btn = (k, title, on, fn, svg) => { const b = el('button', 'ib' + (on ? ' on' : '')); b.type = 'button'; b.innerHTML = svg; b.dataset.k = k; b.title = title; b.onclick = (e) => { e.stopPropagation(); chg(fn); }; return b; };
     const sel = (k, title, opts, cur, set) => { const sl = el('select', 'asel'); sl.dataset.k = k; sl.title = title; for (const [val, tx] of opts) { const op = el('option', '', tx); op.value = val; sl.appendChild(op); } sl.value = cur; sl.onchange = () => chg(() => set(sl.value)); return sl; };
     if (fft) {
-      const mw = el('div', 'ameter'); meter = el('i'); mw.appendChild(meter); mw.title = 'Nível da faixa agora (já com o ganho)';
-      const AU = this.ctx.audio, falta = a.src === 'mic' && AU && !AU.micAnalyser;
-      ctl.append(sel('a-fonte', 'De onde vem o som: os clipes da composição ou o microfone / entrada da placa', [['comp', 'Composição'], ['mic', 'Microfone']], a.src || (AU && AU.settings.source) || 'comp', v => { a.src = v; if (v === 'mic' && AU && AU.enableMic) AU.enableMic().then(() => this.render()); }), sel('a-faixa', 'Faixa: qual parte do som move o valor', BANDS, a.band || 'bass', v => { a.band = v; }), mw);
+      // painel de FFT como o do Resolume: ◀ ▶ − + (modos), ▾ abre o espectro com L M H e a faixa por arrasto, medidor do nível
+      const mw = el('div', 'ameter'); meter = el('i'); mw.appendChild(meter); mw.title = 'Nível do pedaço escolhido agora (já com o ganho)';
+      const AU = this.ctx.audio, falta = a.src === 'mic' && AU && !AU.micAnalyser, fm = a.fmode || 'fwd';
+      const T = { minus: '<svg viewBox="0 0 16 16"><path d="M3 7h10v2H3z"/></svg>', plus: '<svg viewBox="0 0 16 16"><path d="M7 3h2v4h4v2H9v4H7V9H3V7h4z"/></svg>', down: '<svg viewBox="0 0 16 16"><path d="M3 5.500h10L8 11.500z"/></svg>', right: '<svg viewBox="0 0 16 16"><path d="M5.500 3v10l6-5z"/></svg>' };
+      ctl.append(btn('f◀', 'Ao contrário: som forte leva o valor para o mínimo', fm === 'back', () => { a.fmode = 'back'; }, I.back), btn('f▶', 'Direto: som forte leva o valor para o máximo', fm === 'fwd', () => { a.fmode = 'fwd'; }, I.fwd),
+        btn('f−', 'O som empurra o valor para trás, dando a volta', fm === 'dec', () => { a.fmode = 'dec'; }, T.minus), btn('f+', 'O som empurra o valor para a frente, dando a volta', fm === 'inc', () => { a.fmode = 'inc'; }, T.plus));
+      const tg = el('button', 'ib tgs'); tg.type = 'button'; tg.dataset.k = 'f▾'; tg.title = a.spec ? 'Esconder o espectro' : 'Mostrar o espectro e escolher o pedaço do som'; tg.innerHTML = a.spec ? T.down : T.right; tg.onclick = (e) => { e.stopPropagation(); chg(() => { a.spec = !a.spec; }); }; ctl.appendChild(tg);
+      ctl.append(sel('a-fonte', 'De onde vem o som: os clipes da composição ou o microfone / entrada da placa', [['comp', 'Composição'], ['mic', 'Microfone']], a.src || (AU && AU.settings.source) || 'comp', v => { a.src = v; if (v === 'mic' && AU && AU.enableMic) AU.enableMic().then(() => this.render()); }), mw);
       if (falta) { const av = el('span', 'aerr', AU.err || 'ligando o microfone…'); ctl.appendChild(av); }
+      if (a.spec) {
+        const sp = el('div', 'aspec'), lmh = el('div', 'almh'), cv = el('canvas'), rb = el('div', 'abar spec'), rr = el('div', 'range'), r0 = el('div', 'hnd in'), r1 = el('div', 'hnd out'); cv.width = 256; cv.height = 28; rb.append(rr, r0, r1);
+        const f0 = () => a.f0 ?? 0, f1 = () => a.f1 ?? 1, perto = (x, y) => Math.abs(f0() - x) < 0.01 && Math.abs(f1() - y) < 0.01;
+        // L, M e H do Resolume, medidos na barra deles: 0–36,5 %, 32–68 % e 63,5–100 % do espectro
+        for (const [tx, x, y, tt] of [['L', 0, 0.365, 'Graves'], ['M', 0.32, 0.68, 'Médios'], ['H', 0.635, 1, 'Agudos']]) { const b = el('button', perto(x, y) ? 'on' : '', tx); b.type = 'button'; b.dataset.k = 'f' + tx; b.title = tt; b.onclick = (e) => { e.stopPropagation(); chg(() => { a.f0 = x; a.f1 = y; delete a.band; }); }; lmh.appendChild(b); }
+        const bars = new Float32Array(64), g2 = cv.getContext('2d');
+        const pr = () => { rr.style.left = X(f0()); rr.style.width = 'calc((100% - 12px) * ' + Math.max(0, f1() - f0()) + ')'; r0.style.left = X(f0()); r1.style.left = X(f1()); };
+        const desenha = () => { if (!AU || !AU.spectrum) return; AU.spectrum(a.src, 64, bars); g2.clearRect(0, 0, 256, 28); for (let k = 0; k < 64; k++) { const dentro = k / 64 >= f0() - 0.008 && (k + 1) / 64 <= f1() + 0.008, h = Math.max(1, Math.min(1, bars[k] * (AU.settings.gain || 1) * (a.gain ?? 1)) * 28); g2.fillStyle = dentro ? '#7dffd6' : '#3f6f62'; g2.fillRect(k * 4, 28 - h, 3, h); } };
+        rb.onpointerdown = (e) => {
+          if (e.button !== 0) return; e.preventDefault(); rb.setPointerCapture(e.pointerId); this.pushUndo();
+          const q = rb.getBoundingClientRect(), fx = (ev) => Math.max(0, Math.min(1, (ev.clientX - q.left - 6) / Math.max(1, q.width - 12)));
+          const v0 = fx(e), what = e.target === r0 ? 0 : e.target === r1 ? 1 : (Math.abs(v0 - f0()) <= Math.abs(v0 - f1()) ? 0 : 1);
+          const at = (ev) => { const v = fx(ev); if (what === 0) a.f0 = Math.min(v, f1() - 0.02); else a.f1 = Math.max(v, f0() + 0.02); if (a.f0 == null) a.f0 = 0; if (a.f1 == null) a.f1 = 1; delete a.band; pr(); };
+          at(e); rb.onpointermove = (ev) => { if (rb.hasPointerCapture(ev.pointerId)) at(ev); }; rb.onpointerup = () => { rb.onpointermove = null; rb.onpointerup = null; if (after) after(); this.c.onChange(); this.render(); };
+        };
+        const col = el('div', 'acol'); col.append(cv, rb); sp.append(lmh, col); box.appendChild(sp); pr(); desenha(); (this.animTicks || (this.animTicks = [])).push(desenha);
+      }
     } else {
       ctl.append(btn('a◀', 'Anda de trás para a frente', !a.paused && a.dir < 0, () => { a.dir = -1; a.paused = false; }, I.back), btn('a‖', 'Segura o valor onde está', !!a.paused, () => { a.paused = true; }, I.pause), btn('a▶', 'Anda para a frente', !a.paused && !(a.dir < 0), () => { a.dir = 1; a.paused = false; }, I.fwd),
         sel('a-forma', 'Forma: como o valor anda a cada ciclo (os presets de animação do Resolume)', SHAPES.filter(([k]) => k !== 'fft'), a.shape, v => { a.shape = v; }));
     }
-    box.append(bar, ctl); P.appendChild(box); place(); (this.animTicks || (this.animTicks = [])).push(place);
+    box.prepend(bar, ctl); P.appendChild(box); place(); (this.animTicks || (this.animTicks = [])).push(place);
     const half = (rowEl, get, set, lo) => { for (const [tx, k] of [['/2', 0.5], ['×2', 2]]) { const b = el('button', 'mini', tx); b.type = 'button'; b.dataset.k = 'a' + tx; b.onclick = (e) => { e.stopPropagation(); chg(() => set(Math.max(lo, get() * k))); }; rowEl.querySelector('.pv').appendChild(b); } return rowEl; };
     if (fft) {
       P.appendChild(this.pnum('· Ganho', 'Ganho|Multiplica o nível do som antes de mover o valor.', a.gain ?? 1, { min: 0, max: 8, step: 0.1, dec: 1, unit: 'x', bar: true, reset: 1 }, v => { a.gain = v; }));

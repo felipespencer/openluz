@@ -464,6 +464,9 @@ body{ grid-template-rows:30px minmax(0,1fr) 5px var(--botH); }
 .rprops .actl{ display:flex; align-items:center; gap:6px; padding-top:5px; }
 .rprops .actl .ib{ width:22px; height:20px; padding:0; border:0; border-radius:2px; background:none; color:#e6e6e6; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; } .rprops .actl .ib svg{ width:11px; height:11px; fill:currentColor; } .rprops .actl .ib:hover{ background:#2d2d2d; } .rprops .actl .ib.on{ background:#7dffd6; color:#0b0b0d; }
 .rprops .actl .asel{ height:20px; min-width:0; flex:0 1 150px; margin-left:6px; } .rprops .actl .asel + .asel{ margin-left:0; } .rprops .actl .aerr{ flex:none; font-size:10px; color:#e0a060; } .rprops .actl .ameter{ flex:1; height:8px; background:#262626; } .rprops .actl .ameter i{ display:block; height:100%; width:0; background:#4f9a84; }
+.rprops .actl .ib.tgs{ color:#9a9a9a; } .rprops .aspec{ display:flex; gap:8px; align-items:flex-end; padding-top:5px; }
+.rprops .aspec .almh{ display:flex; background:#2e2e2e; border-radius:3px; overflow:hidden; flex:none; } .rprops .aspec .almh button{ width:22px; height:18px; border:0; padding:0; background:none; color:var(--rt); font:inherit; font-size:11px; cursor:pointer; } .rprops .aspec .almh button.on{ background:#7dffd6; color:#0b0b0d; }
+.rprops .aspec .acol{ flex:1; min-width:0; } .rprops .aspec canvas{ display:block; width:calc(100% - 12px); margin:0 6px; height:28px; background:#262626; image-rendering:pixelated; } .rprops .abar.spec{ height:10px; }
 .rprops .folded{ display:none !important; }
 .rprops .phead.foldable{ cursor:pointer; } .rprops .phead .tri{ flex:0 0 auto; width:0; height:0; border-left:6px solid #8a8a8a; border-top:4px solid transparent; border-bottom:4px solid transparent; margin:0 1px 0 1px; }
 .rprops .phead .tri.open{ border-left:4px solid transparent; border-right:4px solid transparent; border-top:6px solid #8a8a8a; border-bottom:0; margin:0; }
