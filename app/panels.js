@@ -344,10 +344,12 @@ export class Panels {
     const fmtR = (s) => { s = Math.max(0, s || 0); return (dur >= 60 ? String(Math.floor(s / 60)).padStart(2, '0') + ':' : '') + (dur >= 60 ? s % 60 : s).toFixed(3).padStart(6, '0'); };
     const step = 1 / ((clip.player && clip.player.fps) || 30);
     let bub = null;
-    const place = () => { const f0 = t.in / dur, f1 = (t.out || dur) / dur, fh = Math.max(0, Math.min(1, v.currentTime / dur)); range.style.left = X(f0); range.style.width = 'calc((100% - 12px) * ' + Math.max(0, f1 - f0) + ')'; hin.style.left = X(f0); hout.style.left = X(f1); head.style.left = X(fh);
+    const place = () => { const f0 = t.in / dur, f1 = (t.out || dur) / dur, agora = Math.max(t.in, Math.min(t.out || dur, v.currentTime)), fh = Math.max(0, Math.min(1, agora / dur));
+      if (!t.playing && Math.abs(v.currentTime - agora) > 0.03) seekClip(clip, agora);   // parado fora do trecho (composição antiga, IN/OUT mudados por fora): volta para dentro
+      range.style.left = X(f0); range.style.width = 'calc((100% - 12px) * ' + Math.max(0, f1 - f0) + ')'; hin.style.left = X(f0); hout.style.left = X(f1); head.style.left = X(fh);
       cueMarks.forEach((m, i) => { const c = (t.cues || [])[i]; m.hidden = c == null; if (c != null) { m.style.left = X(Math.max(0, Math.min(1, c / dur))); m.title = 'Cue ' + (i + 1) + ' · ' + fmtR(c); } });
-      wav1.style.clipPath = 'inset(0 ' + ((1 - f1) * 100).toFixed(3) + '% 0 ' + (f0 * 100).toFixed(3) + '%)'; hin.title = 'Entrada ' + fmtR(t.in); hout.title = 'Saída ' + fmtR(t.out || dur); txt.textContent = fmtR(v.currentTime);
-      if (bub) { bub.style.left = 'clamp(52px, ' + X(fh) + ', calc(100% - 52px))'; bub.querySelector('b').textContent = fmtR(v.currentTime); } };
+      wav1.style.clipPath = 'inset(0 ' + ((1 - f1) * 100).toFixed(3) + '% 0 ' + (f0 * 100).toFixed(3) + '%)'; hin.title = 'Entrada ' + fmtR(t.in); hout.title = 'Saída ' + fmtR(t.out || dur); txt.textContent = fmtR(agora);
+      if (bub) { bub.style.left = 'clamp(52px, ' + X(fh) + ', calc(100% - 52px))'; bub.querySelector('b').textContent = fmtR(agora); } };
     // como no Resolume: se o IN ou o OUT passam pela agulha, ela vem junto (é empurrada para a ponta); fora isso fica onde está
     const clampHead = () => { const lo = t.in, hi = t.out || dur, cur = v.currentTime; if (cur < lo) seekClip(clip, lo); else if (cur > hi) seekClip(clip, hi); };
     const openBub = () => { if (bub) return; clip._bub = true; bub = el('div', 'tbub'); const mk = (k, tx, help, fn) => { const b = el('button', '', tx); b.type = 'button'; b.dataset.k = k; b.title = help; b.onclick = (e) => { e.stopPropagation(); fn(); place(); }; return b; };

@@ -59,6 +59,23 @@ if (tl) {
   await arrasta(0.7, 0.9, tl[1] + tl[3] - 4); let io = await ev(`(() => ({ in: ${clip}.tr.in, out: ${clip}.tr.out }))()`); check('arrastar na barra perto do fim leva a saída', io.in === 0 && Math.abs(io.out - 10.8) < 0.3, JSON.stringify(io));
   await arrasta(0.2, 0.1, tl[1] + tl[3] - 4); io = await ev(`(() => ({ in: ${clip}.tr.in, out: ${clip}.tr.out }))()`); check('arrastar na barra perto do começo leva a entrada', Math.abs(io.in - 1.2) < 0.3 && Math.abs(io.out - 10.8) < 0.3, JSON.stringify(io));
   await ev(`(() => { const c = ${clip}; c.tr.in = 0; c.tr.out = c.dur; ${P}.panels.render(); return 1; })()`);
+  // a agulha nunca sai do trecho entre a entrada e a saída (pedido de 2026-11-11): nem puxando a agulha, nem puxando um triângulo, nem pelo cue
+  { const ag = () => ev(`(() => { const c = ${clip}, tlE = document.querySelector('#clipPan .timeline'), q = (s) => tlE.querySelector(s).getBoundingClientRect(); const h = tlE.querySelector('.thead, .head, [class*=head]'); return { t: c.el.currentTime, in: c.tr.in, out: c.tr.out }; })()`);
+    await ev(`(() => { const c = ${clip}; c.tr.playing = false; c.el.pause(); c.tr.in = 3; c.tr.out = 8; c.el.currentTime = 5; ${P}.panels.render(); return 1; })()`); await wait(300);
+    await arrasta(5 / 12, 0.97, tl[1] + 28); let a1 = await ag(); check('puxar a agulha para depois da saída: ela para na saída', Math.abs(a1.t - 8) < 0.06, JSON.stringify(a1));
+    await arrasta(8 / 12, 0.02, tl[1] + 28); a1 = await ag(); check('puxar a agulha para antes da entrada: ela para na entrada', Math.abs(a1.t - 3) < 0.06, JSON.stringify(a1));
+    await ev(`(() => { ${clip}.el.currentTime = 4; ${P}.panels.render(); return 1; })()`); await wait(300);
+    await arrasta(3 / 12, 6 / 12, tl[1] + tl[3] - 4); a1 = await ag(); check('puxar o triângulo da entrada por cima da agulha: a agulha vai junto, nunca fica antes da entrada', a1.in > 5.5 && a1.t >= a1.in - 0.02, JSON.stringify(a1));
+    await ev(`(() => { ${clip}.el.currentTime = 7.5; ${P}.panels.render(); return 1; })()`); await wait(300);
+    await arrasta(8 / 12, 6.5 / 12, tl[1] + tl[3] - 4); a1 = await ag(); check('puxar o triângulo da saída por cima da agulha: a agulha vai junto, nunca fica depois da saída', a1.out < 7 && a1.t <= a1.out + 0.02 && a1.t >= a1.in - 0.02, JSON.stringify(a1));
+    await ev(`(() => { const c = ${clip}; c.tr.in = 3; c.tr.out = 8; c.el.currentTime = 11; ${P}.panels.render(); return 1; })()`); await wait(500);
+    a1 = await ag(); check('agulha deixada fora do trecho (por fora do painel): volta para dentro sozinha', a1.t <= 8.03 && a1.t >= 2.97, JSON.stringify(a1));
+    await ev(`(() => { const c = ${clip}; c.tr.cues = [10, null, null, null, null, null]; ${P}.C.seekClip(c, c.tr.cues[0]); return 1; })()`); await wait(200);
+    a1 = await ag(); check('pular para um cue gravado fora do trecho: para na ponta', Math.abs(a1.t - 8) < 0.06, JSON.stringify(a1));
+    await ev(`(() => { const c = ${clip}; c.tr.playing = true; c.el.play(); return 1; })()`);
+    let fora = 0, maxT = 0; for (let k = 0; k < 40; k++) { const x = await ev(`(() => { const tlE = document.querySelector('#clipPan .timeline'); const m = /(\d+)[.,](\d+)/.exec(tlE.textContent) ; return { t: ${clip}.el.currentTime, txt: tlE.querySelector('.ttxt').textContent }; })()`); const n = parseFloat(String(x.txt).replace(',', '.')); if (!isNaN(n)) { maxT = Math.max(maxT, n); if (n > 8.001 || n < 2.999) fora++; } await wait(60); }
+    check('tocando em laço entre a entrada e a saída: o tempo mostrado na linha do tempo nunca passa das pontas', fora === 0 && maxT > 3, 'fora ' + fora + ' vez(es); maior tempo mostrado ' + maxT);
+    await ev(`(() => { const c = ${clip}; c.tr.playing = false; c.el.pause(); c.tr.cues = [null, null, null, null, null, null]; c.tr.in = 0; c.tr.out = c.dur; ${P}.panels.render(); return 1; })()`); await wait(200); }
   const onda = await ev(`(() => { const w = document.querySelector('#clipPan .timeline .wave.on'); return w ? getComputedStyle(w).backgroundImage.slice(0, 20) : null; })()`); console.log('      onda na linha do tempo:', onda);
 }
 // Cue Points: a setinha grava, o botão pula, botão vazio grava, botão direito apaga

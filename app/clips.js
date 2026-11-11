@@ -299,7 +299,9 @@ export function playClip(c, dir, speedMul = 1) {
   if (dir > 0) { setRate(c, speedMul); v.play().catch(() => { }); } else v.pause();
 }
 export function pauseClip(c) { c.tr.playing = false; mediaOf(c).pause(); }
-export function seekClip(c, s) { try { mediaOf(c).currentTime = Math.max(0, Math.min(c.dur || 0, s)); } catch { } }
+// trecho tocável do clipe: da entrada (IN) à saída (OUT); a agulha nunca sai dele
+export function faixaDe(c) { const d = c.dur || 0, t = c.tr || {}, lo = Math.max(0, Math.min(d, t.in || 0)); return [lo, Math.max(lo, Math.min(d, t.out || d))]; }
+export function seekClip(c, s) { try { const [lo, hi] = faixaDe(c); mediaOf(c).currentTime = Math.max(lo, Math.min(hi, s)); } catch { } }
 // áudio: volume, pan e mudo (pan por WebAudio, ligado só quando sai do centro)
 let actx = null;
 export function applyAudio(c) {
