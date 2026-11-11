@@ -21,7 +21,9 @@ status = "in_progress"
 plans_completed = 4
 
 [loop]
-position = "IDLE"
+position = "PLAN"
+plan = "12-01"
+plan_path = "phases/12-revisao-geral/12-01-PLAN.md"
 
 [satellite]
 groom = true
@@ -29,4 +31,4 @@ groom = true
 [stats]
 total_plans = 10
 total_phases = 0
-last_activity = "2026-11-05T03:10:00-03:00"
+last_activity = "2026-11-10T19:25:34-03:00"
