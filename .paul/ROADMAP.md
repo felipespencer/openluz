@@ -19,6 +19,28 @@ raiz continua sendo a lista detalhada do que veio do Resolume e do que está fei
 Status: In progress
 Phases: 1 of 8 complete
 
+### Corte da v0.2.0 (2026-11-11)
+
+O Felipe, cansado de o programa nunca acabar ("tou meio cansado de ficar so tendo ideias e ele nunca acaba"), perguntou
+o que falta para dizer que está pronto. Propus o corte abaixo e ele respondeu "Toca a ficha!" — leitura minha: topou.
+
+**A v0.2.0 é o OpenLuz para Windows, estável, com o que já existe funcionando.** Fica pronta quando:
+
+1. Os seis lotes de consertos graves da Fase 12 estiverem feitos (12-02 a 12-07).
+2. As três pendências dele estiverem fechadas com sim ou não: Higgsfield (09-03, colar a chave e gerar uma imagem),
+   Modelos 3D (10-01, aprovado ou não) e Slice Delay/Strokes (02-08: se ele não for arrastar as slices no Resolume
+   agora, os dois saem da v0.2.0).
+3. Ele fizer **um show de verdade só com o OpenLuz** (a meta do PROJECT.md). Em 2026-11-11 ele contou que já fez um show ("Fiz um show sim!! No dia da vitoria de lula"); falta confirmar se foi só com o OpenLuz.
+4. A v0.2.0 for publicada no GitHub sem o "beta", com o README em dia.
+
+**Fica para a v0.3 em diante** (não entra mais nada disso antes da v0.2.0): celular em várias fontes e plugins (Fase 3),
+versão web (5) e Android (6), os efeitos de profundidade e o resto da lista do Resolume (02-09 em diante), IA do
+Automape em fotos novas (01-04, 01-05), laser e APC40 no equipamento (Fase 4, a não ser que o show dependa deles),
+domo, modo Leve, reação ao som completa, e as melhorias de estrutura da revisão (identidade estável de camada e clipe,
+Prévia separada do ar, os 30 quadros, bateria única) junto com o resto da lista de achados do 12-01.
+
+**Regra até lá:** ideia nova vai para a lista da v0.3, não para o código.
+
 ## Phases
 
 **Phase Numbering:**
@@ -224,8 +246,8 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [ ] 12-03: salvar, abrir e desfazer (13, 14, 15, 17, 18, 19, 20, 50) — aplicado em 2026-11-11, na beta.69 instalada; falta o aprovado
 - [ ] 12-04: teclas e editores que descartam (30, 31, 32, 33, 69, 70) — aplicado em 2026-11-11, na beta.69 instalada; falta o aprovado
 - [ ] 12-05: recorte, webcam e nativos (60, 61, 62, 64; o 63 foi retirado: falso alarme do webcam-check rodado sem a imagem de prova) — aplicado em 2026-11-11, na beta.70 instalada; falta o aprovado
-- [ ] 12-06: rede e sites (46, 47)
-- [ ] 12-07: gravação e Preparar (6, 7, 71)
+- [ ] 12-06: rede e sites (46, 47, 54) — aplicado em 2026-11-11, na 0.2.0 instalada; falta o aprovado
+- [ ] 12-07: gravação e Preparar (6, 7, 71) — aplicado em 2026-11-11, na 0.2.0 instalada; falta o aprovado
 
 ## Ideias para um marco futuro
 
