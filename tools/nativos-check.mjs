@@ -69,9 +69,11 @@ else {
   const pidSeg = antesSeg.length === 1 ? antesSeg : nativos().filter(p => !antesSeg.includes(p));
 
   // ---------- 60: a reserva (WebGPU) sozinha entrega máscaras ----------
-  await ev(`(() => { const s = ${P}.seg; s.native = false; s.runs = 0; return 1; })()`); await wait(8000);
-  const sR = await seg();
-  check('só com a reserva (WebGPU), em 8 s (contando a carga do modelo): as máscaras continuam chegando (10 ou mais; antes do conserto vinha 1)', sR.runs >= 10, sR.runs + ' máscara(s); ' + sR.err);
+  // a primeira vez carrega o modelo na WebGPU (uns 7 s nesta máquina): espera a carga e mede o ritmo depois
+  await ev(`(() => { const s = ${P}.seg; s.native = false; s.runs = 0; return 1; })()`);
+  const t0R = Date.now(); const carregou = await ate(`${P}.seg.runs >= 3`, 30000); const carga = ((Date.now() - t0R) / 1000).toFixed(1);
+  const r0 = (await seg()).runs; await wait(4000); const sR = await seg();
+  check('só com a reserva (WebGPU): depois da carga do modelo, as máscaras chegam em bom ritmo (20 ou mais em 4 s; antes do conserto vinha 1 no total)', carregou && sR.runs - r0 >= 20, (sR.runs - r0) + ' máscara(s) em 4 s, carga de ' + carga + ' s; ' + sR.err);
   await ev(`(() => { ${P}.seg.native = true; return 1; })()`); await wait(1500);
 
   // ---------- 61 e 62: o processo nativo morre e o recorte segue ----------

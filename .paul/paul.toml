@@ -22,13 +22,13 @@ plans_completed = 4
 
 [loop]
 position = "APPLY"
-plan = "12-04"
-plan_path = "phases/12-revisao-geral/12-04-PLAN.md"
+plan = "12-05"
+plan_path = "phases/12-revisao-geral/12-05-PLAN.md"
 
 [satellite]
 groom = true
 
 [stats]
-total_plans = 13
+total_plans = 14
 total_phases = 0
-last_activity = "2026-11-11T15:50:00-03:00"
+last_activity = "2026-11-11T17:40:00-03:00"
