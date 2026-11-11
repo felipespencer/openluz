@@ -10,16 +10,26 @@ OpenLuz é um software livre e de código aberto pra VJ, performance visual ao v
 
 Vai ter três versões: **web** (abre no navegador), **Windows** e **Android**, todas com o mesmo motor por baixo.
 
-> **Status:** a versão **Windows** já funciona (0.1.0, instalador MSI e zip, gerados com `npx electron-builder --win msi zip --x64`). Web e Android vêm em seguida, do mesmo código.
+> **Status:** a versão **Windows** (10 e 11, 64 bits) está na **0.2.0**. Web e Android vêm depois, do mesmo código.
 
-### O que vai ter
+### O que já tem (Windows)
 
-- Camadas de conteúdo: texto, imagem, vídeo, sequência de imagens, desenho ao vivo, formas, câmera e links
-- Sintetizadores de vídeo em tempo real (shaders WebGL), com efeitos de realimentação
-- Efeitos de câmera ao vivo
-- Projeção mapeada com corner pin, malha deformável e arestas curvas
-- Controle e saída separados: o painel fica no celular ou no computador e o projetor recebe só a imagem limpa
-- Funciona offline
+- **Grade de clipes** no jeito do Resolume: camadas, colunas, decks, grupos, crossfader, BPM com Beat Snap, autopilot, transporte do clipe com entrada, saída e cue points
+- **Fontes:** vídeo, imagem, GIF, texto (com editor de cartaz), geradores, câmera, captura de tela, de janela e de página web, YouTube, celular como câmera pela rede local, modelos 3D (GLB, OBJ, FBX, STL e outros)
+- **Efeitos e misturas** no modelo do Resolume, aplicados no clipe, na camada ou na composição, com animação por batida, tempo ou som
+- **Tirar o fundo** de pessoas com modelos que rodam no próprio computador, e **Seguir rosto** no clipe de câmera
+- **Saída avançada:** uma tela por projetor, slices, quatro cantos, malha com bezier, máscaras, emenda entre projetores (soft edge) por degradê, presets
+- **Automape:** assistente que fatia uma foto da cena em slices e máscaras (nesta versão com fotos de exemplo; em foto nova o fatiamento é à mão)
+- **Webcam virtual:** a composição aparece como câmera no Meet e afins (precisa do [OBS](https://obsproject.com) instalado)
+- **Gravação** da composição ou de uma tela, direto para o disco
+- **Atalhos de teclado** configuráveis
+- Funciona offline. Os recursos de IA generativa são opcionais e usam serviços de terceiros, com a sua chave
+
+Ainda **em teste com o equipamento**: laser (LaserCube por Wi-Fi) e a controladora APC40 mkII.
+
+### O que vem depois
+
+Celular como controle (pads, sliders, desenho), plugins, versão web e Android, mais efeitos igualados ao Resolume. O rumo está em [ROADMAP.md](ROADMAP.md).
 
 ### De onde vem
 
@@ -40,9 +50,14 @@ npm install
 npm start
 ```
 
-O código vem do projecionista-pc (Electron): grade de clipes por camada, mistura em WebGL, saída avançada
-no formato do Resolume, laser (LaserCube por Wi-Fi), APC40, gravação. Como usar: [COMO-USAR.md](COMO-USAR.md).
-Rumo e pendências: [ROADMAP.md](ROADMAP.md).
+O programa é feito em Electron, sem bundler: `main.js` é o processo principal e a pasta `app/` é a interface e o motor
+(WebGL2). Como usar: [COMO-USAR.md](COMO-USAR.md). O instalador sai com `npx electron-builder --win msi zip --x64`.
+
+### Testar antes de mexer
+
+O projeto tem baterias que usam o programa com mouse e teclado de verdade (pelo protocolo de depuração do Chromium).
+Abra o programa com `npx electron . --remote-debugging-port=9333` e rode, por exemplo, `node tools/trava-check.mjs` ou
+`node tools/salvar-check.mjs`. Cada arquivo `tools/*-check.mjs` explica no começo o que confere.
 
 ### Contribuir
 
@@ -64,16 +79,26 @@ OpenLuz is a free and open source tool for VJing, live visual performance and pr
 
 It will ship in three versions: **web** (runs in the browser), **Windows** and **Android**, all sharing the same engine underneath.
 
-> **Status:** the **Windows** version already works (0.1.0, MSI installer and zip, built with `npx electron-builder --win msi zip --x64`). Web and Android come next, from the same code.
+> **Status:** the **Windows** version (10 and 11, 64-bit) is at **0.2.0**. Web and Android come later, from the same code.
 
-### Planned features
+### What it does today (Windows)
 
-- Content layers: text, image, video, image sequences, live drawing, shapes, camera and links
-- Real-time video synthesizers (WebGL shaders), including feedback effects
-- Live camera effects
-- Projection mapping with corner pin, deformable mesh and curved edges
-- Separate control and output: the panel stays on your phone or computer and the projector only gets the clean image
-- Works offline
+- **Clip grid** in the Resolume style: layers, columns, decks, groups, crossfader, BPM with Beat Snap, autopilot, clip transport with in, out and cue points
+- **Sources:** video, image, GIF, text (with a poster-style editor), generators, camera, screen, window and web page capture, YouTube, phone as a camera over the local network, 3D models (GLB, OBJ, FBX, STL and more)
+- **Effects and blend modes** modelled on Resolume, on the clip, the layer or the composition, animated by beat, time or sound
+- **Background removal** for people, with models that run on your own computer, and **face tracking** on camera clips
+- **Advanced output:** one screen per projector, slices, corner pin, bezier mesh, masks, gradient-based edge blending between projectors, presets
+- **Automape:** a wizard that slices a photo of the scene into slices and masks (in this version with sample photos; on a new photo you slice by hand)
+- **Virtual webcam:** the composition shows up as a camera in Meet and similar apps (needs [OBS](https://obsproject.com) installed)
+- **Recording** of the composition or of a screen, straight to disk
+- Configurable **keyboard shortcuts**
+- Works offline. Generative AI features are optional and use third-party services with your own key
+
+Still **being tested on real hardware**: laser (LaserCube over Wi-Fi) and the APC40 mkII controller.
+
+### What comes next
+
+Phone as a controller (pads, sliders, drawing), plugins, web and Android versions, more effects matched to Resolume. The roadmap (in Portuguese) is in [ROADMAP.md](ROADMAP.md).
 
 ### Background
 
@@ -94,9 +119,15 @@ npm install
 npm start
 ```
 
-The code comes from projecionista-pc (Electron): clip grid per layer, WebGL mixing, advanced output in the
-Resolume format, laser (LaserCube over Wi-Fi), APC40, recording. Usage (Portuguese): [COMO-USAR.md](COMO-USAR.md).
-Roadmap (Portuguese): [ROADMAP.md](ROADMAP.md).
+The app is built on Electron with no bundler: `main.js` is the main process and the `app/` folder holds the interface
+and the engine (WebGL2). Usage (Portuguese): [COMO-USAR.md](COMO-USAR.md). The installer is built with
+`npx electron-builder --win msi zip --x64`.
+
+### Test before you change things
+
+The project ships test suites that drive the app with real mouse and keyboard events (through the Chromium debugging
+protocol). Start the app with `npx electron . --remote-debugging-port=9333` and run, for instance,
+`node tools/trava-check.mjs` or `node tools/salvar-check.mjs`. Each `tools/*-check.mjs` file says at the top what it checks.
 
 ### Contributing
 
