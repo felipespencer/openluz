@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld('projDesktop', {
   iaImg: { espera: () => ipcRenderer.invoke('iaimg:espera'), config: () => ipcRenderer.invoke('iaimg:config'), servico: (s) => ipcRenderer.invoke('iaimg:servico', s), site: (s) => ipcRenderer.invoke('iaimg:site', s), gerar: (r) => ipcRenderer.invoke('iaimg:gerar', r) },
   localPort: () => ipcRenderer.invoke('local:port'),
   // celular como fonte: endereço para o celular abrir, ofertas WebRTC que chegam e a resposta
-  phone: { info: () => ipcRenderer.invoke('phone:info'), onOffer: (fn) => ipcRenderer.on('phone:offer', (_e, o) => fn(o)), answer: (id, sdp, erro) => ipcRenderer.invoke('phone:answer', id, sdp, erro) },
+  phone: { info: () => ipcRenderer.invoke('phone:info'), onOffer: (fn) => ipcRenderer.on('phone:offer', (_e, o) => fn(o)), answer: (id, sdp, erro) => ipcRenderer.invoke('phone:answer', id, sdp, erro), fechar: () => ipcRenderer.invoke('phone:fechar') },
   // Background Removal nativo: pede a porta ao processo principal; ela chega à página por window.postMessage (ports)
   segPort: () => { ipcRenderer.once('seg:port', (e) => { window.postMessage({ type: 'seg:port' }, '*', e.ports); }); ipcRenderer.send('seg:port'); },
   // Seguir rosto: a porta do processo do detector de rosto, do mesmo jeito que a do recorte
@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('projDesktop', {
     webShow: (key, on) => ipcRenderer.invoke('capture:web:show', key, on),   // mostra a página escondida para entrar/mexer (Esc esconde)
   },
   rec: {
+    begin: (name, dir) => ipcRenderer.invoke('rec:begin', name, dir), chunk: (id, bytes) => ipcRenderer.invoke('rec:chunk', id, bytes), end: (id) => ipcRenderer.invoke('rec:end', id),   // gravação em pedaços
     save: (name, bytes, dir) => ipcRenderer.invoke('rec:save', name, bytes, dir),
     list: (dir) => ipcRenderer.invoke('rec:list', dir),
     show: (path) => ipcRenderer.invoke('rec:show', path),

@@ -42,12 +42,20 @@ function probeMedia(clip) {
     let done = false;
     const fail = () => { if (!done) { done = true; reject(new Error('Não consegui abrir ' + clip.name)); } };
     v.addEventListener('error', fail);
-    v.addEventListener('loadeddata', () => {
+    let medindo = false;
+    v.addEventListener('loadeddata', async () => {
+      // Arquivo sem a duração escrita (o WebM das gravações do próprio programa, por exemplo): o navegador diz "infinito". Pedir um
+      // tempo absurdo faz ele andar até o fim e descobrir a duração de verdade; sem isso o clipe ficava com duração zero e não tocava.
+      if (!isFinite(v.duration)) {
+        medindo = true;
+        await new Promise((ok) => { const f = () => { if (isFinite(v.duration)) ok(); }; v.addEventListener('durationchange', f); try { v.currentTime = 1e101; } catch { ok(); } setTimeout(ok, 2500); });
+        medindo = false;
+      }
       clip.w = v.videoWidth; clip.h = v.videoHeight; clip.dur = isFinite(v.duration) ? v.duration : 0; clip.el = v; clip.tr.out = clip.dur;
       try { v.currentTime = Math.min(0.5, (clip.dur || 1) / 2); } catch { }
     });
     v.addEventListener('seeked', () => {
-      if (done) return; done = true;
+      if (done || medindo) return; done = true;
       try {
         const k = Math.min(240 / clip.w, 240 / clip.h), c = document.createElement('canvas');
         c.width = Math.max(2, Math.round(clip.w * k)); c.height = Math.max(2, Math.round(clip.h * k));
@@ -223,7 +231,7 @@ export async function phoneAnswer(offer) {
     try { const cv = document.createElement('canvas'); cv.width = 160; cv.height = Math.round(160 * c.h / c.w); cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height); c.thumb = cv.toDataURL('image/jpeg', 0.7); } catch { }
     return c;
   };
-  return { sdp: pc.localDescription.sdp, clip };
+  return { sdp: pc.localDescription.sdp, clip, pc };
 }
 // captura de tela, janela ou página web: um vídeo ligado ao stream de captura do Chromium (como a câmera).
 // spec: { srcId, name } (tela ou janela da lista) ou { url, w, h } (página renderizada numa janela escondida do programa)

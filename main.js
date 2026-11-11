@@ -266,8 +266,18 @@ app.whenReady().then(async () => {
     return net.fetch(pathToFileURL(file).toString()).then(r => p === '/yt.html' ? r : withIsolation(r));
   });
   const OK = new Set(['media', 'midi', 'midiSysex', 'fullscreen', 'window-management', 'local-fonts']);   // local-fonts: lista de fontes do Text Block
-  session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(OK.has(perm)));
-  session.defaultSession.setPermissionCheckHandler((_wc, perm) => OK.has(perm));
+  // Só as páginas do próprio programa (app://projecionista e a página do celular servida por ele, usada no teste) recebem essas
+  // permissões. Um site aberto como fonte "Página web" divide a sessão com a janela de controle: sem este filtro ele ligava a câmera
+  // e o microfone sem pergunta, e o endereço dele pode vir dentro de uma composição recebida de outra pessoa.
+  const doPrograma = (wc, origem) => {
+    let u = ''; try { u = wc && !wc.isDestroyed() ? wc.getURL() : ''; } catch { }
+    const o = String(origem || '');
+    if (u ? u.startsWith('app://projecionista/') : o.startsWith('app://projecionista')) return true;
+    const cel = 'https://127.0.0.1:' + phonePort + '/';
+    return !!phonePort && (u ? u.startsWith(cel) : (o + '/').startsWith(cel));
+  };
+  session.defaultSession.setPermissionRequestHandler((wc, perm, cb, det) => cb(OK.has(perm) && doPrograma(wc, det && det.requestingUrl)));
+  session.defaultSession.setPermissionCheckHandler((wc, perm, origem) => OK.has(perm) && doPrograma(wc, origem));
   Menu.setApplicationMenu(null);
   // cada abertura começa limpa: a versão do disco é sempre a que roda
   try { await session.defaultSession.clearCache(); } catch {}
@@ -295,9 +305,14 @@ app.whenReady().then(async () => {
     try { const sg = require('selfsigned'); const ips = lanIps(); const p = sg.generate([{ name: 'commonName', value: 'OpenLuz' }], { days: 3650, keySize: 2048, extensions: [{ name: 'subjectAltName', altNames: [...ips, '127.0.0.1'].map(ip => ({ type: 7, ip })) }] }); cert = { key: p.private, cert: p.cert, ips }; fs.writeFileSync(certFile, JSON.stringify(cert)); } catch (e) { logLine('erro', 'certificado do celular: ' + (e.message || e)); }
   }
   const phoneOffers = new Map(); let phoneSeq = 0, phonePort = 0;
+  // O servidor escuta na rede local, então qualquer aparelho no mesmo Wi-Fi o alcança. Ele só responde a quem traz a chave do
+  // momento no endereço (?k=): ela nasce quando a pessoa pede "Celular (câmera)…", vale 10 minutos e para um celular.
+  let phoneChave = '', phoneAte = 0;
+  const chaveOk = (k) => !!phoneChave && String(k || '') === phoneChave && Date.now() < phoneAte;
   if (cert) {
     const phoneSrv = https.createServer({ key: cert.key, cert: cert.cert }, (req, res) => {
       const u = new URL(req.url, 'https://x'); const p = u.pathname;
+      if (!chaveOk(u.searchParams.get('k'))) { res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ erro: 'Este endereço venceu ou não é o que o OpenLuz mostrou. Peça o endereço de novo em Fontes › Celular (câmera).' })); return; }
       if (req.method === 'GET' && (p === '/' || p === '/celular')) { fs.readFile(path.join(APP_DIR, 'celular.html'), (err, data) => { if (err) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(data); }); return; }
       if (req.method === 'POST' && p === '/celular/oferta') {
         let body = ''; req.on('data', (d) => { body += d; if (body.length > 200000) req.destroy(); });
@@ -314,8 +329,12 @@ app.whenReady().then(async () => {
   }
   // o certificado é nosso: janelas do próprio programa (teste automático) podem abrir a página do celular sem reclamar
   app.on('certificate-error', (ev, _wc, url, _err, _c, cb) => { let ok = false; try { const u = new URL(url); ok = phonePort && +u.port === phonePort && (u.hostname === '127.0.0.1' || lanIps().includes(u.hostname)); } catch { } ev.preventDefault(); cb(ok); });
-  ipcMain.handle('phone:info', () => ({ port: phonePort, ips: lanIps(), urls: lanIps().map(ip => 'https://' + ip + ':' + phonePort + '/celular') }));
-  ipcMain.handle('phone:answer', (_e, id, sdp, erro) => { const res = phoneOffers.get(id); if (!res) return false; phoneOffers.delete(id); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(sdp ? { sdp } : { erro: erro || 'recusado' })); return true; });
+  ipcMain.handle('phone:info', () => {
+    phoneChave = require('node:crypto').randomBytes(4).toString('hex').toUpperCase(); phoneAte = Date.now() + 10 * 60000;   // cada pedido de endereço troca a chave
+    return { port: phonePort, ips: lanIps(), urls: lanIps().map(ip => 'https://' + ip + ':' + phonePort + '/celular?k=' + phoneChave), minutos: 10 };
+  });
+  ipcMain.handle('phone:fechar', () => { phoneChave = ''; return true; });   // a pessoa fechou o diálogo: o endereço deixa de valer
+  ipcMain.handle('phone:answer', (_e, id, sdp, erro) => { const res = phoneOffers.get(id); if (!res) return false; phoneOffers.delete(id); if (sdp) phoneChave = ''; /* o celular entrou: a chave não serve para outro */ res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(sdp ? { sdp } : { erro: erro || 'recusado' })); return true; });
   ipcMain.handle('displays', () => displayList());
   // ---------- fonte "Captura": telas, janelas e páginas web ----------
   // a imagem chega à janela de controle por getUserMedia com chromeMediaSourceId (captura do Chromium)
@@ -328,11 +347,14 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('capture:web:open', async (e, key, url, w, h, opts) => {   // opts: só para depurar (opções extras da janela; opts.wp vai em webPreferences)
     key = String(key); w = Math.max(16, w | 0 || 1920); h = Math.max(16, h | 0 || 1080);
+    // o endereço pode vir de uma composição recebida: só http, https e página embutida (data:text/html, usada no teste automático; sem
+    // permissão de câmera nem de arquivo, é inofensiva). Nada de file:, app: ou caminho de rede.
+    if (!/^(https?:\/\/|data:text\/html[,;])/i.test(String(url))) throw new Error('a fonte Página web só abre endereços http ou https');
     let win = webPages.get(key);
     if (!win || win.isDestroyed()) {
       // a janela precisa estar num monitor para o Windows compor o conteúdo (fora da tela sai branca): fica no canto do monitor principal,
       // invisível (opacidade 0), sem foco, sem receber cliques e fora da barra de tarefas
-      const o = opts && typeof opts === 'object' ? opts : {};
+      const o = {};   // as opções extras ("só para depurar") saíram: deixavam a página pedir uma janela com nodeIntegration ou preload à escolha
       win = new BrowserWindow({ show: true, x: 0, y: 0, width: w, height: h, frame: false, skipTaskbar: true, focusable: false, resizable: false, movable: false, opacity: 0, ...o, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required', ...(o.wp || {}) } });
       win.setIgnoreMouseEvents(true); win.setOpacity(process.env.PROJ_WEB_OPACITY != null ? +process.env.PROJ_WEB_OPACITY : 0);   // PROJ_WEB_OPACITY: só para depurar a captura
       win.webContents.setAudioMuted(true);
@@ -352,8 +374,10 @@ app.whenReady().then(async () => {
   // (getUserMedia com chromeMediaSourceId de uma página derruba o processo principal: NOTREACHED)
   let nextPick = null;   // { key } (página escondida) ou { srcId } (tela/janela), escolhido logo antes do pedido
   ipcMain.handle('capture:pick', (_e, pick) => { nextPick = pick && typeof pick === 'object' ? pick : null; return true; });
-  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+  session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
     const pick = nextPick; nextPick = null;
+    const quem = String((request && request.frame && request.frame.url) || (request && request.securityOrigin) || '');
+    if (!quem.startsWith('app://projecionista')) { logLine('captura', 'pedido de captura de tela recusado para ' + quem.slice(0, 80)); return callback({}); }   // só a janela de controle captura tela e janela
     try {
       // página: a janela fora da tela não entra na lista do desktopCapturer; vai direto pelo id da janela
       if (pick && pick.key) { const w = webPages.get(String(pick.key)); if (w && !w.isDestroyed()) return callback({ video: { id: w.getMediaSourceId(), name: w.getTitle() } }); }
@@ -408,6 +432,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('comps:save', (_e, name, json) => { if (typeof json !== 'string' || json.length > 50e6) throw new Error('composição inválida'); fs.mkdirSync(COMP_DIR(), { recursive: true }); writeAtomic(path.join(COMP_DIR(), safeName(name) + '.json'), json); return true; });
   ipcMain.handle('comps:remove', async (_e, name) => { await paraLixeira(path.join(COMP_DIR(), safeName(name) + '.json')); return true; });
   ipcMain.handle('rec:save', (_e, name, bytes, dir) => { const d = REC_DIR(dir); fs.mkdirSync(d, { recursive: true }); const full = path.join(d, safeName(name)); fs.writeFileSync(full, Buffer.from(bytes)); return { name: safeName(name), path: full, size: fs.statSync(full).size }; });
+  // Gravação em pedaços: o arquivo é aberto no começo e cada segundo gravado é acrescentado. A memória não cresce com a duração,
+  // nada atravessa o IPC de uma vez só no fim, e se o programa cair o que já foi gravado está no disco.
+  const recAbertas = new Map(); let recSeq = 0;
+  ipcMain.handle('rec:begin', (_e, name, dir) => { const d = REC_DIR(dir); fs.mkdirSync(d, { recursive: true }); const full = path.join(d, safeName(name)); const fd = fs.openSync(full, 'w'); const id = ++recSeq; recAbertas.set(id, { fd, full, name: safeName(name) }); return id; });
+  ipcMain.handle('rec:chunk', async (_e, id, bytes) => { const r = recAbertas.get(id); if (!r) throw new Error('gravação não está aberta'); await new Promise((ok, no) => fs.write(r.fd, Buffer.from(bytes), (e) => e ? no(e) : ok())); return true; });
+  ipcMain.handle('rec:end', (_e, id) => { const r = recAbertas.get(id); if (!r) throw new Error('gravação não está aberta'); recAbertas.delete(id); fs.closeSync(r.fd); return { name: r.name, path: r.full, size: fs.statSync(r.full).size }; });
   ipcMain.handle('rec:list', (_e, dir) => { const d = REC_DIR(dir); try { return fs.readdirSync(d).filter(f => f.endsWith('.webm')).map(f => ({ name: f, path: path.join(d, f), size: fs.statSync(path.join(d, f)).size })); } catch { return []; } });
   ipcMain.handle('rec:show', (_e, p) => { shell.showItemInFolder(String(p)); return true; });
   ipcMain.handle('media:prepare', (e, src, fmt) => prepareMedia(String(src), fmt, (f) => { if (!e.sender.isDestroyed()) e.sender.send('media:progress', { src, f }); }));

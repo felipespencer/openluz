@@ -169,8 +169,13 @@ async function prepareClip(li, col, fmt) {
     const r = await D.media.prepare(c.path, fmt);
     const n = await C.clipFromPath(r.path, undefined, D);
     n.fx = c.fx; n.transform = c.transform; n.ap = c.ap; n.audio = c.audio; n.blend = c.blend; n.opacity = c.opacity; n.trig = c.trig; n.ignoreColumn = c.ignoreColumn; n.fit = c.fit; n.speed = c.speed; n.tr = { ...c.tr, out: Math.min(c.tr.out || n.dur, n.dur) }; n.name = c.name.replace(/\.[^.]+$/, '') + (fmt === 'dxv' ? '.proj.mov' : '.proj.mp4');
-    const wasOn = L.on === col; if (wasOn) { C.stopClip(c); L.on = -1; }
-    dropClip(c); L.clips[col] = n; if (wasOn) { L.on = col; C.startClip(n, state.speed); }
+    // a conversão demora: nesse meio-tempo o clipe pode ter mudado de casa (ou saído da grade). O preparado entra onde o clipe ESTÁ agora,
+    // não onde estava quando o pedido saiu (antes ele gravava por cima do que estivesse na casa antiga e deixava o clipe movido sem imagem).
+    let Ld = null, linha = null, cd = -1;
+    for (const X of state.layers) { for (const row of rowsOf(X)) { const k = row.indexOf(c); if (k >= 0) { Ld = X; linha = row; cd = k; break; } } if (Ld) break; }
+    if (!Ld) { dropClip(n); toast('Preparado: ' + n.name + ' (o clipe saiu da grade enquanto preparava; o arquivo está na pasta do original)'); preparingNow.delete(c.path); render(); return; }
+    const noAr = linha === Ld.clips && Ld.on === cd; if (noAr) { C.stopClip(c); Ld.on = -1; }
+    dropClip(c); linha[cd] = n; if (noAr) { Ld.on = cd; C.startClip(n, state.speed); }
     toast('Preparado: ' + n.name + ' (' + (r.size / 1e6).toFixed(0) + ' MB)');
   } catch (e) { toast('Não consegui preparar: ' + e.message); }
   preparingNow.delete(c.path); render();
@@ -200,20 +205,29 @@ async function putPhone(li, col) {
   const info = await D.phone.info();
   if (!info.port || !info.urls.length) { toast('O servidor do celular não subiu (sem rede local?)'); return; }
   phoneWait = { li, col };
-  openDialog({ title: 'Celular como câmera', buttons: [{ label: 'Fechar', primary: true }], build: (body) => {
+  const d = openDialog({ title: 'Celular como câmera', buttons: [{ label: 'Fechar', primary: true }], build: (body) => {
     body.append(el('p', 'dtext', 'No celular, na mesma rede Wi-Fi, abra este endereço e toque em "Enviar câmera":'));
     for (const u of info.urls) body.appendChild(el('p', 'dtext big', u));
     body.append(el('p', 'dtext', 'O navegador vai avisar que o certificado é do próprio OpenLuz: aceite (Avançado → continuar). A imagem entra na casa escolhida assim que o celular ligar.'));
+    body.append(el('p', 'dtext', 'O endereço vale por ' + (info.minutos || 10) + ' minutos, para um celular, e só enquanto esta janela estiver aberta.'));
   } });
+  phoneDlg = d;
+  // fechou a janela sem celular: ninguém mais é esperado e o endereço deixa de valer
+  const ob = new MutationObserver(() => { if (!document.body.contains(d.body)) { ob.disconnect(); if (phoneDlg === d) { phoneDlg = null; phoneWait = null; if (D.phone.fechar) D.phone.fechar().catch(() => { }); } } });
+  ob.observe(document.body, { childList: true });
 }
+let phoneDlg = null;
 if (D && D.phone) D.phone.onOffer(async (o) => {
+  // sem ninguém esperando (o diálogo "Celular como câmera" fechado), a oferta é recusada: antes ela entrava na casa selecionada e trocava o clipe que estivesse lá
+  if (!phoneWait) { try { await D.phone.answer(o.id, null, 'O OpenLuz não está esperando um celular. Peça o endereço de novo em Fontes › Celular (câmera).'); } catch { } return; }
+  const alvo = phoneWait; let r = null;
   try {
-    const { sdp, clip } = await C.phoneAnswer(o);
-    await D.phone.answer(o.id, sdp);
-    const c = await clip();
-    const alvo = phoneWait || (state.sel ? { li: state.sel.l, col: state.sel.c } : { li: state.selLayer, col: 0 }); phoneWait = null;
+    r = await C.phoneAnswer(o);
+    await D.phone.answer(o.id, r.sdp);
+    const c = await r.clip();
+    phoneWait = null; const dl = phoneDlg; phoneDlg = null; if (dl) dl.close();
     putClip(alvo.li, alvo.col, c); toast('Celular ligado: ' + c.name);
-  } catch (e) { try { await D.phone.answer(o.id, null, e.message); } catch { } toast('Celular: ' + e.message); }
+  } catch (e) { try { if (r && r.pc) r.pc.close(); } catch { } try { await D.phone.answer(o.id, null, e.message); } catch { } toast('Celular: ' + e.message); }
 });
 function putLaserClip(li, col, frame) { putClip(li, col, C.laserClip(frame, laser.thumbSvg(frame))); }
 // soltar qualquer coisa numa casa
@@ -1669,7 +1683,7 @@ function frame() {
   }
   for (const sc of state.screens) {
     const open = sc.win && !sc.win.closed;
-    if (!open && !(ao.open && ao.curScreen() === sc)) continue;
+    if (!open && !(ao.open && ao.curScreen() === sc) && recorder.tela !== sc) continue;   // a tela que está sendo gravada é desenhada mesmo com a saída fechada
     try { screenCanvas(sc); engine.renderScreen(sc, state.layers, state.screens); engine.blit(sc.ctx, sc.w, sc.h); }
     catch (e) { loopErro(e, 'tela ' + (sc.name || sc.id)); }   // o erro de uma tela não tira as outras do ar
   }
