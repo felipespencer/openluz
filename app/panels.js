@@ -104,7 +104,9 @@ export class Panels {
         { label: 'Basic', check: !a, fn: () => put(() => { dropAnim(holder, key); }) },
         { label: 'Timeline', check: !!(a && a.secs && a.shape !== 'fft'), fn: () => put(() => { holder.panim[key] = { shape: a && a.shape && a.shape !== 'fft' ? a.shape : 'saw', beats: (a && a.beats) || 4, secs: (a && a.secs) || 5, ...base() }; }) },
         { label: 'BPM Sync', check: !!(a && !a.secs && a.shape !== 'fft'), fn: () => put(() => { holder.panim[key] = { shape: forma(), beats: (a && a.beats) || 4, ...base() }; }) },
-        { label: 'FFT (som)', check: !!(a && a.shape === 'fft'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', band: (a && a.band) || 'all', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; }) },   // padrão medido contra a Composition FFT do Resolume (sondas/fft-ajuste.py): espectro inteiro, ganho ~1,36
+        // as duas fontes de som do Resolume: Composition FFT (o som dos clipes) e External FFT (microfone ou entrada da placa)
+        { label: 'Composition FFT', check: !!(a && a.shape === 'fft' && a.src !== 'mic'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', src: 'comp', band: (a && a.band) || 'all', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; }) },   // padrão medido contra o Resolume (sondas/fft-ajuste.py): espectro inteiro, ganho ~1,36
+        { label: 'External FFT (microfone)', check: !!(a && a.shape === 'fft' && a.src === 'mic'), fn: () => put(() => { holder.panim[key] = { shape: 'fft', src: 'mic', band: (a && a.band) || 'all', gain: (a && a.gain) || 1.4, beats: (a && a.beats) || 4, ...base() }; const AU = this.ctx.audio; if (AU && AU.enableMic) AU.enableMic().then(ok => { if (!ok && this.ctx.toast) this.ctx.toast(AU.err || 'Sem microfone'); this.render(); }); }) },
         '-',
         { label: 'Presets', sub: () => SHAPES.filter(([k]) => k !== 'fft').map(([k, t]) => ({ label: t, check: !!(a && a.shape === k), fn: () => put(() => { holder.panim[key] = { beats: (a && a.beats) || 4, secs: a && a.shape !== 'fft' ? a.secs : undefined, ...base(), shape: k }; }) })) },
       ], r.left, r.bottom + 2);
@@ -132,7 +134,7 @@ export class Panels {
     const X = (f) => 'calc(6px + (100% - 12px) * ' + f + ')';
     let meter = null;
     const place = () => { const f0 = fr(a.min), f1 = fr(a.max); range.style.left = X(Math.min(f0, f1)); range.style.width = 'calc((100% - 12px) * ' + Math.abs(f1 - f0) + ')'; hin.style.left = X(f0); hout.style.left = X(f1); hin.title = 'Mínimo ' + fmt(a.min); hout.title = 'Máximo ' + fmt(a.max);
-      head.style.left = X(fr(animValue(a, B))); if (meter) meter.style.width = Math.round(Math.min(1, (B.audio ? (B.audio[a.band || 'bass'] || 0) : 0) * (a.gain ?? 1)) * 100) + '%'; };
+      head.style.left = X(fr(animValue(a, B))); if (meter) { const au = a.src && B.audioBy ? B.audioBy[a.src] : B.audio; meter.style.width = Math.round(Math.min(1, (au ? (au[a.band || 'bass'] || 0) : 0) * (a.gain ?? 1)) * 100) + '%'; } };
     bar.onpointerdown = (e) => {
       if (e.button !== 0) return; e.preventDefault(); bar.setPointerCapture(e.pointerId); this.pushUndo();
       const r = bar.getBoundingClientRect(), val = (ev) => { const f = Math.max(0, Math.min(1, (ev.clientX - r.left - 6) / Math.max(1, r.width - 12))); return Math.round((o.min + f * span) / stp) * stp; };
@@ -145,7 +147,9 @@ export class Panels {
     const sel = (k, title, opts, cur, set) => { const sl = el('select', 'asel'); sl.dataset.k = k; sl.title = title; for (const [val, tx] of opts) { const op = el('option', '', tx); op.value = val; sl.appendChild(op); } sl.value = cur; sl.onchange = () => chg(() => set(sl.value)); return sl; };
     if (fft) {
       const mw = el('div', 'ameter'); meter = el('i'); mw.appendChild(meter); mw.title = 'Nível da faixa agora (já com o ganho)';
-      ctl.append(sel('a-faixa', 'Faixa: qual parte do som move o valor', BANDS, a.band || 'bass', v => { a.band = v; }), mw);
+      const AU = this.ctx.audio, falta = a.src === 'mic' && AU && !AU.micAnalyser;
+      ctl.append(sel('a-fonte', 'De onde vem o som: os clipes da composição ou o microfone / entrada da placa', [['comp', 'Composição'], ['mic', 'Microfone']], a.src || (AU && AU.settings.source) || 'comp', v => { a.src = v; if (v === 'mic' && AU && AU.enableMic) AU.enableMic().then(() => this.render()); }), sel('a-faixa', 'Faixa: qual parte do som move o valor', BANDS, a.band || 'bass', v => { a.band = v; }), mw);
+      if (falta) { const av = el('span', 'aerr', AU.err || 'ligando o microfone…'); ctl.appendChild(av); }
     } else {
       ctl.append(btn('a◀', 'Anda de trás para a frente', !a.paused && a.dir < 0, () => { a.dir = -1; a.paused = false; }, I.back), btn('a‖', 'Segura o valor onde está', !!a.paused, () => { a.paused = true; }, I.pause), btn('a▶', 'Anda para a frente', !a.paused && !(a.dir < 0), () => { a.dir = 1; a.paused = false; }, I.fwd),
         sel('a-forma', 'Forma: como o valor anda a cada ciclo (os presets de animação do Resolume)', SHAPES.filter(([k]) => k !== 'fft'), a.shape, v => { a.shape = v; }));

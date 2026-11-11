@@ -25,6 +25,8 @@ export class AudioEngine {
   constructor() {
     this.ctx = null; this.master = null; this.analyser = null; this.buf = null; this.micAnalyser = null; this.micBuf = null; this.micStream = null;
     this.levels = { bass: 0, lowmid: 0, mid: 0, high: 0, all: 0 }; this.raw = { bass: 0, lowmid: 0, mid: 0, high: 0, all: 0 };
+    // níveis de cada fonte, sempre calculados quando ela existe: a engrenagem de um valor pode ouvir a composição e a de outro o microfone
+    this.compLevels = { bass: 0, lowmid: 0, mid: 0, high: 0, all: 0 }; this.micLevels = { bass: 0, lowmid: 0, mid: 0, high: 0, all: 0 };
     this.settings = AUDIO_SETTINGS(); this.err = '';
   }
   ensure() {
@@ -97,25 +99,36 @@ export class AudioEngine {
   updateFx(c, f) { const n = (c.afxNodes || []).find(x => x.fx === f); if (n) n.update(f.params); else this.rebuild(c); }
   detach(c) { for (const k of ['srcNode', 'gainNode', 'panNode']) { if (c[k]) { try { c[k].disconnect(); } catch { } } } c.afxNodes = []; }
   // fonte da FFT: a composição (o master) ou o microfone/placa de som
-  async setSource(src) {
-    this.settings.source = src;
-    if (src === 'mic' && !this.micAnalyser) {
+  // liga o microfone / entrada de áudio para a FFT (uma vez); não muda a fonte geral
+  async enableMic() {
+    if (this.micAnalyser) return true; if (this.micPend) return this.micPend;
+    this.micPend = (async () => {
       try {
         const ac = this.ensure(); this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const s = ac.createMediaStreamSource(this.micStream); this.micAnalyser = ac.createAnalyser(); this.micAnalyser.fftSize = 1024; this.micAnalyser.smoothingTimeConstant = 0.5; s.connect(this.micAnalyser);
-        this.micBuf = new Uint8Array(this.micAnalyser.frequencyBinCount); this.err = '';
-      } catch (e) { this.err = 'Sem microfone: ' + e.message; this.settings.source = 'comp'; }
-    }
+        this.micBuf = new Uint8Array(this.micAnalyser.frequencyBinCount); this.err = ''; return true;
+      } catch (e) { this.err = 'Sem microfone: ' + e.message; return false; } finally { this.micPend = null; }
+    })();
+    return this.micPend;
+  }
+  async setSource(src) {
+    this.settings.source = src;
+    if (src === 'mic' && !(await this.enableMic())) this.settings.source = 'comp';
   }
   // a cada quadro: lê a FFT e atualiza os níveis com ganho e queda (fallback, em unidades por segundo)
   tick(dt) {
-    const an = this.settings.source === 'mic' ? this.micAnalyser : this.analyser, buf = this.settings.source === 'mic' ? this.micBuf : this.buf;
-    if (!an || !buf) return;
-    an.getByteFrequencyData(buf);
-    const hz = this.ctx.sampleRate / an.fftSize, band = (a, b) => { let s = 0, n = 0; for (let i = Math.max(0, Math.floor(a / hz)); i <= Math.min(buf.length - 1, Math.ceil(b / hz)); i++) { s += buf[i]; n++; } return n ? s / n / 255 : 0; };
-    const g = this.settings.gain, r = this.raw;
-    r.bass = band(20, 250) * g; r.lowmid = band(250, 800) * g; r.mid = band(800, 3000) * g; r.high = band(3000, 12000) * g; r.all = band(20, 12000) * g;
-    const fall = this.settings.fallback * dt;
-    for (const k in r) { const v = Math.min(1, r[k]); this.levels[k] = v >= this.levels[k] ? v : Math.max(v, this.levels[k] - fall); }
+    const g = this.settings.gain, fall = this.settings.fallback * dt;
+    const calc = (an, buf, lv) => {
+      if (!an || !buf) return null;
+      an.getByteFrequencyData(buf);
+      const hz = this.ctx.sampleRate / an.fftSize, band = (a, b) => { let s = 0, n = 0; for (let i = Math.max(0, Math.floor(a / hz)); i <= Math.min(buf.length - 1, Math.ceil(b / hz)); i++) { s += buf[i]; n++; } return n ? s / n / 255 : 0; };
+      const r = { bass: band(20, 250) * g, lowmid: band(250, 800) * g, mid: band(800, 3000) * g, high: band(3000, 12000) * g, all: band(20, 12000) * g };
+      for (const k in r) { const v = Math.min(1, r[k]); lv[k] = v >= lv[k] ? v : Math.max(v, lv[k] - fall); }
+      return r;
+    };
+    const rc = calc(this.analyser, this.buf, this.compLevels), rm = calc(this.micAnalyser, this.micBuf, this.micLevels);
+    // a fonte geral (aba Composição) continua valendo para as animações antigas, que não dizem de onde ouvem
+    const mic = this.settings.source === 'mic', r = mic ? rm : rc; if (!r) return;
+    Object.assign(this.raw, r); Object.assign(this.levels, mic ? this.micLevels : this.compLevels);
   }
 }

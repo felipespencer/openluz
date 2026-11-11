@@ -104,7 +104,7 @@ const seg = new Segmenter(engine); let segErrShown = '';
 // o worker e o processo nativo do recorte sobem logo depois do programa abrir (e aquecem os modelos no DirectML), para o
 // Background Removal recortar desde o primeiro quadro em vez de ficar ~5 s sem máscara (Felipe, 2026-10-30)
 setTimeout(() => { try { seg.start(); } catch (e) { console.warn('recorte: não subiu na abertura', e); } }, 2000);
-const audio = new AudioEngine(); C.setAudioEngine(audio); state.audioSettings = audio.settings; state.bpm.audio = audio.levels;   // a FFT entra nas animações pelo relógio
+const audio = new AudioEngine(); C.setAudioEngine(audio); state.audioSettings = audio.settings; state.bpm.audio = audio.levels; state.bpm.audioBy = { comp: audio.compLevels, mic: audio.micLevels };   // a FFT entra nas animações pelo relógio
 const monCanvas = document.createElement('canvas'); monCanvas.width = COMP_W; monCanvas.height = COMP_H;
 $('outScr').appendChild(monCanvas);
 const monCtx = monCanvas.getContext('2d');
@@ -1568,6 +1568,7 @@ installShortcuts(SHORTCUTS);
 function loop() {
   const now = performance.now() / 1000, dt = Math.min(0.1, now - (loop.last || now)); loop.last = now;
   advance(state.bpm, dt); tickBeat(); audio.tick(dt);
+  if (state.bpm.micWanted && !audio.micAnalyser && !audio.micAsked) { audio.micAsked = true; audio.enableMic().then(ok => { if (!ok) toast(audio.err || 'Sem microfone'); }); }   // uma animação ouve o microfone (External FFT): liga uma vez
   seg.tick(state.layers, liveClip, now); if (seg.err && seg.err !== segErrShown) { segErrShown = seg.err; toast(seg.err); }
   if (now - (loop.apcAt || 0) > 0.2) { loop.apcAt = now; apc.refresh(); }
   for (const L of state.layers) if (L.prev && now - L.prev.t0 >= L.prev.dur) { if (L.clips[L.on] !== L.prev.clip) C.stopClip(L.prev.clip); L.prev = null; }

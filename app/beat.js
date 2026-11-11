@@ -35,7 +35,9 @@ export function animValue(a, B) {
   if (a.paused && r.v != null) return r.v;   // ‖ do mini-transporte: o valor fica onde parou
   const lo = a.min ?? 0, hi = a.max ?? 1; let v;
   if (a.shape === 'fft') {   // reação ao som: o nível da faixa, com ganho próprio e queda (quanto o nível pode cair por segundo)
-    let lv = (B.audio ? (B.audio[a.band || 'bass'] || 0) : 0) * (a.gain ?? 1);
+    if (a.src === 'mic') B.micWanted = true;   // quem cuida do som liga o microfone quando alguém pede
+    const au = a.src && B.audioBy ? B.audioBy[a.src] : B.audio;   // a.src: 'comp' (som dos clipes) ou 'mic'; sem src, a fonte geral
+    let lv = (au ? (au[a.band || 'bass'] || 0) : 0) * (a.gain ?? 1);
     if (a.fall > 0) { const now = performance.now(), dt = Math.min(0.2, (now - (r.t || now)) / 1000); r.t = now; lv = Math.max(lv, (r.lv || 0) - a.fall * dt); r.lv = lv; }
     v = lo + (hi - lo) * Math.min(1, lv);
   } else {
