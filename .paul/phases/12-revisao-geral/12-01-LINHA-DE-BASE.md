@@ -39,7 +39,7 @@ about: "OpenLuz"
 | rosto-check | **1 falha**: "com a pessoa parada o recorte não treme" — centro variou 12,29% da largura | 21/21 (detector 14,3/s) | **intermitente** (B3) |
 | presets-check | 27/27 | — | passa |
 | transport-check | tudo certo | — | passa |
-| webcam-check | **1 falha** em 10: "composição quadrada: barras pretas dos lados, imagem no meio" — esq 0,0,0 meio 0,0,0 dir 0,0,0 | a mesma | **reprova firme** (achado 63). Uma terceira rodada, com 5 s de espera depois de mudar a composição (cópia da bateria fora do projeto), deu o mesmo |
+| webcam-check | _(CORREÇÃO de 2026-11-11: esta reprovação era falsa. A bateria rodou sem a imagem de prova; com ela passa 10/10. Ver achado 63, retirado, e B6.)_ **1 falha** em 10: "composição quadrada: barras pretas dos lados, imagem no meio" — esq 0,0,0 meio 0,0,0 dir 0,0,0 | a mesma | **reprova firme** (achado 63). Uma terceira rodada, com 5 s de espera depois de mudar a composição (cópia da bateria fora do projeto), deu o mesmo |
 | engrenagem-check | tudo certo | — | passa |
 | lote2-check (`prova.png`) | APROVADO; salvar ok; qps 28,6 | — | passa |
 | lote3-check (`barras.png`) | APROVADO; salvar ok; qps 29,0 | — | passa |

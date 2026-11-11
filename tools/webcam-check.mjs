@@ -1,6 +1,9 @@
 // Webcam virtual, do jeito que a pessoa usa: clique REAL em Saída › Webcam virtual pelo CDP, e a imagem lida de volta pela câmera com getUserMedia.
 // Confere cor, orientação, proporção, qps, desligar e religar, câmera ocupada e OBS ausente (este só com PROJ_WEBCAM_SEM_OBS na abertura: --sem-obs).
-// Programa aberto com --remote-debugging-port=9333 (ou PROJ_CDP). Uso: node tools/webcam-check.mjs [--sem-obs] [--basico]
+// Programa aberto com --remote-debugging-port=9333 (ou PROJ_CDP). Uso: node tools/webcam-check.mjs [imagem.png] [--sem-obs] [--basico]
+// Sem imagem no ar a câmera e o motor são os dois pretos e quase tudo "passa" à toa (aconteceu na revisão geral de 2026-11-11, que
+// por isso acusou uma webcam preta que não existia): sem argumento, vai a imagem de prova do projeto.
+const PROVA = decodeURIComponent(new URL('./compare/clips/cam-prova.png', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1');
 const base = 'http://127.0.0.1:' + (process.env.PROJ_CDP || 9333), semObs = process.argv.includes('--sem-obs'), basico = process.argv.includes('--basico');
 const pages = await (await fetch(base + '/json')).json();
 const page = pages.find(p => p.type === 'page' && p.title === 'OpenLuz');
@@ -49,7 +52,7 @@ const padrao = `(async () => { const p = ${P}, L = p.state.layers[0]; const c = 
   x.fillStyle = '#000'; x.fillRect(0, 0, 200, 200); x.fillStyle = '#fff'; x.fillRect(40, 40, 120, 120);
   const b = await new Promise(r => c.toBlob(r, 'image/png')); const f = new File([b], 'cam-prova.png', { type: 'image/png' }); const tmp = URL.createObjectURL(f); window.__camUrl = tmp; return tmp; })()`;
 await ev(padrao);
-await ev(`(async () => { const p = ${P}; document.querySelectorAll('.dlgOver').forEach(d => d.remove()); for (const L of p.state.layers) { if (L.on >= 0) p.eject(p.state.layers.indexOf(L)); L.fx = []; } const path = ${JSON.stringify(process.argv.find(a => a.endsWith('.png')) || '')}; if (path) { await p.putPath(0, 1, path, 'prova.png'); p.trigger(0, 1); } return 1; })()`);
+await ev(`(async () => { const p = ${P}; document.querySelectorAll('.dlgOver').forEach(d => d.remove()); for (const L of p.state.layers) { if (L.on >= 0) p.eject(p.state.layers.indexOf(L)); L.fx = []; } const path = ${JSON.stringify(process.argv.find(a => a.endsWith('.png')) || PROVA)}; if (path) { await p.putPath(0, 1, path, 'prova.png'); p.trigger(0, 1); } return 1; })()`);
 
 const qps0 = await ev(`(async () => { const a = ${P}.frames(), t = performance.now(); await new Promise(r => setTimeout(r, 2500)); return (${P}.frames() - a) / ((performance.now() - t) / 1000); })()`);
 const m1 = await menu(); await click(m1.it.x, m1.it.y); for (let i = 0; i < 40 && !await ev(`${P}.webcam.on`); i++) await S(100);
