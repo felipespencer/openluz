@@ -3,6 +3,7 @@
 // os parâmetros como uniforms float. O motor monta o programa (ver engine.js, applyChain).
 // Um efeito pode ir num clipe, numa camada ou na composição.
 import { MORE } from './effects2.js';
+import { RESOLUME } from './effects-r.js';
 const P = (key, label, def, min, max, step = 0.01, unit = '') => ({ key, label, def, min, max, step, unit });
 // controle de cor ("#rrggbb", vira vec3 no shader; com alpha: "#rrggbbaa", vira vec4, como as cores do Resolume, que têm alfa)
 // e de lista (o índice da opção; ropts = os nomes no Resolume, para a bancada)
@@ -71,7 +72,10 @@ const BASE = [
   { id: 'transform', name: 'Transform', desc: 'Move, redimensiona e gira.', params: [P('x', 'Posição X', 0, -1, 1), P('y', 'Posição Y', 0, -1, 1), P('scale', 'Escala', 1, 0.05, 4, 0.01), P('rot', 'Giro', 0, -180, 180, 1, '°')], glsl: `vec4 fx(vec2 uv){ vec2 p = uv - 0.5 - vec2(x, -y) * 0.5; p.x *= uRes.x / uRes.y; float a = -rot * 3.14159265 / 180.0; p = vec2(cos(a) * p.x - sin(a) * p.y, sin(a) * p.x + cos(a) * p.y) / scale; p.x /= uRes.x / uRes.y; return texIn(p + 0.5); }` },
 ];
 // as duas levas, em ordem alfabética como no painel Efeitos do Resolume
-export const EFFECTS = [...BASE, ...MORE].sort((a, b) => a.name.localeCompare(b.name));
+// RESOLUME (effects-r*.js): os efeitos refeitos com os controles e a imagem do Resolume, conferidos contra o gabarito
+// (tools/compare/confere.mjs). Cada um toma o lugar do antigo de mesmo id.
+const NOVOS = new Map(RESOLUME.map(e => [e.id, e]));
+export const EFFECTS = [...[...BASE, ...MORE].filter(e => !NOVOS.has(e.id)), ...RESOLUME].sort((a, b) => a.name.localeCompare(b.name));
 export const EFFECT_HELPERS = HELPERS;
 export const effectById = (id) => EFFECTS.find(e => e.id === id);
 // uma instância de efeito numa cadeia (clipe, camada ou composição)
