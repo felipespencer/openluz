@@ -105,12 +105,12 @@ export const R3 = [
   // Hatched: riscos de 1 px na cor Color1 sobre Color2; quanto mais claro o ponto, mais famílias de risco entram (brilho acima de
   // 0 / 0,3 / 0,5 / 0,7 / 0,8 / 0,9, medidos): diagonal /, diagonal \, as duas de novo meio passo ao lado, verticais e
   // horizontais (estas a cada meio passo). Levels = quantas famílias no máximo. Passo em px medido por Density: 1 → 32, 2 → 22,
-  // 4 → 18, 6 → 10, 8 → 5 (3, 5 e 7 interpolados: não há foto)
+  // 3 → 20, 4 → 18, 5 → 16, 6 → 10, 7 → 8, 8 → 5
   def({ id: 'hatched', name: 'Hatched', desc: 'Hachuras de desenho a traço: mais riscos onde a imagem é mais clara.',
     params: [N('density', 'Density', 'Densidade', 4, 1, 8), N('levels', 'Levels', 'Níveis', 6, 2, 6, 1), B('invert', 'Invert', 'Inverter'), C('color1', 'Color1', 'Cor do risco', '#ffffffff', true), C('color2', 'Color2', 'Cor do fundo', '#000000ff', true)],
     glsl: `bool hz(float v, float p){ float m = mod(v, p); return m < 0.01 || p - m < 0.01; }
     vec4 fx(vec2 uv){ vec4 c = texture(uTex, uv); float l = lum(un(c)); if (invert > 0.5) l = 1.0 - l;
-      float d = floor(density + 0.001), p = d < 1.5 ? 32.0 : d < 2.5 ? 22.0 : d < 3.5 ? 20.0 : d < 4.5 ? 18.0 : d < 5.5 ? 14.0 : d < 6.5 ? 10.0 : d < 7.5 ? 7.0 : 5.0;
+      float d = floor(density + 0.001), p = d < 1.5 ? 32.0 : d < 2.5 ? 22.0 : d < 3.5 ? 20.0 : d < 4.5 ? 18.0 : d < 5.5 ? 16.0 : d < 6.5 ? 10.0 : d < 7.5 ? 8.0 : 5.0;
       vec2 q = floor(vec2(uv.x, 1.0 - uv.y) * uRes); float a = q.x + q.y + 1.0, b = q.x - q.y, n = floor(levels + 0.5); bool on = false;
       if (l > 0.0 && hz(a, p)) on = true;
       if (l > 0.3 && n > 1.5 && hz(b, p)) on = true;
@@ -142,8 +142,8 @@ export const R3 = [
       float k = 10.0 * dist, ang = (rotation - 0.5) * -6.65; vec2 p = uv - 0.5; vec4 s = vec4(0.0);
       for (float i = 0.0; i <= n; i += 1.0) { float t = i / n, a = ang * t; vec2 q = vec2(cos(a) * p.x - sin(a) * p.y, sin(a) * p.x + cos(a) * p.y) / (1.0 + k * t); s += tex(q + 0.5); }
       return s / (n + 1.0); }` }),
-  // Drop Shadow: no gabarito a carta cobre o quadro inteiro e a sombra nunca aparece (todas as fotos = padrão). Controles da ficha;
-  // a conta é dedução nossa: sombra da transparência, deslocada Distance px no ângulo dado, borrada por Spread (fração da largura),
+  // Drop Shadow: conferido na segunda passada com um clipe transparente (degradê de alfa, sem bordas duras: o borrão do
+  // Spread e do Strength segue sem prova): sombra da transparência, deslocada Distance px no ângulo dado, borrada por Spread (fração da largura),
   // com Strength amostras por lado
   def({ id: 'dropshadow', name: 'Drop Shadow', desc: 'Sombra atrás da imagem, onde ela é transparente.',
     params: [N('dist', 'Distance', 'Distância', 10, 0, 100, 0.1, ' px'), N('angle', 'Angle', 'Ângulo', 45, -180, 180, 1, '°'), C('color', 'Color', 'Cor', '#000000ff', true), N('spread', 'Spread', 'Espalhamento', 0.0013, 0, 0.005, 0.0001), N('strength', 'Strength', 'Força', 8, 1, 32, 1)],
@@ -151,7 +151,7 @@ export const R3 = [
       vec2 o = vec2(cos(a), sin(a)) * dist / uRes; float s = 0.0, tt = 0.0;
       for (float j = -4.0; j <= 4.0; j += 1.0) for (float i = -4.0; i <= 4.0; i += 1.0) { vec2 d = vec2(i, j) * 0.25 * n; float w = exp(-dot(d, d) / (0.5 * n * n + 0.0001));
         s += texIn(uv - o + d * st / uRes).a * w; tt += w; }
-      vec4 sh = vec4(color.rgb, 1.0) * color.a * (s / tt);
+      vec4 sh = vec4(color.rgb, color.a) * (s / tt);   // medido com clipe transparente: o alfa da cor só entra no alfa da sombra, a cor vai inteira
       return c + sh * (1.0 - c.a); }` }),
   // Goo: malha de Resolution colunas; cada nó anda sozinho (Speed) até MaxDistortion para cada lado e a imagem estica junto.
   // Mexe sozinho e parte do repouso, como no Resolume: não bate por pixel. Tamanhos tirados das folhas, no olho

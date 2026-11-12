@@ -106,7 +106,7 @@ export const R5 = [
       return c * (r > 0.0 ? sqrt(smoothstep(-1.9, 7.5, r - length(p - vec2(xc, yd)))) : 0.0); }` }),
   // grade de pontos com a cor da imagem: 4 + 124 × Resolution pontos na largura (× 9/16 na altura), espalhados por
   // 1,062 × o quadro; ponto de raio 32 × Size px; Space afasta os pontos (× 1 + 9,1 × Space) sem mudar a cor de cada um;
-  // Rotate X/Y/Z giram o plano (0,5 = parado, volta inteira de 0 a 1; medido só de 90 em 90 graus, sem perspectiva).
+  // Rotate X/Y/Z giram o plano (0,5 = parado, volta inteira de 0 a 1; com perspectiva, medida na segunda passada).
   // Smooth Start abaixo de 1 apaga parte dos pontos (no Resolume segue um ruído próprio; aqui, um ruído parecido).
   def({ id: 'pointgrid', name: 'Point Grid', desc: 'A imagem vira uma grade de pontos que pode ser afastada e girada no espaço.',
     params: [N('size', 'Size', 'Tamanho', 0.1, 0, 1), N('sstart', 'Smooth Start', 'Entrada suave', 1, 0, 1), B('bg', 'Black BG', 'Fundo preto'),
@@ -115,14 +115,18 @@ export const R5 = [
     glsl: `vec4 fx(vec2 uv){ float nx = floor(4.5 + 124.0 * res), ny = max(1.0, floor(nx * 0.5625)), ext = 2.124 * (1.0 + 9.1 * space), A = 16.0 / 9.0;
       vec3 a = (vec3(rx, ry, 1.0 - rz) - 0.5) * 6.2831853, cs = cos(a), sn = sin(a);
       mat2 M = mat2(cs.z * cs.y, sn.z * cs.y, cs.z * sn.y * sn.x - sn.z * cs.x, sn.z * sn.y * sn.x + cs.z * cs.x);
-      float det = M[0][0] * M[1][1] - M[1][0] * M[0][1]; if (abs(det) < 1e-5) det = det < 0.0 ? -1e-5 : 1e-5;
-      mat2 Mi = mat2(M[1][1], -M[0][1], -M[1][0], M[0][0]) / det;
-      vec2 n = (uv - 0.5) * 2.0, P = Mi * vec2(n.x, n.y * A), nn = vec2(nx, ny);
+      // plano girado no espaço e visto em perspectiva pela câmera do Resolume (45° de abertura vertical); tudo em meias larguras
+      vec2 r3 = vec2(sn.y, cs.y * sn.x); float D = 2.4142136 * A;
+      vec2 n = (uv - 0.5) * 2.0, np = vec2(n.x, n.y * A), nn = vec2(nx, ny);
+      mat2 K = D * M - mat2(np.x * r3.x, np.y * r3.x, np.x * r3.y, np.y * r3.y);
+      float det = K[0][0] * K[1][1] - K[1][0] * K[0][1]; if (abs(det) < 1e-6) det = det < 0.0 ? -1e-6 : 1e-6;
+      vec2 P = mat2(K[1][1], -K[0][1], -K[1][0], K[0][0]) / det * (np * D);
       vec2 f = (vec2(P.x, -P.y / A) / ext + 0.5) * nn - 0.5, b0 = clamp(floor(f + 0.5), vec2(0.0), nn - 1.0);
       float r = 32.0 * size + 0.4, best = -1.0; vec2 bi = vec2(0.0);
       for (int dj = -3; dj <= 3; dj++) for (int di = -3; di <= 3; di++) { vec2 id = b0 + vec2(float(di), float(dj));
         if (id.x < 0.0 || id.y < 0.0 || id.x >= nx || id.y >= ny) continue;
-        vec2 g = ((id + 0.5) / nn - 0.5) * ext, w = M * vec2(g.x, -g.y * A);
+        vec2 g = ((id + 0.5) / nn - 0.5) * ext, q = vec2(g.x, -g.y * A); float dz = D + dot(r3, q); if (dz < 0.05) continue;
+        vec2 w = M * q * D / dz;
         float d = length((vec2(w.x, w.y / A) - n) * 0.5 * uRes), o = id.y * nx + id.x;
         if (d < r && o > best) { best = o; bi = id; } }
       if (best < 0.0) return bg > 0.5 ? vec4(0.0, 0.0, 0.0, 1.0) : vec4(0.0);
