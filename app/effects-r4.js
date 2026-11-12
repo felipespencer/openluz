@@ -13,10 +13,11 @@ export const R4 = [
   def({ id: 'flip', name: 'Flip', desc: 'Vira a imagem de lado ou de cabeça para baixo.',
     params: [B('horiz', 'Horizontal', 'Horizontal', 1), B('vert', 'Vertical', 'Vertical'), BG],
     glsl: `${bg} vec4 fx(vec2 uv){ return bgk(tex(vec2(horiz > 0.5 ? 1.0 - uv.x : uv.x, vert > 0.5 ? 1.0 - uv.y : uv.y))); }` }),
-  // eixo em X (reflete o que está à esquerda dele) e em Y (reflete o que está abaixo); medido com um controle por vez
+  // eixo em X (reflete o que está à esquerda dele) e em Y (reflete o que está abaixo); In / Out desliza a origem até o eixo;
+  // Flip troca o lado que se reflete. Medido com um controle por vez e, na segunda passada, com Flip e In / Out juntos do eixo
   def({ id: 'mirror', name: 'Mirror', desc: 'Espelha a imagem em torno de um eixo vertical e de um horizontal.',
     params: [N('x', 'X', 'Eixo X', 0, 0, 1), N('y', 'Y', 'Eixo Y', 0, 0, 1), N('io', 'In / Out', 'Dentro / fora', 1, 0, 1), B('flipx', 'Flip X', 'Virar X'), B('flipy', 'Flip Y', 'Virar Y'), BG],
-    glsl: `${bg} ${rep} vec4 fx(vec2 uv){ vec2 p = vec2(abs(uv.x - x) + x * (2.0 * io - 1.0), abs(uv.y - y) - y + io);
+    glsl: `${bg} ${rep} vec4 fx(vec2 uv){ vec2 p = vec2(flipx > 0.5 ? x - abs(1.0 - uv.x - x) : abs(uv.x - x) + x * io, flipy > 0.5 ? (1.0 - y) - abs(uv.y - (1.0 - y)) : abs(uv.y - y) + io * (1.0 - y));
       return bgk(texR(p)); }` }),
   // a imagem inteira cabe em cada quarto, espelhada para o centro
   def({ id: 'mirrorquad', name: 'Mirror Quad', desc: 'Quatro cópias da imagem, espelhadas uma na outra.',
@@ -99,14 +100,19 @@ export const R4 = [
     params: [N('x', 'X', 'Centro X', 0.5, 0, 1), N('y', 'Y', 'Centro Y', 0.5, 0, 1), N('w', 'Width', 'Largura', 0.5, 0, 1), N('h', 'Height', 'Altura', 0.5, 0, 1)],
     glsl: `vec4 fx(vec2 uv){ vec2 c = vec2(x, 1.0 - y), d = vec2(w, h); return tex(clamp(uv, c - d, c + d)); }` }),
   // cada ponto busca a cor a uma distância igual ao próprio brilho × (1 − 2 × fator): X para a direita, Y para baixo.
-  // No Clamp, o que passa da borda de baixo sai com meia transparência (medido). Smooth, Threshold e Invert não
-  // mudam nada com os fatores no padrão (0,5), que é como o gabarito os fotografou: ficam sem efeito por enquanto.
+  // No Clamp, o que passa da borda de baixo sai com meia transparência (medido). Segunda passada (fator 0,75): Threshold zera
+  // o deslocamento abaixo do limiar, Invert usa 1 − brilho, Transparent apaga o ponto cuja origem cai fora (sem deslocar o resto).
+  // Smooth usa o brilho médio de 5 × 5 pontos a cada 2 px (aproximado: 3,4 de diferença).
   def({ id: 'displace', name: 'Displace', desc: 'Desloca a imagem pelo próprio brilho.',
     params: [N('xf', 'X factor', 'Fator X', 0.5, 0, 1), N('yf', 'Y factor', 'Fator Y', 0.5, 0, 1), B('smooth_', 'Smooth', 'Suavizar'), N('thresh', 'Threshold', 'Limiar', 0, 0, 1), B('invert', 'Invert', 'Inverter'),
       L('mode', 'Mode', 'Borda', ['Clamp', 'Wrap', 'Transparent'], ['Esticar', 'Repetir', 'Transparente']), BG],
     glsl: `${bg} vec4 fx(vec2 uv){ float m = dot(un(tex(uv)), vec3(0.3, 0.59, 0.11));   // pesos medidos (0,299/0,587/0,114 dá diferença)
-      vec2 p = uv + m * vec2(1.0 - 2.0 * xf, 2.0 * yf - 1.0);
-      if (mode > 1.5) return bgk(texIn(p)); if (mode > 0.5) return bgk(texture(uTex, fract(p)));
+      if (smooth_ > 0.5) { m = 0.0; for (int i = -2; i <= 2; i++) for (int j = -2; j <= 2; j++) m += dot(un(tex(uv + vec2(float(i), float(j)) * 2.0 / uRes)), vec3(0.3, 0.59, 0.11)); m /= 25.0; }
+      if (m < thresh) m = 0.0;
+      vec2 k = vec2(1.0 - 2.0 * xf, 2.0 * yf - 1.0); if (invert > 0.5) m = 1.0 - m;
+      vec2 p = uv + m * k;
+      if (mode > 1.5) { vec2 q = step(vec2(0.0), p) * step(p, vec2(1.0)); return bgk(tex(uv) * q.x * q.y); }
+      if (mode > 0.5) return bgk(texture(uTex, 1.0 - abs(1.0 - mod(p, 2.0))));   // Wrap espelha na borda (medido)
       return bgk(tex(p) * clamp(0.5 + p.y * uRes.y, 0.5, 1.0)); }` }),
   // medido: a imagem se comporta como uma folha ondulada em profundidade vista em perspectiva a partir do centro:
   // ponto da tela = centro + (ponto da imagem − centro) / (1 + m), m = −0,25 × Both × (AmpH × sen(16π × FreqH × x + fase)
@@ -139,9 +145,9 @@ export const R4 = [
       return blackbg > 0.5 ? texIn(p) : tex(abs(p)); }` }),
   // medido só em parte: cada linha inteira desliza para a direita (e volta pelo outro lado) 0,1 × Distort × o brilho
   // da própria linha num ponto fixo, a 84% da largura (achado por comparação linha a linha; erro médio de 12 px de 960
-  // nas linhas da foto). Radius não muda nada com Distort no padrão (0), que é como foi fotografado: sem efeito ainda.
+  // nas linhas da foto).
   def({ id: 'distortion', name: 'Distortion', desc: 'Desliza cada linha da imagem conforme o brilho dela.',
     params: [N('distort', 'Distort', 'Força', 0, 0, 1), N('radius', 'Radius', 'Raio', 0.55, 0, 1)],
     glsl: `vec4 fx(vec2 uv){ float m = dot(un(tex(vec2(0.839, uv.y))), vec3(0.3, 0.59, 0.11));
-      return texture(uTex, vec2(fract(uv.x - 0.1 * distort * m), uv.y)); }` }),
+      return texture(uTex, vec2(fract(uv.x - 2.0 * distort * (radius - 0.5) * m), uv.y)); }` }),   // Radius é o tamanho e o lado do deslize: 2 × (Radius − 0,5) (medido na segunda passada)
 ];
