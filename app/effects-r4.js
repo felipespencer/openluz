@@ -49,13 +49,13 @@ export const R4 = [
     glsl: `mat3 rX(float a){ float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
     mat3 rY(float a){ float c = cos(a), s = sin(a); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
     mat3 rZ(float a){ float c = cos(a), s = sin(a); return mat3(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0); }
-    vec4 fx(vec2 uv){ float D = 0.5 * uRes.x, g = 0.017453293;
+    vec4 fx(vec2 uv){ float D = 0.5 * uRes.y * 2.4142136, g = 0.017453293;   // câmera com 45° de abertura vertical (medido com Rotation X e Y em 30°, 45° e 60°)
       vec3 S = vec3(sw, sh, 100.0) * sc * 0.0001; if (S.x < 1e-5 || S.y < 1e-5) return vec4(0.0);
-      mat3 R = rZ(rz * g) * rY(ry * g) * rX(rx * g);
+      mat3 R = rZ(rz * g) * rX(rx * g) * rY(ry * g);   // ordem conferida com X e Y em 30° juntos
       vec3 E = vec3(0.0, 0.0, D), s = vec3((uv.x - 0.5) * uRes.x, (0.5 - uv.y) * uRes.y, 0.0);
       vec3 e = (E - vec3(px, py, 0.0)) * R, d = (s - E) * R;      // v * R = R transposta × v
       if (abs(d.z) < 1e-6) return vec4(0.0);
-      float t = (S.z * az - e.z) / d.z; if (t <= 0.0) return vec4(0.0);
+      float t = (S.z * az * D / (0.5 * uRes.x) - e.z) / d.z; if (t <= 0.0) return vec4(0.0);
       vec2 q = (e.xy + t * d.xy) / S.xy - vec2(ax, ay);
       return texIn(vec2(q.x / uRes.x + 0.5, 0.5 - q.y / uRes.y)); }` }),
   // em uv, em volta do centro: n = parte inteira de 12 × Angles fatias espelhadas; raio × Zoom; Rotation gira a

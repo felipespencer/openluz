@@ -141,17 +141,22 @@ export const R2 = [
       float m = clamp((pow(max(v, 0.0), 2.0 * roundness) - size) * g, 0.0, 1.0);
       return blackbg > 0.5 ? vec4(c.rgb * m, c.a) : c * m; }` }),
   // cada canal de cor vai para um lado: em Shift X anda valor × Distance × a largura (positivo = direita), sem dar a volta, e
-  // o que fica de fora some (medido: exato). Shift Y, Rotate X/Y/Z e Zoom não têm foto com R, G ou B fora do zero: são estimados
+  // o que fica de fora some (medido: exato). Shift Y, Rotate X/Y e Zoom medidos na segunda passada (2026-11-12)
   def({ id: 'shiftrgb', name: 'Shift RGB', desc: 'Separa o vermelho, o verde e o azul, cada um para um lado.',
     params: [N('distance', 'Distance', 'Distância', 1, 0, 1), L('mode', 'Mode', 'Modo', ['Shift X', 'Shift Y', 'Rotate X', 'Rotate Y', 'Rotate Z', 'Zoom'], ['Deslocar X', 'Deslocar Y', 'Girar X', 'Girar Y', 'Girar Z', 'Zoom']),
       N('r', 'R', 'Vermelho', 0, -1, 1), N('g', 'G', 'Verde', 0, -1, 1), N('b', 'B', 'Azul', 0, -1, 1), B('blackbg', 'Black BG', 'Fundo preto')],
-    glsl: `vec4 srgbS(vec2 uv, float v){ float k = v * distance; vec2 p = uv - 0.5;
+    glsl: `mat3 sgX(float a){ float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
+    mat3 sgY(float a){ float c = cos(a), s = sin(a); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
+    vec4 srgbS(vec2 uv, float v){ float k = v * distance; vec2 p = uv - 0.5;
       if (mode < 0.5) p.x -= k;
-      else if (mode < 1.5) p.y -= k;
-      else if (mode < 2.5) { float c = cos(k * 1.5708); if (abs(c) < 1e-4) return vec4(0.0); p.y /= c; }
-      else if (mode < 3.5) { float c = cos(k * 1.5708); if (abs(c) < 1e-4) return vec4(0.0); p.x /= c; }
+      else if (mode < 1.5) p.y += k;
+      else if (mode < 3.5) {   // giro no espaço, com a mesma câmera do Transform (45° de abertura vertical); meia volta em 1
+        float D = 0.5 * uRes.y * 2.4142136; mat3 R = mode < 2.5 ? sgX(-1.0 * k * 3.14159265) : sgY(-1.0 * k * 3.14159265);
+        vec3 E = vec3(0.0, 0.0, D), e = E * R, d = (vec3(p.x * uRes.x, -p.y * uRes.y, 0.0) - E) * R;
+        if (abs(d.z) < 1e-6) return vec4(0.0); float t = -e.z / d.z; if (t <= 0.0) return vec4(0.0);
+        vec2 q = e.xy + t * d.xy; p = vec2(q.x / uRes.x, -q.y / uRes.y); }
       else if (mode < 4.5) p = rot2(p * vec2(ar(), 1.0), -k * 3.14159265) / vec2(ar(), 1.0);
-      else { float z = 1.0 + k; if (z < 1e-4) return vec4(0.0); p /= z; }
+      else { float z = 1.0 - (v < 0.0 ? 17.0 * k : 1.9 * k * distance); if (z < 1e-4) return vec4(0.0); p *= z; }   // medido: 1/escala = 1 − 17 × valor × Distance para longe e 1 − 1,9 × valor × Distance² para perto
       return texIn(p + 0.5); }
     vec4 fx(vec2 uv){ vec4 cr = srgbS(uv, r), cg = srgbS(uv, g), cb = srgbS(uv, b);
       return vec4(cr.r, cg.g, cb.b, blackbg > 0.5 ? 1.0 : max(cr.a, max(cg.a, cb.a))); }` }),

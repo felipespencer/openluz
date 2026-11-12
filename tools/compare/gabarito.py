@@ -107,7 +107,7 @@ def tem_marca(img):
     if _MARCA is False:
         return False
     px = np.asarray(img.convert('RGB'))
-    return (px[_MARCA].min(-1) >= 245).mean() > 0.97 and px[~_MARCA].mean() < 225
+    return (px[_MARCA].min(-1) >= 222).mean() > 0.93 and px[~_MARCA].mean() < 225   # 245 deixava passar a marca sobre imagem girada (o A sai um pouco cinza)
 
 
 def sem_marca(sp, espera=4):

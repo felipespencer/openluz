@@ -233,12 +233,19 @@ export const R5 = [
       if (k < 1.5) return max(a.x, a.y) - 1.0;
       if (k < 2.5) return max(a.y, a.x * 0.8660254 + a.y * 0.5) / 0.8660254 - 1.0;
       vec2 r = abs(vec2(p.x + p.y, p.x - p.y)) * 0.7071068; return min(max(r.x - 0.34, r.y - 1.25), max(r.y - 0.34, r.x - 1.25)); }
+    // Retângulo e Cruz são o mesmo polígono de 12 pontas (medido com casas grandes, Resolution 4): o entalhe do meio de cada
+    // lado vai de 1 a 0,4 e as pontas dos braços de (1, 1) a (0,6, 1), estas duas vezes mais depressa. Entre os dois o Resolume move as pontas, não mistura.
+    float msq(vec2 p, float k){ vec2 a = abs(p); if (a.x > a.y) a = a.yx; vec2 N = vec2(0.0, 1.0 - 0.6 * k), A = vec2(1.0 - 0.4 * min(1.0, 2.0 * k), 1.0), e = A - N;
+      return max(dot(a - N, normalize(vec2(-e.y, e.x))), dot(a - A, vec2(0.7071068))); }
     vec4 fx(vec2 uv){ float rows = max(1.0, floor(res)), cols = ceil(rows * uRes.x / uRes.y - 0.01); vec2 n = vec2(cols, rows);
-      vec2 q = vec2(uv.x, 1.0 - uv.y) * n, id = floor(q), p = (fract(q) - 0.5) * 2.0, cc = id / n;
-      vec4 c = tex(vec2(cc.x, 1.0 - cc.y)); float l = lum(un(c)), tl = invert > 0.5 ? 1.0 - l : l, t = pow(tl, 2.0);
-      float s = (1.0 - margin) * (scale > 0.5 ? l : 1.0); if (s <= 0.0) return vec4(0.0, 0.0, 0.0, 1.0);
-      vec2 pp = p / s; float d = mix(msd(pp, shape1), msd(pp, shape2), t);
-      float px = 2.0 * n.y / uRes.y / s, w = mode < 0.5 ? 9.0 : mode < 1.5 ? 0.14 : (0.125 + 0.9 * tl * tl * tl) * min(1.0, sqrt(rows / 18.0));
+      vec2 q = vec2(uv.x, 1.0 - uv.y) * n, id = floor(q), cc = id / n;
+      vec4 c = tex(vec2(cc.x, 1.0 - cc.y)); float l = dot(un(c), vec3(0.299, 0.587, 0.114)), tl = invert > 0.5 ? 1.0 - l : l, t = clamp((tl - 0.2) / 0.6, 0.0, 1.0);   // brilho Rec. 601; medido nas cores puras da carta
+      // a forma é do mesmo tamanho para os lados e para cima (não estica com a casa): meia altura da casa × (1 − 2 × Margin)
+      float s = (1.0 - 2.0 * margin) * (scale > 0.5 ? l : 1.0); if (s <= 0.0) return vec4(0.0, 0.0, 0.0, 1.0);
+      float meia = 0.5 * uRes.y / rows * s; vec2 pp = (fract(q) - 0.5) * (uRes / n) / meia;
+      bool poli = (shape1 > 0.5 && shape1 < 1.5 || shape1 > 2.5) && (shape2 > 0.5 && shape2 < 1.5 || shape2 > 2.5);
+      float d = poli ? msq(pp, mix(shape1 > 2.5 ? 1.0 : 0.0, shape2 > 2.5 ? 1.0 : 0.0, t)) : mix(msd(pp, shape1), msd(pp, shape2), t);
+      float px = 1.0 / meia, w = mode < 0.5 ? 9.0 : mode < 1.5 ? 0.14 : 0.1 + 0.8 * pow(tl, 4.0);
       float m = clamp(0.5 - d / px, 0.0, 1.0) * clamp(0.5 + (d + w) / px, 0.0, 1.0);
       vec3 col = colmode < 0.5 ? vec3(1.0) : colmode < 1.5 ? vec3(l) : colmode < 2.5 ? un(c) : un(tex(uv));
       return vec4(col * m, 1.0); }` }),
