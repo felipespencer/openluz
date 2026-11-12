@@ -605,8 +605,8 @@ export class Panels {
   // Depois: Ken Burns e Loop na batida são um Transform com ♪ na escala (dá para ver e mexer na lista de efeitos)
   aplicarDepois(clip) {
     const st = clip.iagen; clip.fx = (clip.fx || []).filter(f => !f.iagen);
-    if (st.depois === 'kenburns') clip.fx.push({ id: 'transform', params: { x: 0, y: 0, scale: 1.08, rot: 0 }, bypass: false, iagen: true, panim: { scale: { shape: 'lfo', beats: 32, min: 1.0, max: 1.18 }, x: { shape: 'lfo', beats: 64, min: -0.04, max: 0.04 } } });
-    if (st.depois === 'batida') clip.fx.push({ id: 'transform', params: { x: 0, y: 0, scale: 1, rot: 0 }, bypass: false, iagen: true, panim: { scale: { shape: '1floor', beats: 1, min: 1.0, max: 1.07 } } });
+    if (st.depois === 'kenburns') clip.fx.push({ ...mkFx('transform'), iagen: true, panim: { sc: { shape: 'lfo', beats: 32, min: 100, max: 118 }, px: { shape: 'lfo', beats: 64, min: -77, max: 77 } } });
+    if (st.depois === 'batida') clip.fx.push({ ...mkFx('transform'), iagen: true, panim: { sc: { shape: '1floor', beats: 1, min: 100, max: 107 } } });
   }
   // Estilos prontos (maquete presets-texto-mockup.html): um clique quebra o texto e aplica fonte, cor, tamanho e animação
   presetRows(P, clip) {

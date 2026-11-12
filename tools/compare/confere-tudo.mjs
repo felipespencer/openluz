@@ -1,5 +1,5 @@
 // Roda o confere.mjs em todos os efeitos que têm gabarito e junta os resumos numa tabela.
-// Uso: node tools/compare/confere-tudo.mjs [porta=9333]   -> tools/compare/saida/conf/_tudo.json e a tabela na tela
+// Uso: [RETOMA=1] node tools/compare/confere-tudo.mjs [porta=9333]   -> tools/compare/saida/conf/_tudo.json e a tabela na tela
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +9,9 @@ const REF = path.join(HERE, 'saida', 'ref'), out = [];
 for (const d of fs.readdirSync(REF).sort()) {
   const cj = path.join(REF, d, 'casos.json'); if (!fs.existsSync(cj)) continue;
   const g = JSON.parse(fs.readFileSync(cj, 'utf8'));
+  const pronto = path.join(HERE, 'saida', 'conf', d, 'resumo.json');
+  // RETOMA=1: aproveita o resumo que já existe (a rodada anterior foi interrompida) e mede só o que falta.
+  if (process.env.RETOMA && fs.existsSync(pronto)) { const { res, ...r } = JSON.parse(fs.readFileSync(pronto, 'utf8')); out.push({ ...r, anima: !!(g.casos[0] || {}).anima }); continue; }
   try {
     const t = execFileSync('node', [path.join(HERE, 'confere.mjs'), g.efeito, '--porta', porta], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 26, timeout: 600000 }).trim().split('\n').pop();
     const r = JSON.parse(t); const padrao = g.casos[0] || {};

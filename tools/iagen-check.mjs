@@ -68,10 +68,10 @@ await ev(`(() => { const b = ${P}.browser; b.search = ''; b.setTab('src'); retur
 // 4. Depois: Ken Burns e Loop na batida viram Transform com ♪
 {
   const kb = await pos('#clipPan .iagen [data-depois="kenburns"]'); await click(kb.x, kb.y); await wait(300);
-  const f = await ev(`(${clip}.fx || []).filter(x => x.iagen).map(x => [x.id, Object.keys(x.panim || {}).join('+'), x.panim && x.panim.scale && x.panim.scale.shape])`);
+  const f = await ev(`(${clip}.fx || []).filter(x => x.iagen).map(x => [x.id, Object.keys(x.panim || {}).join('+'), x.panim && x.panim.sc && x.panim.sc.shape])`);
   check('Ken Burns põe um Transform com a escala andando devagar', f.length === 1 && f[0][0] === 'transform' && f[0][2] === 'lfo', JSON.stringify(f));
   const lb = await pos('#clipPan .iagen [data-depois="batida"]'); await click(lb.x, lb.y); await wait(300);
-  const f2 = await ev(`(${clip}.fx || []).filter(x => x.iagen).map(x => x.panim.scale.shape + ':' + x.panim.scale.beats)`);
+  const f2 = await ev(`(${clip}.fx || []).filter(x => x.iagen).map(x => x.panim.sc.shape + ':' + x.panim.sc.beats)`);
   check('Loop na batida troca para um pulso por batida', f2.length === 1 && f2[0] === '1floor:1', JSON.stringify(f2));
   const pa = await pos('#clipPan .iagen [data-depois="parada"]'); await click(pa.x, pa.y); await wait(300);
   check('Imagem parada tira o Transform', await ev(`(${clip}.fx || []).filter(x => x.iagen).length`) === 0);

@@ -104,7 +104,7 @@ await click(cell(L1, 0, 'th'));
   ev(`${P}.prepareClip(${L1}, 0)`).catch(() => { }); await wait(700);
   // com a conversão andando: o clipe vai para a casa 4 e outro clipe entra na casa 1
   await ev(`(async () => { const p = ${P}, L = p.state.layers[${L1}]; L.clips[3] = L.clips[0]; L.clips[0] = null; await p.putPath(${L1}, 0, ${JSON.stringify(CL + 'quadA.png')}, 'quadA.png'); p.render(); return 1; })()`);
-  let pronto = false; for (let i = 0; i < 240 && !pronto; i++) { await wait(500); pronto = fs.readdirSync(TMP).some(f => /\.proj\.mp4$/.test(f)) && !(await ev(`[...document.querySelectorAll('#grid .cell')].some(c => /%/.test(c.textContent))`)); if (pronto) await wait(2500); }
+  let pronto = false; for (let i = 0; i < 240 && !pronto; i++) { await wait(500); pronto = await ev(`${P}.state.layers[${L1}].clips.some(c => c && /\.proj\.mp4$/.test(c.name))`); if (pronto) await wait(1000); }   // espera a troca acontecer: o arquivo aparece no disco antes de a conversão acabar
   const linha = await ev(`${P}.state.layers[${L1}].clips.slice(0, 4).map(c => c ? c.name : '-').join(' | ')`);
   check('clipe movido durante o Preparar: o preparado entra na casa nova e a casa antiga fica com o que foi posto lá', /^quadA\.png \| - \| - \| preparar\.proj\.mp4$/.test(linha), linha);
   const toca = await ev(`(() => { const c = ${P}.state.layers[${L1}].clips[3]; return !!(c && c.dur > 1); })()`);

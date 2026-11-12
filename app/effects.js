@@ -44,12 +44,12 @@ const BASE = [
     params: [P('level', 'Limiar', 0.5, 0, 1), P('soft', 'Suavidade', 0, 0, 1), COLOR('color1', 'Cor 1', '#ffffffff', true), COLOR('color2', 'Cor 2', '#000000ff', true),
       LIST('alpha', 'Alfa', ['Original', 'Combinar', 'Substituir'], ['Original', 'Combine', 'Replace'])],
     rparams: { Threshold: 'level', Smoothness: 'soft', 'Color 1': 'color1', 'Color 2': 'color2', Alpha: 'alpha' },
-    // Medido na bancada (2026-10-25): o limiar é pelo brilho SEM premultiplicar, com os pesos de HD (Rec. 709); a rampa de
+    // Medido na bancada (2026-10-25): o limiar é pelo brilho SEM premultiplicar, com os pesos Rec. 601 (corrigido em 2026-11-12 pela carta de teste: 709 errava a linha de corte); a rampa de
     // 10 % a 90 % mede 0,52 × Suavidade (smoothstep de meia-largura 0,43 × Suavidade); a cor escolhida sai escurecida pelo
     // próprio alfa; e o modo Alfa decide o alfa da saída: Original = o do clipe, Combinar = o do clipe × o da cor,
     // Substituir = só o da cor. ("smooth" é palavra reservada do GLSL.)
-    glsl: `vec4 fx(vec2 uv){ vec4 c = tex(uv); float l = dot(un(c), vec3(0.2126, 0.7152, 0.0722)); float s = soft * 0.43;
-      float m = s > 0.0 ? smoothstep(level - s, level + s, l) : step(level, l);
+    glsl: `vec4 fx(vec2 uv){ vec4 c = tex(uv); float l = dot(un(c), vec3(0.299, 0.587, 0.114)); float s = soft * 0.5;
+      float m = s > 0.0 ? smoothstep(level - s, level + s, l) : (l > level ? 1.0 : 0.0);   // medido nos cinzas da carta: meia-largura 0,5 × Suavidade (bate até 0,5; acima disso a curva do Resolume é mais reta, em aberto); no limiar exato fica a Cor 2
       vec4 k = mix(color2, color1, m);
       float a = alpha < 0.5 ? c.a : (alpha < 1.5 ? c.a * k.a : k.a);
       return pre(k.rgb * k.a, a); }` },
@@ -79,6 +79,9 @@ export const EFFECTS = [...[...BASE, ...MORE].filter(e => !NOVOS.has(e.id)), ...
 export const EFFECT_HELPERS = HELPERS;
 export const effectById = (id) => EFFECTS.find(e => e.id === id);
 // uma instância de efeito numa cadeia (clipe, camada ou composição)
-export function mkFx(id) { const d = effectById(id); if (!d) return null; const params = {}; for (const p of d.params) params[p.key] = p.def; return { id: d.id, params, bypass: false, anim: {} }; }
+export function mkFx(id) { const d = effectById(id); if (!d) return null; const params = {}; for (const p of d.params) params[p.key] = p.def; return { id: d.id, params, bypass: false, anim: {}, ...(d.v ? { v: d.v } : {}) }; }
 // cópia independente de uma instância de efeito (parâmetros e animações na batida)
-export const cloneFx = (f) => ({ ...Object.fromEntries(Object.entries(f).filter(([k]) => k[0] !== '_')), params: { ...f.params }, panim: JSON.parse(JSON.stringify(f.panim || {})) });   // o _ fica: a cópia não pode dividir textura e memória do recorte com o original
+export const cloneFx = (f) => { const d = effectById(f.id);
+  // efeito refeito com os controles do Resolume e instância gravada antes disso: os valores antigos não servem, volta ao padrão
+  if (d && d.v && f.v !== d.v) return { ...mkFx(f.id), bypass: !!f.bypass, panim: {}, ...(f.iagen ? { iagen: true } : {}) };
+  return { ...Object.fromEntries(Object.entries(f).filter(([k]) => k[0] !== '_')), params: { ...f.params }, panim: JSON.parse(JSON.stringify(f.panim || {})) }; };   // o _ fica: a cópia não pode dividir textura e memória do recorte com o original

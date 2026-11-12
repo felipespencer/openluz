@@ -249,9 +249,9 @@ module.exports = (win, app, laser) => {
           }
         }
         // Trails em Clarear (como medido no Resolume: o mais claro entre o novo e o rastro × Feedback) segura a imagem depois que o clipe sai
-        const cropFx = { id: 'crop', params: { l: 0, r: 0, t: 0, b: 0, soft: 0 }, bypass: false, panim: {} };
+        const cropFx = { id: 'crop', params: { l: 0, r: 32768, t: 0, b: 32768 }, bypass: false, panim: {} };
         L[0].fx = [cropFx, { id: 'trails', params: { feedback: 0.9, mode: 2 }, bypass: false, panim: {} }]; P.probe(mid); P.probe(mid); const trailsAntes = P.probe(mid)[0];
-        cropFx.params.l = 1; const trailsDepois = P.probe(mid)[0]; L[0].fx = []; P.eject(0);
+        cropFx.params.r = 0; const trailsDepois = P.probe(mid)[0]; L[0].fx = []; P.eject(0);
         R.fxAll = { ...fxAll, trails: [trailsAntes, trailsDepois], total: P.EFFECTS.length };
         // APC40 mkII (sem a controladora: as mensagens entram pela função que recebe o MIDI): pad da camada 2 coluna 2, linha de cima dispara a coluna, fader e master
         const A = P.apc, ap = {}, LB = (k) => L[L.length - 1 - k]; const iB1 = L.length - 2; P.putSource(iB1,1,'testcard'); A.handle([0x90, 9, 127]); ap.pad = [LB(1).on, L[0].on];
@@ -278,10 +278,10 @@ module.exports = (win, app, laser) => {
         L[0].autopilot={dir:'next',dur:'fixed',secs:0.4,loop:true}; P.trigger(0,2); const ap0=L[0].on; await S(600); const ap1=L[0].on; await S(400); const ap2=L[0].on; L[0].autopilot.dir='off'; P.eject(0);
         R.extras={semFx,comFx,prevFx,compFx,fonte,solido,texto,meio,fim,ap:[ap0,ap1,ap2]};
         // composição: salva e abre de volta
-        L[0].name='Topo'; L[1].fx.push({id:'blur',params:{amount:0.5},bypass:false});
+        L[0].name='Topo'; L[1].fx.push({id:'blur',v:2,params:{blur:0.5},bypass:false});
         const cjson=P.serialize(); const antesN=P.state.layers.map(l=>l.clips.filter(c=>c&&(c.path||c.kind!=='video'&&c.kind!=='image')).length);   // arquivo solto sem caminho não vai para o arquivo
         P.ao.hide(true); await P.load(cjson,'teste'); await S(300); P.ao.show(); P.ao.setTab('out'); P.ao.select(P.screens()[0],P.screens()[0].items[0]); P.ao.setMode('pts');
-        R.comp={nome:P.state.name, camadas:P.state.layers.length, primeira:P.state.layers[0].name, clipes:P.state.layers.map(l=>l.clips.filter(Boolean).length), antes:antesN, fx:P.state.layers[1].fx.length, blur:P.state.layers[1].fx[0]&&P.state.layers[1].fx[0].params.amount, kinds:P.state.layers.flatMap(l=>l.clips.filter(Boolean).map(c=>c.kind))};
+        R.comp={nome:P.state.name, camadas:P.state.layers.length, primeira:P.state.layers[0].name, clipes:P.state.layers.map(l=>l.clips.filter(Boolean).length), antes:antesN, fx:P.state.layers[1].fx.length, blur:P.state.layers[1].fx[0]&&P.state.layers[1].fx[0].params.blur, kinds:P.state.layers.flatMap(l=>l.clips.filter(Boolean).map(c=>c.kind))};
         // gravação: 1,5 s da composição
         P.trigger(1,2); P.recorder.opts.stop='after'; P.recorder.opts.stopSecs=1.5; P.recorder.start(); await S(3500);
         R.rec={estado:P.recorder.state, arquivos:P.recorder.files.length, tamanho:P.recorder.files.length?P.recorder.files[P.recorder.files.length-1].size:0, blob:P.recorder.lastBlob?P.recorder.lastBlob.size:0};

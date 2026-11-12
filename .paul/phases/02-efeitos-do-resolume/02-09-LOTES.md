@@ -77,3 +77,17 @@ Triangulate 28,6 (regra dos níveis não decifrada) · Sphere 36,85 · Infinite 
 - Motor: controle de arquivo por efeito (UV Map, Mask); malha 3D com vértices (Sphere, Stingy Sphere, Terrain); som por efeito;
   semente guardada por botão (Randomize, Reset).
 - Armadilha: `input` é palavra reservada do GLSL; como chave de controle derruba o shader sem aviso (a imagem passa direto).
+
+## Conferência geral dos 113 (2026-11-12, `confere-tudo.mjs`, resultado em `tools/compare/saida/conf/_tudo.json`)
+Parados e medidos 90: igual 68 · perto 6 (Bloom 4,89, ChromaKey 3,26, Distortion 3,52, Polkadot 3,08, RadialBlur 4,65, Snowy 5,09;
+WarpSpeed 2,09 no limite) · longe 16. Mexem sozinhos 14. Sem medição 9 (seis Depth e Slice Delay não existem; Text Block e
+Text Animator não passam pelo confere).
+- Longe só por sorteio ou pela medição, sem defeito conhecido: Grid Cloner (só Random Shift), Cube Tiles, Fragment, Reveal,
+  Stripper, Snow, Background Removal (o modelo ainda não tinha respondido na foto do padrão; com a foto 0,64), Iterate (3 fotos
+  com marca d'água), Tunnel (fotos com a fase andada; refazer o gabarito com a fase zerada).
+- Longe de verdade: CRT 28,9 (presets), Meta Shape 19,2, Noisy 19,1 (só Noise = 1), Triangulate 28,6, Sphere 36,9, Stingy Sphere 6,7.
+- Threshold: era 11,07; o brilho é Rec. 601 (não 709), meia-largura da rampa 0,5 × Smoothness, no limiar exato fica a Cor 2 → 1,33.
+  Em aberto: Smoothness acima de 0,5 (a curva do Resolume fica mais reta; pior caso 13,4).
+- Composição antiga: os efeitos refeitos têm `v: 2`; instância gravada sem essa versão volta ao padrão no `cloneFx` (o Crop
+  antigo com r = 0 ficaria preto). Ken Burns e Loop na batida (imagem por IA) passaram a usar as chaves novas do Transform.
+- Baterias: selftest 75/75 e as 30 baterias aprovadas depois de acertar três testes que usavam chaves antigas e a espera do Preparar.
