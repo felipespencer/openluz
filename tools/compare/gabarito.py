@@ -63,6 +63,15 @@ class Spout:
             sys.exit(f'remetente Spout "{NOME}" não existe. Há: {self.r.getSenderList()}')
         self.r.setReceiverName(NOME)
         self.buf = None
+        import atexit
+        atexit.register(self.fecha)   # sem soltar o receptor, o remetente do Resolume some da lista quando este programa sai
+
+    def fecha(self):
+        try:
+            self.r.releaseReceiver()
+            self.r.closeOpenGL()
+        except Exception:
+            pass
 
     def quadro(self, espera=4, limite=6.0):
         r, novos, fim = self.r, 0, time.time() + limite
@@ -90,6 +99,8 @@ _MARCA = None
 def tem_marca(img):
     """A marca d'água do demo (logotipo do Arena no meio, o resto escurecido) está na imagem?"""
     global _MARCA
+    if os.environ.get('SEM_MARCA'):   # efeito que deixa o meio branco (Fragment, Iterate) engana o molde
+        return False
     if _MARCA is None:
         arq = os.path.join(REF, '_marca.npy')
         _MARCA = np.load(arq) if os.path.exists(arq) else False

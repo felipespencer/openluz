@@ -191,6 +191,9 @@ export class Panels {
     // cor e lista não animam na batida: só o controle
     if (p.color) { P.appendChild(this.pcolor(p.label, help, holder.params[p.key] ?? p.def, v => { holder.params[p.key] = v; }, p.alpha)); return; }
     if (p.opts) { P.appendChild(this.pselect(p.label, help, p.opts.map((t, i) => [String(i), t]), String(holder.params[p.key] ?? p.def), v => { holder.params[p.key] = +v; })); return; }
+    // liga/desliga e botão de disparo dos efeitos no modelo do Resolume (effects-rk.js): caixa de marcar e botão, não barra de 0 a 1
+    if (p.bool) { P.appendChild(this.pcheck(p.label, help, (holder.params[p.key] ?? p.def) >= 0.5, v => { holder.params[p.key] = v ? 1 : 0; })); return; }
+    if (p.event) { P.appendChild(this.pbutton(p.label, help, () => { holder.params[p.key] = 1; setTimeout(() => { holder.params[p.key] = 0; }, 150); })); return; }
     const a = holder.panim && holder.panim[p.key];
     const o = { min: p.min, max: p.max, step: p.step, dec: p.step < 1 ? 2 : 0, unit: p.unit, bar: true };
     const row = this.pnum(p.label, help, holder.params[p.key] ?? p.def, { ...o, reset: p.def }, v => { holder.params[p.key] = v; });

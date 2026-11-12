@@ -74,3 +74,14 @@ Cada pessoa (ou agente) mexe SÓ no seu `app/effects-rN.js` e usa a sua porta. D
 `node --check app/effects-rN.js`. Se o `confere.mjs` falhar com erro de sintaxe num arquivo de outro lote, é
 alguém no meio de uma edição: esperar uns 20 s e tentar de novo. Não tocar no Resolume (uma camada só, os lotes
 se atropelariam); dúvida que só uma medição nova resolve vai para o relatório.
+
+## Armadilhas achadas nos primeiros lotes
+
+- A chave de um controle vira uniform do shader: não pode ser nome de função nem palavra reservada do GLSL (`floor`,
+  `input`, `mix`, `sample`…). Com chave assim o shader não compila e o efeito deixa a imagem passar sem aviso.
+  `node tools/compare/compila.mjs` compila todos os efeitos no OpenLuz aberto e lista os que falham.
+- O gabarito é uma imagem parada com um controle mexido por vez: efeito que precisa de movimento (Freeze, Stop Motion),
+  de transparência no clipe (Drop Shadow) ou de dois controles juntos (Twitch, Shift RGB) não aparece nele.
+- Efeito que anima: a foto pode ter saído com a fase de um caso anterior (Tunnel, Recolor) ou atrasada um valor (Wave Warp).
+- O Resolume às vezes apaga só o alfa e deixa a cor (Raster): o `confere` mede também contra a foto multiplicada pelo alfa.
+- `node tools/compare/confere-tudo.mjs` roda todos e grava `saida/conf/_tudo.json`.
