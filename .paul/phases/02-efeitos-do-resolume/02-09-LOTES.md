@@ -79,8 +79,8 @@ Triangulate 28,6 (regra dos níveis não decifrada) · Sphere 36,85 · Infinite 
 - Armadilha: `input` é palavra reservada do GLSL; como chave de controle derruba o shader sem aviso (a imagem passa direto).
 
 ## Conferência geral dos 113 (2026-11-12, `confere-tudo.mjs`, resultado em `tools/compare/saida/conf/_tudo.json`)
-Parados e medidos 90: igual 68 · perto 6 (Bloom 4,89, ChromaKey 3,26, Distortion 3,52, Polkadot 3,08, RadialBlur 4,65, Snowy 5,09;
-WarpSpeed 2,09 no limite) · longe 16. Mexem sozinhos 14. Sem medição 9 (seis Depth e Slice Delay não existem; Text Block e
+Parados e medidos 90: igual 68 · perto 7 (Bloom 4,89, ChromaKey 3,26, Distortion 3,52, Polkadot 3,08, RadialBlur 4,65, Snowy 5,09,
+WarpSpeed 2,09) · longe 15 (já contando o Threshold corrigido). Mexem sozinhos 14. Sem medição 9 (seis Depth e Slice Delay não existem; Text Block e
 Text Animator não passam pelo confere).
 - Longe só por sorteio ou pela medição, sem defeito conhecido: Grid Cloner (só Random Shift), Cube Tiles, Fragment, Reveal,
   Stripper, Snow, Background Removal (o modelo ainda não tinha respondido na foto do padrão; com a foto 0,64), Iterate (3 fotos
