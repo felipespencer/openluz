@@ -139,10 +139,12 @@ export const R4 = [
   def({ id: 'wavewarp', name: 'Wave Warp', desc: 'Ondula a imagem numa direção, em movimento.',
     params: [N('mode', 'Mode', 'Forma', 0, 0, 1), N('height', 'Height', 'Altura', 0.2, 0, 1), N('width', 'Width', 'Largura', 0.2, 0, 1), N('angle', 'Angle', 'Ângulo', 1, 0, 1), N('speed', 'Speed', 'Velocidade', 0.5, 0, 1), B('pin', 'Pin edges?', 'Prender bordas', 1), BG],
     glsl: `vec4 fx(vec2 uv){ float a = angle * 6.2831853; vec2 d = vec2(cos(a), sin(a));
-      float f = 45.0 * (1.0 - width) * dot(uv, vec2(-d.y, d.x)) + uTime * speed * 12.0, k = floor(mode * 4.0 + 0.5), q = fract(f);
-      float g = k < 0.5 ? sin(f) : k < 1.5 ? step(0.5, q) : k < 2.5 ? q : abs(2.0 * q - 1.0);
+      // a onda conta a posição a partir de cima e começa descendo: −sen (medido pelas bordas pretas com Pin edges desligado)
+      float f = 45.0 * (1.0 - width) * dot(vec2(uv.x, 1.0 - uv.y), vec2(-1.0 * d.y, d.x)) + uTime * speed * 12.0, k = floor(mode * 4.0 + 0.5), q = fract(f);
+      float g = k < 0.5 ? -sin(f) : k < 1.5 ? step(0.5, q) : k < 2.5 ? q : abs(2.0 * q - 1.0);
       vec2 p = uv + d * (g - 0.5) * height * 0.5;
-      return blackbg > 0.5 ? texIn(p) : tex(abs(p)); }` }),
+      vec4 c = pin < 0.5 ? texIn(p) : tex(abs(p));   // sem prender as bordas, o que vem de fora do quadro fica transparente
+      return blackbg > 0.5 ? vec4(c.rgb, 1.0) : c; }` }),
   // medido só em parte: cada linha inteira desliza para a direita (e volta pelo outro lado) 0,1 × Distort × o brilho
   // da própria linha num ponto fixo, a 84% da largura (achado por comparação linha a linha; erro médio de 12 px de 960
   // nas linhas da foto).

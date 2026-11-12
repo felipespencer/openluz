@@ -187,7 +187,8 @@ export const R6 = [
   // lei ajustada às fotos, erro ~0,003).
   // Rotation soma (0,5 − valor) a u; Kaleidoscope repete o ângulo 2^(4 × valor) vezes; Twist torce u com a fundura.
   // TurnH/TurnV puxam o centro (valor − 0,5) × min(4 × fundura, 1,2). Speed 0,5 é parado; a escala da velocidade
-  // e o Wobble são palpite (o gabarito não dá). As fotos tiradas depois dos casos de Speed ficaram com a fase andada (+0,092).
+  // e o Wobble são palpite. Segunda passada (fotos com o efeito recém-posto, fase zerada): Twist torce 4 × (0,5 − valor) × fundura
+  // (de ~85 para ~13 de diferença); Kaleidoscope (17 a 47) e Wobble (38 a 60) seguem em aberto.
   def({ id: 'tunnel', name: 'Tunnel', desc: 'Túnel sem fim feito da imagem, com torção, caleidoscópio e curvas.',
     params: [N('pos', 'Position', 'Posição', 0, 0, 1), N('speed', 'Speed', 'Velocidade', 0.5, 0, 1), N('twist', 'Twist', 'Torção', 0.5, 0, 1), N('kal', 'Kaleidoscope', 'Caleidoscópio', 0, 0, 1), N('rot', 'Rotation', 'Giro', 0.5, 0, 1),
       N('turnh', 'TurnH', 'Curva horizontal', 0.5, 0, 1), N('turnv', 'TurnV', 'Curva vertical', 0.5, 0, 1), N('wobh', 'WobbleH', 'Balanço horizontal', 0, 0, 1), N('wobv', 'WobbleV', 'Balanço vertical', 0, 0, 1), B('blackbg', 'Black BG', 'Fundo preto')],
@@ -197,8 +198,8 @@ export const R6 = [
       for (int i = 0; i < 5; i++) { d = 0.0914 / (length(P) + 0.0907); 
         P = Q - th * min(4.0 * d, 1.2) - wb * 0.3 * min(4.0 * d, 1.0) * sin(uTime * 2.0 + 12.566 * d); }
       d = 0.0914 / (length(P) + 0.0907);
-      float n = floor(pow(2.0, 4.0 * kal) + 0.001);
-      float a = fract(atan(P.y, P.x) / 6.2831853 - (0.5 - rot) - (0.5 - twist) * 4.0 * (d - 0.0957));
+      float n = floor(pow(2.0, 4.0 * kal) + 0.5);
+      float a = fract(atan(P.y, P.x) / 6.2831853 - (0.5 - rot) - (0.5 - twist) * 4.0 * d);
       a = fract(a * n);
       float u = 1.0 - a;
       float v = 0.055 + 0.941 * fract(1.0 - d - pos + (speed - 0.5) * 2.0 * uTime);

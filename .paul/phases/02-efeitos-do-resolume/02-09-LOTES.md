@@ -91,3 +91,24 @@ Text Animator não passam pelo confere).
 - Composição antiga: os efeitos refeitos têm `v: 2`; instância gravada sem essa versão volta ao padrão no `cloneFx` (o Crop
   antigo com r = 0 ficaria preto). Ken Burns e Loop na batida (imagem por IA) passaram a usar as chaves novas do Transform.
 - Baterias: selftest 75/75 e as 30 baterias aprovadas depois de acertar três testes que usavam chaves antigas e a espera do Preparar.
+
+## Segunda passada no Resolume (2026-11-12, `tools/compare/gabarito2.py`)
+Casos que a varredura de um controle por vez não mostra: dois controles juntos, valores finos, clipe com transparência
+(`clips/alfa.png`), efeito recolocado a cada foto (Tunnel, Wave Warp). Os casos novos entram no `casos.json` com o nome `x_…`.
+- Exatos agora: Transform 0,01 (câmera com 45° de abertura vertical, ordem Z·X·Y, âncora Z) · Shift RGB 0,03 (Shift Y, giros em
+  perspectiva, Zoom = 1 − 17 × valor × Distance para longe e 1 − 1,9 × valor × Distance² para perto) · Mirror 0 (Flip e In / Out) ·
+  Displace 0,21 (Threshold, Invert, Wrap espelhado, Transparent; Smooth aproximado) · Saturation 0,04 (tabela acima de 0,5) ·
+  Recolor 1,04 (nove paletas, trocas em 0,2 / 0,35 / 0,4 / 0,55 / 0,6 / 0,75 / 0,8 / 1; Use Alpha) · Hatched 0,67 (passo das
+  densidades 5 e 7) · Point Grid 0,51 (perspectiva, D = 2,414 × 16/9) · Drop Shadow 0,29 (primeira prova, com clipe transparente).
+- A olho: Meta Shape (polígono de 12 pontas, tamanho pela altura da casa, brilho Rec. 601; traço fino, o número por pixel não
+  serve) · Wave Warp (onda −sen contada de cima, amplitude e frequência conferidas pelas bordas pretas, Pin edges; a fase depende
+  do instante em que o efeito entra, não bate por pixel).
+- Em aberto: Distortion (Radius = 2 × (Radius − 0,5) confirmado; a amostra de brilho por linha não é um ponto fixo: vale 1 nas
+  linhas dos rótulos, 0,381 no topo subindo até 0,604; `saida/dist_m.npy` tem a curva medida) · Tunnel (Twist acertado, 85 → 13;
+  Kaleidoscope 17–47 e Wobble 38–60: o Wobble do Resolume é parado com Speed 0,5 e entorta também a parte de fora) · Bloom
+  (Iterations 3 com Size 0,5: 16,7) · ChromaKey (Edge Blur 1: 11,9; Key Hue 0,6: 5,9) · RadialBlur (4,9; visualmente igual) ·
+  Threshold com Smoothness acima de 0,5 · Twitch, Freeze e Stop Motion (pedem clipe em movimento e comparação no tempo).
+- Bancada: a marca d'água do demo aparece ~5 s a cada ~61 s; o detector estava apertado demais (corrigido); uma foto que pega a
+  marca entrando ainda passa (Displace Invert, Point Grid Rotate X 0,6). Depois de varrer um controle de velocidade a fase fica
+  andada: os controles seguintes têm de ser fotografados com o efeito recém-posto. `zoom.py` e `fol.py` montam folhas de perto.
+- Placar geral (113): igual 69 · perto 6 · longe 15 · mexem 14 · sem medição 9, agora com ~250 casos a mais por efeito difícil.

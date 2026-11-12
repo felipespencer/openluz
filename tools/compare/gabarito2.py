@@ -53,14 +53,19 @@ CASOS = {
     'Colorize': lista({'GreysKeep': True}, 'GreysTolerance', [0, 0.15, 0.6, 1]) + [{'GreysKeep': True, 'Invert': True}],
     'Point Grid': [{'Rotate Z': 0.55}, {'Rotate Z': 0.6}, {'Rotate X': 0.6}, {'Rotate Y': 0.6}, {'Rotate X': 0.6, 'Space': 0.5}],
     'Bloom': lista({}, 'Size', [0.4, 0.6]) + [{'Iterations': 1, 'Size': 0.5}, {'Iterations': 3, 'Size': 0.5}, {'Iterations': 5, 'Size': 0.5}, {'Iterations': 1}, {'Iterations': 1, 'Threshold': 0.5}],
-    'Wave Warp': [{'Speed': 0.5, 'Height': h} for h in (0, 0.5, 1)] + [{'Width': w} for w in (0, 0.5, 1)] + [{'Angle': a} for a in (0, 0.25, 0.5, 0.75)]
-                 + [{'Mode': m} for m in (0.25, 0.5, 0.75, 1)] + [{'Pin edges?': False}, {'Pin edges?': False, 'Height': 0.5}, {'Speed': 0}, {'Speed': 1}],
+    # parados só com Speed em 0 (Wave Warp) ou no meio (Tunnel); o efeito é recolocado a cada foto para a fase voltar ao começo
+    'Wave Warp': [dict(c, Speed=0) for c in [{}, {'Height': 0}, {'Height': 0.5}, {'Height': 1}, {'Width': 0}, {'Width': 0.5}, {'Width': 1}, {'Angle': 0}, {'Angle': 0.25},
+                  {'Angle': 0.5}, {'Angle': 0.75}, {'Mode': 0.25}, {'Mode': 0.5}, {'Mode': 0.75}, {'Mode': 1}, {'Pin edges?': False}, {'Pin edges?': False, 'Height': 0.5},
+                  {'Black BG': True, 'Height': 0.5}]],
     'Twitch': [{'Max Pos X': 0.5, 'Pos Frequency': 1}, {'Max Pos Y': 0.5, 'Pos Frequency': 1}, {'Max Scale': 0.5, 'Scale Frequency': 1}, {'Max Opacity': 1, 'Opacity Frequency': 1},
                {'Max Light': 1, 'Light Frequency': 1}, {'Max RGB Shift': 1, 'RGB Frequency': 1}, {'Max Blur': 1, 'Blur Frequency': 1}, {'Max Pos X': 1, 'Pos Frequency': 0.5}],
-    'Tunnel': [{'Speed': 0.5}, {'Speed': 0}, {'Speed': 1}],
+    'Tunnel': [{'Position': 0}] + [{k: v} for k in ('Position', 'Twist', 'Kaleidoscope', 'Rotation', 'TurnH', 'TurnV', 'WobbleH', 'WobbleV') for v in (0, 0.25, 0.5, 0.75, 1)
+               if not (k in ('Position', 'Kaleidoscope', 'WobbleH', 'WobbleV') and v == 0) and not (k in ('Twist', 'Rotation', 'TurnH', 'TurnV') and v == 0.5)]
+              + [{'Black BG': True, 'TurnH': 0.25}, {'Kaleidoscope': 0.5, 'Twist': 0.25}],
     'Noisy': lista({}, 'Noise', [0.6, 0.8, 0.9, 0.95]),
 }
 # fotos do gabarito que saíram com a marca d'água do demo (efeitos em que o molde da marca não funciona)
+REPOR = {'Tunnel', 'Wave Warp'}   # efeitos em que cada foto parte do efeito recém-posto
 REFAZER = {'Iterate': ['DTranslateZ_1.png', 'DRotateX_0.png', 'DRotateX_0.25.png'], 'Fragment': ['FragRotationZ_0.png', 'FragRotationZ_0.25.png']}
 
 
@@ -88,12 +93,17 @@ def um(sp, nome, casos_novos, refazer):
     time.sleep(0.8)
     anima = bool(g['casos'][0].get('anima'))
     feitos = 0
+    if nome in REPOR:   # joga fora as fotos da primeira tentativa (fase andada)
+        g['casos'] = [x for x in g['casos'] if not x.get('passada')]
 
     def poe(valores):
+        nonlocal ps
         for k, v in valores.items():
             G.req('PUT', f"/parameter/by-id/{ps[k]['id']}", {'value': v})
 
     def tira(valores):
+        if nome in REPOR:
+            return
         for k in valores:
             G.req('PUT', f"/parameter/by-id/{ps[k]['id']}", {'value': ps[k]['value']})
 
@@ -105,6 +115,10 @@ def um(sp, nome, casos_novos, refazer):
             clip = quer
             time.sleep(1.0)
         arq = nome_caso(dict(c, **({'clip': quer} if quer else {})))
+        if nome in REPOR:
+            posto = G.por(nome)
+            ps = posto['params']
+            time.sleep(0.6)
         try:
             poe(c)
         except Exception as e:
