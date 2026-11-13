@@ -112,3 +112,18 @@ Casos que a varredura de um controle por vez não mostra: dois controles juntos,
   marca entrando ainda passa (Displace Invert, Point Grid Rotate X 0,6). Depois de varrer um controle de velocidade a fase fica
   andada: os controles seguintes têm de ser fotografados com o efeito recém-posto. `zoom.py` e `fol.py` montam folhas de perto.
 - Placar geral (113): igual 69 · perto 6 · longe 15 · mexem 14 · sem medição 9, agora com ~250 casos a mais por efeito difícil.
+
+## Terceira rodada (2026-11-13): sondas com imagem de teste própria (`tools/compare/sondas/`)
+Em vez de comparar na carta, cada sonda mostra ao Resolume uma imagem que isola a conta (ponto, quadrado escuro, degradê,
+barras de brilho conhecido) e lê o resultado em resolução cheia.
+- RadialBlur 4,9 → 0,21: N = 1 + 63 × Steps cópias (parte inteira), a cópia i ampliada por 1 + 10 × Distance × i/N e girada de
+  (Rotation − 0,5) × uma volta × (i + 1)/N; fora da imagem é transparente; sem High Quality cada cópia é somada já arredondada em
+  8 bits (o degrau troca em 0,555: medido com um degradê, `sondas/radial_quant.py`), daí as faixas de cor. O número de cópias e o
+  ângulo saíram de um ajuste por mínimos quadrados das fotos contra cópias simuladas da carta.
+- Polkadot 3,08 → 0,86: a casa das bolinhas não fica menor que 1/160 da largura (Dot Size 0); o raio segue a conta antiga.
+- Bloom 4,98 → 1,67 (`sondas/bloom_psf.py`, `bloom_lin.py`): brilho somado = (5 × Amount × soma das voltas)² de um desfoque feito
+  na RAIZ da imagem que passou do limiar e foi reduzida antes (por isso traço fino brilha mais do que a conta simples dá, e a
+  borda de um quadrado fica com 1/4 e não 1/2); raio 46 px × Size, dobra a cada volta; rampa do limiar = smoothstep². O motor
+  ganhou `stageMip` (a imagem intermediária lida por mipmaps). Em aberto: 5 voltas na carta (12,9), Knee 0,5 (4,1).
+- Armadilha nova: imagem com o meio branco (máscara do ChromaKey) engana o molde da marca d'água e a foto nunca sai;
+  `MEDIANA=1 SEM_MARCA=1 py tools/compare/gabarito2.py <efeito>` usa a mediana de três capturas em 5 s.

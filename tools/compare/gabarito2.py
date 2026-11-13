@@ -135,7 +135,10 @@ def um(sp, nome, casos_novos, refazer):
             tira(c)
             continue
         time.sleep(1.2)
-        img, b, mexe = G.firme(sp, anima)
+        if os.environ.get('MEDIANA'):   # efeito cuja imagem engana o molde da marca d'água (máscara branca do ChromaKey): mediana de 3 fotos em 5 s
+            img, b, mexe = mediana(sp, 3, 2.6), None, False
+        else:
+            img, b, mexe = G.firme(sp, anima)
         img.save(os.path.join(pasta, arq + '.png'))
         if b is not None:
             b.save(os.path.join(pasta, arq + '.b.png'))
