@@ -52,7 +52,7 @@ CASOS = {
     'Vibrance': lista({}, 'Vibrance', [0.25, 0.75, -0.25, -0.75]),
     'Colorize': lista({'GreysKeep': True}, 'GreysTolerance', [0, 0.15, 0.6, 1]) + [{'GreysKeep': True, 'Invert': True}],
     'Point Grid': [{'Rotate Z': 0.55}, {'Rotate Z': 0.6}, {'Rotate X': 0.6}, {'Rotate Y': 0.6}, {'Rotate X': 0.6, 'Space': 0.5}],
-    'Bloom': lista({}, 'Size', [0.4, 0.6]) + [{'Iterations': 1, 'Size': 0.5}, {'Iterations': 3, 'Size': 0.5}, {'Iterations': 5, 'Size': 0.5}, {'Iterations': 1}, {'Iterations': 1, 'Threshold': 0.5}],
+    'Bloom': lista({}, 'Size', [0.4, 0.6]) + [{'Iterations': 1, 'Size': 0.5}, {'Iterations': 3, 'Size': 0.5}, {'Iterations': 5, 'Size': 0.5}, {'Iterations': 1}, {'Iterations': 1, 'Threshold': 0.5}] + [dict(c, clip='quadradinho.png') for c in [{'Iterations': 1}, {'Iterations': 1, 'Size': 0.1}, {'Iterations': 1, 'Size': 0.5}, {'Iterations': 1, 'Size': 0.75}, {'Iterations': 1, 'Size': 1}, {'Iterations': 2}, {'Iterations': 3}, {'Iterations': 4}, {'Iterations': 5}, {'Iterations': 3, 'Size': 0.5}, {'Iterations': 5, 'Size': 0.5}, {'Iterations': 2, 'Size': 1}, {'Iterations': 1, 'Gaussian': 0}, {'Iterations': 1, 'Gaussian': 0.25}, {'Iterations': 1, 'Gaussian': 1}, {'Iterations': 1, 'Amount': 0.5}, {'Iterations': 3, 'Amount': 0.5}, {'Iterations': 2, 'Amount': 0.5}]],
     # parados só com Speed em 0 (Wave Warp) ou no meio (Tunnel); o efeito é recolocado a cada foto para a fase voltar ao começo
     'Wave Warp': [dict(c, Speed=0) for c in [{}, {'Height': 0}, {'Height': 0.5}, {'Height': 1}, {'Width': 0}, {'Width': 0.5}, {'Width': 1}, {'Angle': 0}, {'Angle': 0.25},
                   {'Angle': 0.5}, {'Angle': 0.75}, {'Mode': 0.25}, {'Mode': 0.5}, {'Mode': 0.75}, {'Mode': 1}, {'Pin edges?': False}, {'Pin edges?': False, 'Height': 0.5},
@@ -70,7 +70,7 @@ REFAZER = {'Iterate': ['DTranslateZ_1.png', 'DRotateX_0.png', 'DRotateX_0.25.png
 
 
 def nome_caso(v):
-    return 'x_' + '_'.join(G.rotulo(k, x)[:40] for k, x in v.items() if k != 'clip')[:110] + ('_alfa' if v.get('clip') else '')
+    return 'x_' + '_'.join(G.rotulo(k, x)[:40] for k, x in v.items() if k != 'clip')[:110] + ('' if not v.get('clip') else '_alfa' if v['clip'] == 'alfa.png' else '_' + v['clip'].split('.')[0])
 
 
 def mediana(sp, n=7, pausa=2.5):

@@ -134,14 +134,18 @@ export const R3 = [
         else if (shape > 0.5) { if (i * i + j * j > n * n + 0.5) continue; }
         vec4 t = tex(uv + vec2(i, j) * st / uRes); float lt = lum(t.rgb); if (threshold > 0.0 && (mode < 0.5 ? lt <= threshold : 1.0 - lt <= threshold)) continue; r = mode < 0.5 ? max(r, t) : min(r, t); }
       return r; }` }),
-  // RadialBlur: média de N cópias da imagem, cada uma mais ampliada a partir do centro (raio ÷ (1 + k × t), t de 0 a 1) e girada
-  // de −6,65 rad × (Rotation − 0,5) × t (giro feito no quadro esticado, por isso em elipse). N = 64 × Steps e k = 10 × Distance, ajustados pelas fotos; o giro é aproximado; Black BG e High Quality ainda sem conta
+  // RadialBlur (medido na segunda passada, cópia por cópia): N = 1 + 63 × Steps cópias (parte inteira) de peso 1/N; a cópia i
+  // (0 a N−1) é ampliada a partir do centro por 1 + 10 × Distance × i/N e girada (no quadro esticado) de
+  // (Rotation − 0,5) × uma volta × (i + 1)/N; fora da imagem é transparente. Sem High Quality cada cópia é somada já
+  // arredondada em 8 bits (o degrau troca em 0,555, medido com um degradê), o que dá as faixas de cor; com High Quality não há
+  // arredondamento. Black BG fecha o fundo em preto (sem foto que prove)
   def({ id: 'radialblur', name: 'RadialBlur', desc: 'Borrão em volta do centro, como zoom em movimento, com giro.',
     params: [N('steps', 'Steps', 'Passos', 0.3, 0, 1), N('dist', 'Distance', 'Distância', 0.1, 0, 1), N('rotation', 'Rotation', 'Giro', 0.5, 0, 1), B('hq', 'High Quality', 'Alta qualidade'), B('black', 'Black BG', 'Fundo preto')],
-    glsl: `vec4 fx(vec2 uv){ float n = floor(steps * 64.0 + 0.5); if (n < 0.5 || (dist <= 0.0 && rotation == 0.5)) return texture(uTex, uv);
-      float k = 10.0 * dist, ang = (rotation - 0.5) * -6.65; vec2 p = uv - 0.5; vec4 s = vec4(0.0);
-      for (float i = 0.0; i <= n; i += 1.0) { float t = i / n, a = ang * t; vec2 q = vec2(cos(a) * p.x - sin(a) * p.y, sin(a) * p.x + cos(a) * p.y) / (1.0 + k * t); s += tex(q + 0.5); }
-      return s / (n + 1.0); }` }),
+    glsl: `vec4 fx(vec2 uv){ float n = floor(1.0 + 63.0 * steps + 0.0001); if (steps <= 0.0) return texture(uTex, uv);
+      float k = 10.0 * dist, ang = (rotation - 0.5) * -6.2831853, m = n;  vec2 p = uv - 0.5; vec4 s = vec4(0.0);
+      for (float i = 0.0; i < m; i += 1.0) { float t = i / n, a = ang * (i + 1.0) / n; vec2 q = vec2(cos(a) * p.x - sin(a) * p.y, sin(a) * p.x + cos(a) * p.y) / (1.0 + k * t); vec4 c = texIn(q + 0.5);
+        s += hq > 0.5 ? c : floor(c * 255.0 / n + 0.445) / 255.0; }
+      if (hq > 0.5) s /= m; return black > 0.5 ? vec4(s.rgb, 1.0) : s; }` }),
   // Drop Shadow: conferido na segunda passada com um clipe transparente (degradê de alfa, sem bordas duras: o borrão do
   // Spread e do Strength segue sem prova): sombra da transparência, deslocada Distance px no ângulo dado, borrada por Spread (fração da largura),
   // com Strength amostras por lado
