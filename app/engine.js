@@ -431,6 +431,8 @@ void main(){
           gl.uniform2f(S.u.uRes, w, h); gl.uniform1f(S.u.uTime, this.time);
           for (const p of def.params) this.setParam(S, p, this.paramValue(f, p));
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); midTex = T.t;
+          // { stageMip }: o passe final lê a imagem intermediária já reduzida (textureLod); a textura é a mesma para todos os efeitos, por isso o filtro volta ao normal nos outros
+          gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, T.t); if (def.stageMip) gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, def.stageMip ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR); gl.activeTexture(gl.TEXTURE0);
           gl.bindFramebuffer(gl.FRAMEBUFFER, T2.fb); gl.uniform1f(S.u.uPass, 1); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); stage2 = T2.t;   // segundo passe: o que o gauss desfoca
         }
         if (def.gauss) { const sg = def.gauss(Object.fromEntries(def.params.map(p => [p.key, this.paramValue(f, p)])), w, h); prev = this.gaussOf(stage2 || src, w, h, Array.isArray(sg) ? sg[0] : sg, Array.isArray(sg) ? sg[1] : sg, Array.isArray(sg) && sg[2]); }

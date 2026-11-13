@@ -17,17 +17,17 @@ const PXB = `vec4 pxb(sampler2D t, vec2 uv, vec2 px, float R, float st, float g)
   return sqrt(s / tt); }
 `;
 
-// Bloom: o que passa do limiar (brilho; rampa cúbica de Threshold − Knee até Threshold) é somado 11 × 11 vezes em volta, até R px,
-// com peso de sino (sigma = Gaussian × R) e SEM dividir pela soma dos pesos: por isso estoura para o branco
-const BLM = `vec3 blm(sampler2D t, vec2 uv, float R, float pre, float N){
-  vec3 s = vec3(0.0); float g = max(gaussian, 0.0005), tt = 0.0;
-  for (float i = -N; i <= N; i += 1.0) { float wi = exp(-0.5 * (i / N / g) * (i / N / g)); if (wi < 0.002) continue;
-    for (float j = -N; j <= N; j += 1.0) { float w = wi * exp(-0.5 * (j / N / g) * (j / N / g)); if (w < 0.002) continue;
-      vec2 q = uv + vec2(i, j) * R / N / uRes; tt += w; if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) continue;
-      vec4 c = texture(t, q); if (pre < 0.5) { s += c.rgb * c.rgb * 64.0 * w; continue; }
-      float b = lum(c.rgb), m = knee > 0.0005 ? clamp((b - threshold + knee) / knee, 0.0, 1.0) : step(threshold, b);
-      s += c.rgb * m * m * m * w; } }
-  return s * amount / (pre < 0.5 ? tt : 1.0); }
+// Bloom (medido na segunda passada com quadrados de brilho conhecido): o que passa do limiar (brilho; rampa suave ao quadrado de
+// Threshold − Knee até Threshold) é primeiro REDUZIDO (média linear numa casa de ~0,55 × Gaussian × raio), entra pela RAIZ, é
+// desfocado por 11 × 11 amostras (sino de sigma = Gaussian × R cortado em R, R = 46 px × Size em 1080 linhas, pesos divididos
+// pela soma) e o brilho somado à imagem é (5 × Amount × soma das voltas)²: por isso cresce com o quadrado do Amount e do número
+// de voltas e estoura para o branco. A volta k usa raio (e redução) 2^(k−1) vezes maior.
+const BLM = `vec3 blmK(vec2 uv, float R, float sg, float lod){ vec3 s = vec3(0.0); float tt = 0.0, k = R / 5.0 / max(sg, 1e-4);
+  for (float i = -5.0; i <= 5.0; i += 1.0) { float wi = exp(-0.5 * i * i * k * k); if (wi < 0.002) continue;
+    for (float j = -5.0; j <= 5.0; j += 1.0) { float w = wi * exp(-0.5 * j * j * k * k); if (w < 0.002) continue;
+      vec2 q = uv + vec2(i, j) * R / 5.0 / uRes; tt += w; if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) continue;
+      s += sqrt(textureLod(uMid, q, lod).rgb) * w; } }
+  return s / max(tt, 1e-5); }
 `;
 
 export const R3 = [
@@ -43,16 +43,15 @@ export const R3 = [
     params: [N('blur', 'Blur', 'Desfoque', 1, 0, 1), N('dx', 'Distance X', 'Distância X', 20, 0, 250, 0.1, ' px'), N('dy', 'Distance Y', 'Distância Y', 20, 0, 250, 0.1, ' px'), N('interval', 'Interval', 'Intervalo', 2, 1, 6), N('gaussian', 'Gaussian', 'Suavidade', 0.2, 0, 1)],
     stage: PXB + `vec4 fx(vec2 uv){ if (uPass > 0.5) return vec4(0.0); return pxb(uTex, uv, vec2(1.0 / uRes.x, 0.0), blur * dx, floor(interval), gaussian); }`,
     glsl: PXB + `vec4 fx(vec2 uv){ return pxb(uMid, uv, vec2(0.0, 1.0 / uRes.y), blur * dy, floor(interval), gaussian); }` }),
-  // Bloom: cada volta espalha de novo o brilho da volta anterior, com raio dobrado (32 px × Size na primeira), e soma.
-  // O motor só dá dois passes de 8 bits: o 1º guarda o brilho espalhado (raiz de 1/64, para caber o que estoura);
-  // da 3ª volta em diante é aproximação (espalha a 1ª volta mais longe).
+  // Bloom: o 1º passe guarda o que passou do limiar; a redução vem dos mipmaps dessa imagem (stageMip). Em aberto: 5 voltas na
+  // carta (12,9) e Knee longe do padrão
   def({ id: 'bloom', name: 'Bloom', desc: 'As partes claras brilham e vazam para fora.',
     params: [N('amount', 'Amount', 'Quantidade', 1, 0, 1), N('threshold', 'Threshold', 'Limiar', 0.9, 0, 1), N('knee', 'Knee', 'Joelho', 0.1, 0, 1), N('iterations', 'Iterations', 'Voltas', 2, 1, 5, 1), N('size', 'Size', 'Tamanho', 0.25, 0, 1), N('gaussian', 'Gaussian', 'Suavidade', 0.5, 0, 1)],
-    stage: BLM + `vec4 fx(vec2 uv){ if (uPass > 0.5) return vec4(0.0); return vec4(sqrt(blm(uTex, uv, 32.0 * size * uRes.y / 1080.0, 1.0, 5.0) / 64.0), 1.0); }`,
-    glsl: BLM + `vec4 fx(vec2 uv){ vec4 c = texture(uTex, uv); float n = floor(iterations + 0.5), R = 32.0 * size * uRes.y / 1080.0; vec3 r = c.rgb + blm(uTex, uv, R, 1.0, 5.0);
-      if (n > 1.5) r += blm(uMid, uv, 2.0 * R, 0.0, 5.0);
-      for (float k = 3.0; k <= n; k += 1.0) r += blm(uMid, uv, sqrt((pow(4.0, k) - 4.0) / 3.0) * R, 0.0, 8.0) * pow(amount, k - 2.0);
-      return vec4(min(r, vec3(c.a)), c.a); }` }),
+    stageMip: true,
+    stage: `vec4 fx(vec2 uv){ if (uPass > 0.5) return vec4(0.0); vec4 c = texture(uTex, uv); float b = lum(c.rgb), m = knee > 0.0005 ? smoothstep(threshold - knee, threshold, b) : step(threshold, b); return vec4(c.rgb * m * m, 1.0); }`,
+    glsl: BLM + `vec4 fx(vec2 uv){ vec4 c = texture(uTex, uv); float n = floor(iterations + 0.5), R = 46.0 * size * uRes.y / 1080.0, g = max(gaussian, 0.0005); vec3 e = vec3(0.0);
+      for (float k = 1.0; k <= n; k += 1.0) { float f = pow(2.0, k - 1.0); e += R < 0.3 ? sqrt(texture(uMid, uv).rgb) : blmK(uv, f * R, g * f * R, max(0.0, log2(0.55 * g * f * R))); }
+      e *= 5.0 * amount; return vec4(min(c.rgb + e * e, vec3(c.a)), c.a); }` }),
   // Pixel High Pass: cada canal abaixo do seu limiar vira zero; do limiar para cima passa como está (medido: exato nos cinzas)
   def({ id: 'pixelhighpass', name: 'Pixel High Pass', desc: 'Apaga, canal por canal, o que estiver abaixo do limiar.',
     params: [N('r', 'R', 'Vermelho', 0, 0, 1), N('g', 'G', 'Verde', 0, 0, 1), N('b', 'B', 'Azul', 0, 0, 1)],
