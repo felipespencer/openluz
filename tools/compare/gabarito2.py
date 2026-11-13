@@ -135,8 +135,8 @@ def um(sp, nome, casos_novos, refazer):
             tira(c)
             continue
         time.sleep(1.2)
-        if os.environ.get('MEDIANA'):   # efeito cuja imagem engana o molde da marca d'água (máscara branca do ChromaKey): mediana de 3 fotos em 5 s
-            img, b, mexe = mediana(sp, 3, 2.6), None, False
+        if os.environ.get('MEDIANA'):   # efeito cuja imagem engana o molde da marca d'água (máscara branca do ChromaKey): mediana de 5 fotos em 13 s (a marca dura mais de 5 s)
+            img, b, mexe = mediana(sp, 5, 2.6), None, False
         else:
             img, b, mexe = G.firme(sp, anima)
         img.save(os.path.join(pasta, arq + '.png'))
@@ -172,7 +172,8 @@ def main():
     t0 = time.time()
     for n in nomes:
         try:
-            r = f'{um(sp, n, CASOS.get(n, []), REFAZER.get(n, []))} casos'
+            so = [x for x in os.environ.get('SO', '').split(',') if x]   # SO=nome1,nome2: refaz só esses casos (foto que saiu com a marca d'água)
+            r = f'{um(sp, n, [c for c in CASOS.get(n, []) if not so or nome_caso(c) in so], [] if so else REFAZER.get(n, []))} casos'
         except Exception as e:
             r = 'ERRO ' + str(e)[:200]
             if 'Spout' in r or 'refused' in r or 'timed out' in r:

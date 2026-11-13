@@ -170,10 +170,11 @@ export const R2 = [
       return texIn(p + 0.5); }
     vec4 fx(vec2 uv){ vec4 cr = srgbS(uv, r), cg = srgbS(uv, g), cb = srgbS(uv, b);
       return vec4(cr.r, cg.g, cb.b, blackbg > 0.5 ? 1.0 : max(cr.a, max(cg.a, cb.a))); }` }),
-  // tira a cor de matiz Key Hue: distância de matiz d (HSV); a transparência começa em 0,4 × Hue Threshold − 0,03 (acima de 0,75 sobe até pegar tudo em 1) e leva
-  // 0,4 × Hue Softness para fechar (medido). Spill tira a cor (vira a média dos canais) do que sobra perto do matiz, com a mesma
-  // régua (medido). Brancos e pretos escapam do recorte: White age sobre a saturação e Black sobre o brilho (rampas estimadas).
-  // Edge Shrink e Edge Blur: sem efeito ainda (pedem passes de erosão e desfoque da máscara)
+  // ChromaKey, medido na terceira rodada com uma carta de matiz × saturação e matiz × brilho (Show Mask): a distância à chave é
+  // o seno de π × diferença de matiz (0 na chave, 1 no matiz oposto); fica o que passa de Hue Threshold, com rampa suave do
+  // tamanho de Hue Softness. Brancos e pretos escapam: ficam abaixo de White Threshold de saturação e de Black Threshold de
+  // brilho (HSV), com rampa do tamanho da Softness. Spill tira a cor (média dos canais) com a mesma régua do matiz.
+  // Edge Shrink come 8 px × valor da borda (1º passe) e Edge Blur desfoca a máscara (sigma 10,4 px × valor; em 1 medido 14 px).
   def({ id: 'chromakey', name: 'ChromaKey', desc: 'Tira uma cor (o verde do fundo, por exemplo).',
     params: [B('showmask', 'Show Mask', 'Mostrar a máscara'), N('keyhue', 'Key Hue', 'Matiz da chave', 0.4401114284992218, 0, 1),
       N('huethr', 'Hue Threshold', 'Limiar do matiz', 0.1, 0, 1), N('huesoft', 'Hue Softness', 'Suavidade do matiz', 0.25, 0, 1),
@@ -181,17 +182,23 @@ export const R2 = [
       N('blackthr', 'Black Threshold', 'Limiar do preto', 0.2, 0, 1), N('blacksoft', 'Black Softness', 'Suavidade do preto', 0.1, 0, 1),
       N('spillthr', 'Spill Threshold', 'Limiar do vazamento', 0.2, 0, 1), N('spillsoft', 'Spill Softness', 'Suavidade do vazamento', 0.1, 0, 1),
       N('shrink', 'Edge Shrink', 'Encolher a borda', 0.125, 0, 1), N('eblur', 'Edge Blur', 'Desfocar a borda', 0.125, 0, 1)],
+    stage: `float ckRamp(float a, float w, float x){ return w < 1e-4 ? step(a, x) : smoothstep(a, a + w, x); }
+    float ckD(vec3 h){ return abs(sin(3.14159265 * (h.x - keyhue))); }
+    float ckM(vec2 q){ vec3 h = rgb2hsv(un(tex(q)));
+      return max(ckRamp(huethr, huesoft, ckD(h)), max(1.0 - ckRamp(whitethr, whitesoft, h.y), 1.0 - ckRamp(blackthr, blacksoft, h.z))); }
+    vec4 fx(vec2 uv){ if (uPass > 0.5) return vec4(0.0); float a = ckM(uv), r = 8.0 * shrink * uRes.y / 1080.0;
+      if (r > 0.25) for (float i = -1.0; i <= 1.0; i += 1.0) for (float j = -1.0; j <= 1.0; j += 1.0) { if (i == 0.0 && j == 0.0) continue;
+        a = min(a, ckM(uv + vec2(i, j) * r / uRes)); if (r > 2.5) a = min(a, ckM(uv + vec2(i, j) * 0.5 * r / uRes)); }
+      return vec4(a); }`,
     glsl: `float ckRamp(float a, float w, float x){ return w < 1e-4 ? step(a, x) : smoothstep(a, a + w, x); }
-    vec4 fx(vec2 uv){ vec4 c = tex(uv); vec3 u = un(c); vec3 h = rgb2hsv(u);
-      float d = abs(h.x - keyhue); d = min(d, 1.0 - d);
-      float keep = ckRamp(huethr <= 0.75 ? 0.4 * huethr - 0.03 : 0.27 + (huethr - 0.75) * 0.92, 0.4 * huesoft, d);
-      float branco = 1.0 - ckRamp(whitethr - 0.5 * whitesoft, 1.5 * whitesoft, h.y);
-      float preto = 1.0 - ckRamp(blackthr - 0.5 * blacksoft, 1.5 * blacksoft, h.z);
-      float a = max(keep, max(branco, preto));
-      if (whitethr >= 0.999 || blackthr >= 0.999) a = 1.0;
+    float ckD(vec3 h){ return abs(sin(3.14159265 * (h.x - keyhue))); }
+    float ckM(vec2 q){ vec3 h = rgb2hsv(un(tex(q)));
+      return max(ckRamp(huethr, huesoft, ckD(h)), max(1.0 - ckRamp(whitethr, whitesoft, h.y), 1.0 - ckRamp(blackthr, blacksoft, h.z))); }
+    vec4 fx(vec2 uv){ vec4 c = tex(uv); vec3 u = un(c); float d = ckD(rgb2hsv(u)), sg = (eblur <= 0.5 ? 10.4 * eblur : 5.2 + (eblur - 0.5) * 17.6) * uRes.y / 1080.0, a = 0.0, tt = 0.0;
+      if (sg < 0.2) a = texture(uMid, uv).r;
+      else { for (float i = -6.0; i <= 6.0; i += 1.0) for (float j = -6.0; j <= 6.0; j += 1.0) { float w = exp(-0.125 * (i * i + j * j)); a += texture(uMid, clamp(uv + vec2(i, j) * 0.5 * sg / uRes, 0.0, 1.0)).r * w; tt += w; } a /= tt; }
       if (showmask > 0.5) return vec4(vec3(a) * c.a, c.a);
-      float sp = ckRamp(0.4 * spillthr - 0.03, 0.4 * spillsoft, d);
-      u = mix(vec3((u.r + u.g + u.b) / 3.0), u, sp);
+      u = mix(vec3((u.r + u.g + u.b) / 3.0), u, ckRamp(spillthr, spillsoft, d));
       return pre(u, c.a * a); }` }),
   // ponto × (1 + 8 × Strength) − Strength × os 8 vizinhos a Distance pontos (em cruz e nas diagonais), medido
   def({ id: 'sharpen', name: 'Sharpen', desc: 'Realça os detalhes.',

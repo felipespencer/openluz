@@ -127,3 +127,9 @@ barras de brilho conhecido) e lê o resultado em resolução cheia.
   ganhou `stageMip` (a imagem intermediária lida por mipmaps). Em aberto: 5 voltas na carta (12,9), Knee 0,5 (4,1).
 - Armadilha nova: imagem com o meio branco (máscara do ChromaKey) engana o molde da marca d'água e a foto nunca sai;
   `MEDIANA=1 SEM_MARCA=1 py tools/compare/gabarito2.py <efeito>` usa a mediana de três capturas em 5 s.
+- ChromaKey 4,99 → 0,63 (carta `clips/hsv.png`: matiz × saturação e matiz × brilho, com Show Mask; `clips/chave.png` para a borda):
+  distância à chave = seno de π × diferença de matiz; fica o que passa de Hue Threshold, rampa suave do tamanho de Hue Softness;
+  branco e preto = abaixo do limiar de saturação / brilho, rampa do tamanho da Softness; Spill com a mesma régua do matiz;
+  Edge Shrink come 8 px × valor e Edge Blur desfoca com sigma 10,4 px × valor (agora feitos, em dois passes). A marca d'água
+  dura mais de 5 s: a mediana passou a cinco capturas em 13 s; `SO=caso1,caso2` refaz só as fotos estragadas.
+- Placar dos "perto" depois desta rodada: sobram Snowy 5,09 (sorteado) e WarpSpeed 2,09.
