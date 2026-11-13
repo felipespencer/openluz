@@ -133,3 +133,6 @@ barras de brilho conhecido) e lê o resultado em resolução cheia.
   Edge Shrink come 8 px × valor e Edge Blur desfoca com sigma 10,4 px × valor (agora feitos, em dois passes). A marca d'água
   dura mais de 5 s: a mediana passou a cinco capturas em 13 s; `SO=caso1,caso2` refaz só as fotos estragadas.
 - Placar dos "perto" depois desta rodada: sobram Snowy 5,09 (sorteado) e WarpSpeed 2,09.
+
+## Plano 02-10 (2026-11-13)
+- Distortion 3,52 → 0,00 (`sondas/dist_mapa.py`): o brilho que desliza cada linha é lido na DIAGONAL da imagem (a linha r lê a coluna na mesma fração, do canto de cima à esquerda ao de baixo à direita), média simples de R, G e B, deslize para a direita dando a volta. A fração é (r + 0,5)/1088, não /1080 (achado com colunas de cinza sorteado, erro de 0,46 nível): parece a altura arredondada para múltiplo de 16; só medido em 1080, em outra altura é suposição.

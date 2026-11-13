@@ -150,6 +150,6 @@ export const R4 = [
   // nas linhas da foto).
   def({ id: 'distortion', name: 'Distortion', desc: 'Desliza cada linha da imagem conforme o brilho dela.',
     params: [N('distort', 'Distort', 'Força', 0, 0, 1), N('radius', 'Radius', 'Raio', 0.55, 0, 1)],
-    glsl: `vec4 fx(vec2 uv){ float m = dot(un(tex(vec2(0.839, uv.y))), vec3(0.3, 0.59, 0.11));
-      return texture(uTex, vec2(fract(uv.x - 2.0 * distort * (radius - 0.5) * m), uv.y)); }` }),   // Radius é o tamanho e o lado do deslize: 2 × (Radius − 0,5) (medido na segunda passada)
+    glsl: `vec4 fx(vec2 uv){ vec3 d = un(tex(vec2((1.0 - uv.y) * uRes.y / (ceil(uRes.y / 16.0) * 16.0), uv.y))); float m = (d.r + d.g + d.b) / 3.0;
+      return texture(uTex, vec2(fract(uv.x - 2.0 * distort * (radius - 0.5) * m), uv.y)); }` }),   // o brilho de cada linha é lido na diagonal da imagem (canto de cima à esquerda ao de baixo à direita), média de R, G e B; a diagonal é contada como se a imagem tivesse 1088 linhas (1080 arredondado para múltiplo de 16; só medido em 1080); Radius é o tamanho e o lado: 2 × (Radius − 0,5) (sondas/dist_mapa.py)
 ];
