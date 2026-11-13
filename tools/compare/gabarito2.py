@@ -46,7 +46,16 @@ CASOS = {
                   {'Edge Shrink': 0, 'Edge Blur': 1}, {'Show Mask': True, 'Edge Shrink': 0, 'Edge Blur': 0}, {'Show Mask': True},
                   {'White Threshold': 0.5, 'Edge Shrink': 0, 'Edge Blur': 0}, {'White Threshold': 0.8, 'Edge Shrink': 0, 'Edge Blur': 0},
                   {'Black Threshold': 0.5, 'Edge Shrink': 0, 'Edge Blur': 0}, {'Black Threshold': 0.8, 'Edge Shrink': 0, 'Edge Blur': 0},
-                  {'Key Hue': 0.6, 'Edge Shrink': 0, 'Edge Blur': 0}, {'Key Hue': 0.6, 'Show Mask': True, 'Edge Shrink': 0, 'Edge Blur': 0}],
+                  {'Key Hue': 0.6, 'Edge Shrink': 0, 'Edge Blur': 0}, {'Key Hue': 0.6, 'Show Mask': True, 'Edge Shrink': 0, 'Edge Blur': 0}]
+    + [dict(v, **{'Show Mask': True, 'Edge Shrink': 0, 'Edge Blur': 0, 'clip': 'hsv.png'}) for v in
+       [{}] + [{'Key Hue': x} for x in (0, 0.25, 0.6, 0.8)] + [{'Hue Threshold': x} for x in (0, 0.05, 0.25, 0.5, 0.75, 0.9, 1)]
+       + [{'Hue Softness': x} for x in (0, 0.5, 1)] + [{'White Threshold': x} for x in (0, 0.1, 0.5, 0.8)] + [{'White Softness': x} for x in (0, 0.5, 1)]
+       + [{'Black Threshold': x} for x in (0, 0.1, 0.5, 0.8)] + [{'Black Softness': x} for x in (0, 0.5, 1)]
+       + [{'Hue Threshold': 0.5, 'Hue Softness': 0.5}, {'White Threshold': 0.5, 'White Softness': 0.5}, {'Black Threshold': 0.5, 'Black Softness': 0.5}]]
+    + [dict(v, **{'Edge Shrink': 0, 'Edge Blur': 0, 'clip': 'hsv.png'}) for v in
+       [{}] + [{'Spill Threshold': x} for x in (0, 0.5, 1)] + [{'Spill Softness': x} for x in (0, 0.5, 1)] + [{'Spill Threshold': 0.5, 'Spill Softness': 0.5}]]
+    + [dict(v, **{'Show Mask': True, 'clip': 'chave.png'}) for v in
+       [{'Edge Shrink': a, 'Edge Blur': b} for a, b in ((0, 0), (0.125, 0), (0.25, 0), (0.5, 0), (1, 0), (0, 0.125), (0, 0.25), (0, 0.5), (0, 1), (0.5, 0.5))]],
     'Exposure': lista({}, 'Exposure', [0.55, 0.6, 0.7, 0.8, 0.9]),
     'Saturation': lista({}, 'Saturation', [0.55, 0.6, 0.7, 0.8, 0.9]),
     'Vibrance': lista({}, 'Vibrance', [0.25, 0.75, -0.25, -0.75]),

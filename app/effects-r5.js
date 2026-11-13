@@ -93,16 +93,16 @@ export const R5 = [
     vec4 fx(vec2 uv){ vec4 c = tex(uv); if (width <= 0.0) return c;
       float m = clamp(gline(uv.x - 0.5, 0.5 * sx, 1.0 / uRes.x) + gline(uv.y - 0.5, 0.5 * sy, 1.0 / uRes.y), 0.0, 1.0);
       return mix(c, vec4(color.rgb * color.a, color.a), m); }` }),
-  // bolinhas em colunas: meia casa s = 1 px + Dot Size × 1/4 da largura; colunas a cada 2s a partir do centro, bolinhas a
+  // bolinhas em colunas: meia casa s = 1 px + Dot Size × 1/4 da largura (o raio segue essa conta, mas a casa não fica menor que 1/160 da largura: medido com Dot Size 0); colunas a cada 2s a partir do centro, bolinhas a
   // cada 2s em cada coluna, colunas alternadas deslocadas de s. A cor é a do centro da casa (2s × 2s) e o raio é
   // s × brilho (Rec. 601) dessa cor, com a borda desfeita em ~10 px. Abaixo do Threshold a bolinha some.
   def({ id: 'polkadot', name: 'Polkadot', desc: 'A imagem vira bolinhas, maiores onde é mais claro.',
     params: [N('dsize', 'Dot Size', 'Tamanho', 0.1, 0, 1), N('thr', 'Threshold', 'Limiar', 0, 0, 1)],
-    glsl: `vec4 fx(vec2 uv){ float s = 1.0 + dsize * uRes.x * 0.25; vec2 p = (uv - 0.5) * uRes; p.y = -p.y;
+    glsl: `vec4 fx(vec2 uv){ float sr = 1.0 + dsize * uRes.x * 0.25, s = max(uRes.x / 160.0, sr); vec2 p = (uv - 0.5) * uRes; p.y = -p.y;
       float col = floor(p.x / (2.0 * s)), xc = (col + 0.5) * 2.0 * s, yd, ys;
       if (mod(col, 2.0) > 0.5) { yd = (floor(p.y / (2.0 * s)) + 0.5) * 2.0 * s; ys = yd; }
       else { yd = floor(p.y / (2.0 * s) + 0.5) * 2.0 * s; ys = yd + s; }
-      vec4 c = abs(ys) > 0.5 * uRes.y ? vec4(0.0) : tex(vec2(xc, -ys) / uRes + 0.5); float l = lum(un(c)), r = (thr > 0.0 && l <= thr) ? 0.0 : s * l;
+      vec4 c = abs(ys) > 0.5 * uRes.y ? vec4(0.0) : tex(vec2(xc, -ys) / uRes + 0.5); float l = lum(un(c)), r = (thr > 0.0 && l <= thr) ? 0.0 : sr * l;
       return c * (r > 0.0 ? sqrt(smoothstep(-1.9, 7.5, r - length(p - vec2(xc, yd)))) : 0.0); }` }),
   // grade de pontos com a cor da imagem: 4 + 124 × Resolution pontos na largura (× 9/16 na altura), espalhados por
   // 1,062 × o quadro; ponto de raio 32 × Size px; Space afasta os pontos (× 1 + 9,1 × Space) sem mudar a cor de cada um;
