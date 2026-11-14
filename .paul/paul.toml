@@ -21,7 +21,9 @@ status = "in_progress"
 plans_completed = 6
 
 [loop]
-position = "IDLE"
+position = "PLAN"
+plan = "12-10"
+plan_path = "phases/12-revisao-geral/12-10-PLAN.md"
 
 [satellite]
 groom = true

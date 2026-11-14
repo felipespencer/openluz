@@ -253,7 +253,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [ ] 12-07: gravação e Preparar (6, 7, 71) — aplicado em 2026-11-11, na 0.2.0 instalada; falta o aprovado
 - [x] 12-08: pente fino por uso (show de mentira com mouse e teclado reais; lista única com os achados que sobraram do 12-01) — fechado em 2026-11-14 (7 achados novos, lista única em lotes A–F; o Felipe: "lotes")
 - [x] 12-09: lote A, o que derruba um show (27/N4, 49, 24, 22, 21, 75, 5, 16) — fechado em 2026-11-14 com a 0.3.0-beta.1 instalada ("aprovado")
-- [ ] 12-10: lote C1 (N1, N3, N5, 72, 73, 74)
+- [ ] 12-10: lote C1 (N1, N3, N5, 72, 73, 74) — plano criado em 2026-11-14, aguardando aprovação
 - [ ] 12-11: lote B2 (39, 40, 44, 42, N2)
 - [ ] depois, se ele pedir: B1, C2, D, E, F
 
