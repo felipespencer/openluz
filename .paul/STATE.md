@@ -62,7 +62,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [12-09: loop fechado (lote A; 0.3.0-beta.1 instalada e aprovada)]
   ✓        ✓        ✓     [12-10: loop fechado (lote C1; não entrou em beta instalada)]
   ✓        ✓        ✓     [12-11: loop fechado (lote B2; 0.3.0-beta.2 pública)]
-  ✓        ◐        ○     [07-03: aprovado em 2026-11-14 ("Tá bem" / "Vem nessa" à ordem 07-03 primeiro; "roda"); APPLY iniciado: só mede, não muda o programa]
+  ✓        ✓        ○     [07-03: Tarefas 1 e 2 feitas em 2026-11-14 — 07-03-DIFERENCAS.md (28 linhas: gestos Shift/Ctrl/Alt/roda/inteiros, presets, origens da entrada, painel da máscara, Is Key/Black BG, guia) e tools/compare/sondas/ao_resolume.py; programa intocado, XML do Resolume restaurado, tudo fechado. NO CHECKPOINT: Felipe diz "tudo" ou os números das linhas. Não medido: pontos/bezier, aba de entrada, anel de giro do nosso lado, Shift+seta no Resolume]
   ✓        ✓        ○     [13-01: porta de entrada aplicada, sem push; no checkpoint de decisão]
   ✓        ✓        ✓     [13-02: FECHADO em 2026-11-14 — convite e aviso (1acc7ae, só local); 13/13, show-passada, lotes A/C1/B2, selftest e 30 baterias (em duas partes, a primeira rodada caiu por falta de memória); textos aprovados pelo Felipe; beta.3 sem resposta. Pedido de 3D na Saída avançada: depois do 07-03, plano de desenho com maquete]
 ```
