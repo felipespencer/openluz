@@ -72,6 +72,9 @@ CASOS = {
                if not (k in ('Position', 'Kaleidoscope', 'WobbleH', 'WobbleV') and v == 0) and not (k in ('Twist', 'Rotation', 'TurnH', 'TurnV') and v == 0.5)]
               + [{'Black BG': True, 'TurnH': 0.25}, {'Kaleidoscope': 0.5, 'Twist': 0.25}],
     'Noisy': lista({}, 'Noise', [0.6, 0.8, 0.9, 0.95]),
+    'CRT': [{'Columns': 40, 'Rows': 20}, {'Columns': 40, 'Rows': 20, 'Shift': 0}, {'Columns': 40, 'Rows': 20, 'Shift': 50}, {'Columns': 40, 'Rows': 20, 'Bloom Amount': 0}, {'Bloom Amount': 0},
+            {'Left/Right': 3, 'Between Slots': 2}, {'Left/Right': 0, 'Between Slots': 0}, {'Height Scale': 8, 'Top/Bottom': 3}, {'Height Scale': 1, 'Top/Bottom': 0},
+            {'Columns': 40, 'Rows': 20, 'Spread': 0, 'Bloom Amount': 0}, {'Columns': 40, 'Rows': 20, 'Spread': 100, 'Bloom Amount': 0}, {'Columns': 40, 'Rows': 20, 'Fisheye': 100}, {'Columns': 40, 'Rows': 20, 'Vignette': 100}],
 }
 # fotos do gabarito que saíram com a marca d'água do demo (efeitos em que o molde da marca não funciona)
 REPOR = {'Tunnel', 'Wave Warp'}   # efeitos em que cada foto parte do efeito recém-posto
@@ -94,6 +97,16 @@ def mediana(sp, n=7, pausa=2.5):
 def um(sp, nome, casos_novos, refazer):
     pasta = os.path.join(G.REF, re.sub(r'[^\w.\- ]+', '_', nome))
     alvo = os.path.join(pasta, 'casos.json')
+    if os.environ.get('CHEIA'):   # CHEIA=1: refaz o gabarito inteiro do efeito em 1920x1080 numa pasta ao lado, <efeito>-cheia (usar com MEDIANA=1 SEM_MARCA=1)
+        base, pasta = pasta, pasta + '-cheia'
+        os.makedirs(pasta, exist_ok=True)
+        alvo = os.path.join(pasta, 'casos.json')
+        if not os.path.exists(alvo):
+            g0 = json.load(open(os.path.join(base, 'casos.json'), encoding='utf-8'))
+            g0['casos'] = [x for x in g0['casos'] if not x.get('clip') and not x.get('passada')]
+            json.dump(g0, open(alvo, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        so = [x for x in os.environ.get('SO', '').split(',') if x]
+        refazer = [x['arquivo'] for x in json.load(open(alvo, encoding='utf-8'))['casos'] if x.get('arquivo') and not x.get('passada') and (not so or x['arquivo'][:-4] in so) and (so or not os.path.exists(os.path.join(pasta, x['arquivo'])))]
     g = json.load(open(alvo, encoding='utf-8'))
     G.abrir(G.CARTA)
     clip = None
@@ -155,7 +168,7 @@ def um(sp, nome, casos_novos, refazer):
         c = next(x for x in g['casos'] if x.get('arquivo') == arq)
         poe(c['valores'])
         time.sleep(1.2)
-        img = mediana(sp)
+        img = mediana(sp, 5, 2.6) if os.environ.get('CHEIA') else mediana(sp)
         img.save(os.path.join(pasta, arq))
         c['media'] = round(float(np.asarray(img.convert('RGB')).mean()), 2)
         c['anima'] = False

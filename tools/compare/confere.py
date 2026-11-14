@@ -3,11 +3,11 @@
 import json, sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
-W, H = 960, 540
 saida = []
 for p in json.load(open(sys.argv[1], encoding='utf-8')):
+    W, H = (1920, 1080) if p.get('cheia') else (960, 540)   # cheia: efeito de grade fina (CRT), comparado em resolução cheia
     bruta = np.asarray(Image.open(p['ref']).convert('RGBA').resize((W, H), Image.BOX), np.float32)
     r = bruta[..., :3]
     o = np.asarray(Image.open(p['nosso']).convert('RGB').resize((W, H), Image.BOX), np.float32)
@@ -18,8 +18,14 @@ for p in json.load(open(sys.argv[1], encoding='utf-8')):
     d2 = np.abs(r2 - o)
     if d2.mean() < d.mean():
         r, d = r2, d2
-    Image.fromarray(np.concatenate([r, o, np.clip(d * 4, 0, 255)], 1).astype(np.uint8)).save(p['lado'])
+    lado = Image.fromarray(np.concatenate([r, o, np.clip(d * 4, 0, 255)], 1).astype(np.uint8))
+    longe = None
+    if p.get('cheia'):   # "de longe": as duas imagens borradas por uma caixa de 13 px (umas duas células do CRT padrão) antes da diferença; não pune a fase da grade
+        lado = lado.resize((2880, 540), Image.BOX)
+        br = [np.asarray(Image.fromarray(x.astype(np.uint8)).filter(ImageFilter.BoxBlur(6)), np.float32) for x in (r, o)]
+        longe = round(float(np.abs(br[0] - br[1]).mean()), 2)
+    lado.save(p['lado'])
     saida.append({'caso': p['caso'], 'media': round(float(d.mean()), 2), 'max': int(d.max()),
                   'acima16': round(float((d.max(2) > 16).mean() * 100), 1), 'anima': p['anima'],
-                  'igual_ao_padrao': p['igual_ao_padrao'], 'fora': p['fora']})
+                  'igual_ao_padrao': p['igual_ao_padrao'], 'fora': p['fora'], 'longe': longe})
 print(json.dumps(saida))

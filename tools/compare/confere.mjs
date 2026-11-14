@@ -23,7 +23,9 @@ for (let i = 2; i < process.argv.length; i++) {
 }
 if (!a.efeito) { console.log('uso: node tools/compare/confere.mjs "<efeito>" [--so casos] [--espera n] [--abre]'); process.exit(1); }
 const limpo = s => s.replace(/[^\w.\- ]+/g, '_');
-const REF = path.join(HERE, 'saida', 'ref', limpo(a.efeito)), OUT = path.join(HERE, 'saida', 'conf', limpo(a.efeito));
+// efeito de grade fina (CRT): se existe a pasta <efeito>-cheia (gabarito em 1920x1080, CHEIA=1 no gabarito2), vale ela, e sai também a medida "de longe"
+const CHEIA = fs.existsSync(path.join(HERE, 'saida', 'ref', limpo(a.efeito) + '-cheia', 'casos.json'));
+const REF = path.join(HERE, 'saida', 'ref', limpo(a.efeito) + (CHEIA ? '-cheia' : '')), OUT = path.join(HERE, 'saida', 'conf', limpo(a.efeito));
 if (!fs.existsSync(path.join(REF, 'casos.json'))) { console.error('sem gabarito para ' + a.efeito + ' (rode tools/compare/gabarito.py)'); process.exit(1); }
 const gab = JSON.parse(fs.readFileSync(path.join(REF, 'casos.json'), 'utf8'));
 fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
@@ -78,19 +80,19 @@ try {
     clipAtual = clip;
     const nosso = path.join(OUT, c.arquivo.replace(/\.png$/, '.openluz.png'));
     fs.writeFileSync(nosso, Buffer.from(r.png.split(',')[1], 'base64'));
-    pares.push({ caso: c.arquivo.replace(/\.png$/, ''), ref: path.join(REF, c.arquivo), nosso, lado: path.join(OUT, c.arquivo), anima: !!c.anima, igual_ao_padrao: !!c.igual_ao_padrao, fora: r.fora });
+    pares.push({ caso: c.arquivo.replace(/\.png$/, ''), ref: path.join(REF, c.arquivo), nosso, lado: path.join(OUT, c.arquivo), anima: !!c.anima, igual_ao_padrao: !!c.igual_ao_padrao, fora: r.fora, cheia: CHEIA });
   }
   await ev(`(() => { window.projecionista.state.layers[0].fx = []; return true; })()`);
   ws.close();
   const lista = path.join(OUT, 'pares.json'); fs.writeFileSync(lista, JSON.stringify(pares));
   const res = JSON.parse(execFileSync('py', [path.join(HERE, 'confere.py'), lista], { maxBuffer: 1 << 26 }).toString());
-  let soma = 0, n = 0, pior = null;
+  let soma = 0, n = 0, pior = null, somaL = 0, piorL = null;
   for (const r of res) {
     const marca = r.fora.length ? '  SEM CONTROLE: ' + r.fora.join(', ') : '';
-    console.log(`${r.caso.padEnd(34)} média ${String(r.media).padStart(6)}  máx ${String(r.max).padStart(3)}  >16: ${String(r.acima16).padStart(5)}%${r.anima ? '  (mexe sozinho)' : ''}${r.igual_ao_padrao ? '  (no Resolume = padrão)' : ''}${marca}`);
-    if (!r.anima && !/-foto$/.test(r.caso)) { soma += r.media; n++; if (!pior || r.media > pior.media) pior = r; }
+    console.log(`${r.caso.padEnd(34)} média ${String(r.media).padStart(6)}  máx ${String(r.max).padStart(3)}  >16: ${String(r.acima16).padStart(5)}%${r.longe != null ? '  de longe ' + String(r.longe).padStart(5) : ''}${r.anima ? '  (mexe sozinho)' : ''}${r.igual_ao_padrao ? '  (no Resolume = padrão)' : ''}${marca}`);
+    if (!r.anima && !/-foto$/.test(r.caso)) { soma += r.media; n++; if (!pior || r.media > pior.media) pior = r; if (r.longe != null) { somaL += r.longe; if (!piorL || r.longe > piorL.longe) piorL = r; } }
   }
-  const resumo = { efeito: a.efeito, casos: res.length, media: n ? +(soma / n).toFixed(2) : null, pior: pior && { caso: pior.caso, media: pior.media }, semControle: [...new Set(res.flatMap(r => r.fora))] };
+  const resumo = { efeito: a.efeito, casos: res.length, media: n ? +(soma / n).toFixed(2) : null, pior: pior && { caso: pior.caso, media: pior.media }, semControle: [...new Set(res.flatMap(r => r.fora))], ...(CHEIA && n ? { longe: +(somaL / n).toFixed(2), piorLonge: piorL && { caso: piorL.caso, longe: piorL.longe } } : {}) };
   fs.writeFileSync(path.join(OUT, 'resumo.json'), JSON.stringify({ ...resumo, res }, null, 1));
   console.log(JSON.stringify(resumo));
 } finally { fecha(); }

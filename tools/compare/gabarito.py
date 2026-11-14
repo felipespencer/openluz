@@ -84,7 +84,8 @@ class Spout:
                 novos += 1
                 if novos > espera:
                     img = np.frombuffer(self.buf, np.uint8).reshape(r.getSenderHeight(), r.getSenderWidth(), 4)
-                    return Image.fromarray(np.ascontiguousarray(img)).resize((960, 540), Image.BOX)   # RGBA premultiplicado
+                    im = Image.fromarray(np.ascontiguousarray(img))   # RGBA premultiplicado
+                    return im.copy() if os.environ.get('CHEIA') else im.resize((960, 540), Image.BOX)   # CHEIA=1: resolução cheia (grade fina do CRT)
             r.waitFrameSync(NOME, 100)
         raise RuntimeError('o Spout não mandou quadro novo a tempo (Resolume congelou?)')
 
