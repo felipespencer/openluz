@@ -251,6 +251,8 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [ ] 12-05: recorte, webcam e nativos (60, 61, 62, 64; o 63 foi retirado: falso alarme do webcam-check rodado sem a imagem de prova) — aplicado em 2026-11-11, na beta.70 instalada; falta o aprovado
 - [ ] 12-06: rede e sites (46, 47, 54) — aplicado em 2026-11-11, na 0.2.0 instalada; falta o aprovado
 - [ ] 12-07: gravação e Preparar (6, 7, 71) — aplicado em 2026-11-11, na 0.2.0 instalada; falta o aprovado
+- [ ] 12-08: pente fino por uso (show de mentira com mouse e teclado reais; lista única com os achados que sobraram do 12-01) — plano criado em 2026-11-13, aguardando aprovação
+- [ ] 12-09 em diante: consertos do pente fino, em lotes escolhidos pelo Felipe
 
 ## Ideias para um marco futuro
 
