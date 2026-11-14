@@ -195,6 +195,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 **Plans:**
 - [x] 07-01: Soft Edge por degradê e seleção na sobreposição (registro do entregue + alças na aba Saída) — ok do Felipe em 2026-11-03
 - [x] 07-02: botão direito com o mesmo menu do Resolume 7.28 (pedido de 2026-11-05)
+- [ ] 07-03: medir a Saída avançada contra a Advanced Output do Resolume e listar as diferenças ("eu acho que o advanced não está igual ao resolume", 2026-11-14) — plano criado, aguardando aprovação
 
 ### Phase 8: Webcam virtual
 
