@@ -61,6 +61,7 @@ Prévia separada do ar, os 30 quadros, bateria única) junto com o resto da list
 | 10 | Modelos 3D | 0/1 | In progress (10-01 no checkpoint) | - |
 | 11 | Câmera que segue o rosto | 1/1 | ✅ Complete | 2026-11-09 |
 | 12 | Revisão geral | 2/7 | In progress (12-01 fechado; consertos em seis lotes) | - |
+| 13 | Porta de entrada | 0/1 | In progress (13-01 em aplicação) | - |
 
 ## Phase Details
 
@@ -257,6 +258,14 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [x] 12-10: lote C1 (N1, N3, N5, 72, 73, 74) — fechado em 2026-11-14 (cb36a72; "aprovado"); ainda fora da beta instalada
 - [x] 12-11: lote B2 (39, 40, 44, 42, N2) — fechado em 2026-11-14 (72b3bf9) com a 0.3.0-beta.2 pública ("Continua")
 - [ ] parado no "risco 1" (decisão do Felipe, 2026-11-14): B1, C2, D, E, F só se ele pedir
+
+### Phase 13: Porta de entrada
+
+**Goal:** quem chega de fora baixa, instala e faz a primeira projeção sozinho. Pedido de 2026-11-14 ("quero ver esse app open-source pronto, quero melhorar a vida das pessoas"; "Escolha e dá-lhe").
+**Depends on:** nada
+
+**Plans:**
+- [ ] 13-01: primeira vez medida, PRIMEIROS-PASSOS.md (PT/EN), README em dia e caminhos de assinatura do instalador — em aplicação desde 2026-11-14
 
 ## Ideias para um marco futuro
 
