@@ -1,5 +1,7 @@
 # Projecionista (OpenLuz no Windows): como usar
 
+> Primeira vez? Comece pelos [primeiros passos](PRIMEIROS-PASSOS.md): baixar, instalar e pôr uma imagem no projetor.
+
 Programa de computador para projeção ao vivo: uma grade de clipes por camada, tudo misturado
 numa imagem só, e uma janela de saída para o projetor. O jeito de trabalhar segue o do Resolume
 (camadas, colunas, clipes), com menos botões.

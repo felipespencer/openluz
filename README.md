@@ -10,7 +10,9 @@ OpenLuz é um software livre e de código aberto pra VJ, performance visual ao v
 
 Vai ter três versões: **web** (abre no navegador), **Windows** e **Android**, todas com o mesmo motor por baixo.
 
-> **Status:** a versão **Windows** (10 e 11, 64 bits) está na **0.2.0**. Web e Android vêm depois, do mesmo código.
+> **Status:** a versão **Windows** (10 e 11, 64 bits) está na **0.2.0**; a **0.3.0-beta.2** está em teste. Web e Android vêm depois, do mesmo código.
+>
+> **Começando agora?** Veja os [primeiros passos](PRIMEIROS-PASSOS.md): do download a uma imagem no projetor.
 
 ### O que já tem (Windows)
 
@@ -41,7 +43,7 @@ A interface começa em português. A tradução pra inglês e outros idiomas vem
 
 ### Baixar
 
-Instalador do Windows (MSI) e versão sem instalar (zip) na página de [releases](https://github.com/felipespencer/openluz/releases).
+Instalador do Windows (MSI) na página de [releases](https://github.com/felipespencer/openluz/releases). O instalador ainda não é assinado: no aviso do Windows, clique em **Mais informações** e depois em **Executar assim mesmo**. O passo a passo está em [PRIMEIROS-PASSOS.md](PRIMEIROS-PASSOS.md).
 
 ### Rodar do código (versão Windows, hoje)
 
@@ -79,7 +81,9 @@ OpenLuz is a free and open source tool for VJing, live visual performance and pr
 
 It will ship in three versions: **web** (runs in the browser), **Windows** and **Android**, all sharing the same engine underneath.
 
-> **Status:** the **Windows** version (10 and 11, 64-bit) is at **0.2.0**. Web and Android come later, from the same code.
+> **Status:** the **Windows** version (10 and 11, 64-bit) is at **0.2.0**; **0.3.0-beta.2** is in testing. Web and Android come later, from the same code.
+>
+> **New here?** See the [first steps](PRIMEIROS-PASSOS.md#openluz-first-steps): from download to an image on the projector.
 
 ### What it does today (Windows)
 
@@ -110,7 +114,7 @@ The interface starts in Portuguese. English and other languages will come later.
 
 ### Download
 
-Windows installer (MSI) and portable zip on the [releases](https://github.com/felipespencer/openluz/releases) page.
+Windows installer (MSI) on the [releases](https://github.com/felipespencer/openluz/releases) page. The installer is not signed yet: on the Windows warning, click **More info**, then **Run anyway**. Step by step in [PRIMEIROS-PASSOS.md](PRIMEIROS-PASSOS.md#openluz-first-steps).
 
 ### Run from source (Windows version, for now)
 
