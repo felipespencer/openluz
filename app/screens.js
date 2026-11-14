@@ -233,6 +233,12 @@ export function gradOutline(g) {
 export function maskShape(kind, x, y, w, h) {
   if (kind === 'circle') { const n = 32, pts = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; pts.push([x + w / 2 + Math.cos(a) * w / 2, y + h / 2 + Math.sin(a) * h / 2]); } return pts; }
   if (kind === 'triangle') return [[x + w / 2, y], [x + w, y + h], [x, y + h]];
+  if (kind === 'hexagon') { const pts = []; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; pts.push([x + w / 2 + Math.cos(a) * w / 2, y + h / 2 + Math.sin(a) * h / 2]); } return pts; }
+  if (kind === 'heart') {   // curva clássica do coração, encaixada na caixa (a ponta para baixo)
+    const n = 48, raw = []; for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, sn = Math.sin(t); raw.push([16 * sn * sn * sn, -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]); }
+    const xs = raw.map(q => q[0]), ys = raw.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    return raw.map(q => [x + (q[0] - x0) / (x1 - x0) * w, y + (q[1] - y0) / (y1 - y0) * h]);
+  }
   return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
 }
 // máscara de entrada do slice: polígono em coordenadas locais (0..1)

@@ -154,7 +154,8 @@ export class AdvancedOutput {
     if (document.querySelector('.dlgOver')) return;   // com um diálogo por cima (Automape, uma pergunta), as teclas são dele
     if (e.key === ' ') { this.space = true; e.preventDefault(); }
     else if (e.key === 'Escape') {
-      if (this.drawing) { this.drawing = null; this.draw(); }
+      if (['aoAddMenu', 'aoGridMenu', 'aoPresetMenu'].some(id => !$(id).hidden)) this.closeMenus();   // menu suspenso aberto: o Esc é dele
+      else if (this.drawing) { this.drawing = null; this.draw(); }
       else if (this.hist.length) confirmBox('Saída avançada', 'Sair sem guardar o que foi feito nas telas nesta sessão?').then((ok) => { if (ok && this.open) this.hide(true); });   // o botão Cancelar continua direto
       else this.hide(true);
     }
@@ -245,7 +246,8 @@ export class AdvancedOutput {
     return ins;
   }
   itemsAt(p) { return this.itemsOnStage().filter(o => this.hit(o.item, p)); }
-  select(screen, item) { this.sel = { screen, item }; this.selPt = -1; this.selG = -1; this.syncTools(); if (this.tab === 'out') this.layout(); this.refresh(); }
+  select(screen, item) { if (this.drawing) this.finishDrawing();   // desenho de máscara em curso: fecha com o que há (menos de 3 pontos: cancela), senão o palco ficava vazio
+    this.sel = { screen, item }; this.selPt = -1; this.selG = -1; this.syncTools(); if (this.tab === 'out') this.layout(); this.refresh(); }
 
   // ---------- desenho do palco ----------
   draw() {
@@ -379,8 +381,8 @@ export class AdvancedOutput {
     if (!wasSel) this.select(found.screen, found.item);
     const it = found.item; this.lastDown.item = it;   // o item que este clique acertou: o segundo clique do par age nele, mesmo que o up do primeiro tenha passado a seleção adiante
     this.svg.setPointerCapture(e.pointerId);
-    this.pushUndo();
-    const d = this.drag = { k, i: +t.dataset.i, it, last: p, start: p, wasSel, moved: false };
+    const redo0 = this.redoHist; this.pushUndo();
+    const d = this.drag = { k, i: +t.dataset.i, it, last: p, start: p, wasSel, moved: false, redo0 };
     if (k[0] === 'g' && k.length <= 3) {   // alça de degradê: o automático vira ajustado na hora em que é tocado
       const g0 = this.grads(it)[d.i]; if (!g0) { this.drag = null; return; }
       this.selG = d.i; this.selPt = -1; d.src = g0; d.g = null; d.g0 = { a: [...g0.a], b: [...g0.b] }; d.lp = this.localPx(it, p);   // só vira ajustado quando mexer de fato (clique parado só seleciona)
@@ -438,6 +440,7 @@ export class AdvancedOutput {
   up(e) {
     const d = this.drag; if (!d) return;
     this.drag = null; try { this.svg.releasePointerCapture(e.pointerId); } catch { }
+    { const top = this.hist[this.hist.length - 1]; if (top && top.json === M.serialize(this.screens())) { this.hist.pop(); this.redoHist = d.redo0 || []; this.syncTools(); } }   // o gesto não mudou nada: fora do desfazer, e o refazer continua
     if (d.moved || d.k !== 'body' || !d.wasSel) return;
     // clique (sem arrastar) no corpo do item já selecionado, com outros embaixo do cursor: a seleção passa para o próximo,
     // em roda; assim dá para pegar o slice que está atrás clicando na região em que os dois se sobrepõem
@@ -520,7 +523,7 @@ export class AdvancedOutput {
       sc.items.push(s); this.sel = { screen: sc, item: s };
     } else if (kind === 'maskDraw') { this.setTab('out'); this.drawing = { kind: 'mask', pts: [] }; }
     else {
-      const shape = { maskRect: 'rect', maskCircle: 'circle', maskTri: 'triangle', maskHex: 'hexagon' }[kind] || 'rect';
+      const shape = { maskRect: 'rect', maskCircle: 'circle', maskTri: 'triangle', maskHex: 'hexagon', maskHeart: 'heart' }[kind] || 'rect';
       const m = M.mkMask('Máscara ' + (sc.items.filter(i => i.type === 'mask').length + 1), M.maskShape(shape, sc.w * 0.35, sc.h * 0.3, sc.w * 0.3, sc.h * 0.4));
       sc.items.push(m); this.sel = { screen: sc, item: m }; this.setTab('out');
     }
@@ -653,14 +656,14 @@ export class AdvancedOutput {
     gs.forEach((g, i) => {
       const row = el('div', 'grow' + (i === this.selG ? ' cur' : '') + (g.on === false ? ' off' : ''));
       const on = g.on !== false, ck = el('label', 'ck' + (on ? ' on' : '')); ck.innerHTML = on ? ICON.item : ICON.itemOff; ck.title = on ? 'Desligar esta emenda' : 'Ligar esta emenda';
-      ck.onclick = (ev) => { ev.stopPropagation(); this.pushUndo(); const m = M.adoptGrad(s, g); m.on = !on; this.selG = this.grads(s).indexOf(m); refresh(); };
+      ck.onclick = (ev) => { ev.stopPropagation(); if (!on && gs.filter(x => x.on !== false).length >= 8) { this.c.toast('No máximo 8 degradês ligados por slice: desligue um antes'); return; } this.pushUndo(); const m = M.adoptGrad(s, g); m.on = !on; this.selG = this.grads(s).indexOf(m); refresh(); };
       row.append(ck, el('span', 'nm', M.gradName(g, i)), el('span', 'tag' + (g.auto ? '' : ' man'), !on ? 'desligado' : g.auto ? 'automático' : 'ajustado'));
       if (!g.auto && !g.edge) { const x = el('span', 'x', '✕'); x.title = 'Apagar'; x.onclick = (ev) => { ev.stopPropagation(); this.selG = i; this.removeGrad(); }; row.appendChild(x); }
       row.onclick = () => { this.selG = i; this.draw(); this.renderProps(); };
       list.appendChild(row);
     });
     const add = el('button', 'wide', '+ Adicionar degradê'); add.type = 'button';
-    add.onclick = () => { this.pushUndo(); const w = s.in.w, h = s.in.h, rd = s.soft.round; s.soft.grads.push({ id: M.nextId(), edge: null, on: true, a: [Math.round(w * 0.3), Math.round(h / 2)], b: [0, Math.round(h / 2)], n1: Math.round(h / 4), n2: Math.round(h / 4), roundOn: rd.on, round: rd.r }); this.selG = this.grads(s).length - 1; refresh(); };
+    add.onclick = () => { if (gs.filter(x => x.on !== false).length >= 8) { this.c.toast('No máximo 8 degradês ligados por slice: desligue um antes'); return; } this.pushUndo(); const w = s.in.w, h = s.in.h, rd = s.soft.round; s.soft.grads.push({ id: M.nextId(), edge: null, on: true, a: [Math.round(w * 0.3), Math.round(h / 2)], b: [0, Math.round(h / 2)], n1: Math.round(h / 4), n2: Math.round(h / 4), roundOn: rd.on, round: rd.r }); this.selG = this.grads(s).length - 1; refresh(); };
     P.appendChild(list); P.appendChild(add);
     const g = gs[this.selG]; if (!g) return;
     const edit = (fn) => (v) => { const m = M.adoptGrad(s, g); fn(m, v); this.selG = this.grads(s).indexOf(m); M.touch(s); };
