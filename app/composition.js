@@ -23,14 +23,20 @@ export function serializeComposition(state, laser, cols) {
   for (const L of state.layers) { restoreAnims(L); restoreAnims(L.transform); for (const c of L.clips) if (c) { restoreAnims(c); restoreAnims(c.transform); } }
   for (const g of state.groups || []) restoreAnims(g.transform);
   if (state.compTransformRef) restoreAnims(state.compTransformRef());
+  // clipe de laser: além do id do quadro (que muda a cada abertura), a posição dele na lista; casa cujo clipe não abriu: o registro original volta para o arquivo
+  const sClip = (c) => { const o = serializeClip(c); if (o && o.kind === 'laser') o.laserIdx = laser.frames.findIndex(f => f.id === c.laserId); return o; };
+  const linha = (L, clips) => clips.map((c, i) => c ? sClip(c) : (clips === L.clips && L.lost && L.lost[i]) || null);
+  // slice com Fonte = camada: o id da camada muda a cada abertura e a cada desfazer; vai junto a posição dela na pilha
+  const telas = JSON.parse(M.serialize(state.screens));
+  (function anda(o) { if (!o || typeof o !== 'object') return; if (typeof o.source === 'number') o.sourceLayer = state.layers.findIndex(L => L.id === o.source); for (const k in o) anda(o[k]); })(telas);
   return JSON.stringify({
     v: 1, name: state.name || 'Composição', cols, colNames: state.colNames || {}, settings: state.settings, master: state.master, compBypass: !!state.compBypass, speed: state.speed, compFx: state.compFx, compTransform: state.compTransform, compAutopilot: state.compAutopilot,
-    layers: state.layers.map(L => ({ name: L.name, master: L.master ?? 1, volume: L.volume ?? 1, opacity: L.opacity, panim: L.panim, blend: L.blend, bypass: L.bypass, autopilot: L.autopilot, fx: L.fx, transform: L.transform, transition: L.transition, transMode: L.transMode, transOpt: L.transOpt, blendOpt: L.blendOpt, group: L.group ?? null, solo: !!L.solo, bus: L.bus || null, on: L.on, clips: L.clips.map(serializeClip) })),
+    layers: state.layers.map(L => ({ name: L.name, master: L.master ?? 1, volume: L.volume ?? 1, opacity: L.opacity, panim: L.panim, blend: L.blend, bypass: L.bypass, autopilot: L.autopilot, fx: L.fx, transform: L.transform, transition: L.transition, transMode: L.transMode, transOpt: L.transOpt, blendOpt: L.blendOpt, group: L.group ?? null, solo: !!L.solo, bus: L.bus || null, ignoreColumn: !!L.ignoreColumn, on: L.on, clips: linha(L, L.clips) })),
     groups: state.groups || [], xfade: state.xfade || XFADE(), deck: state.deck || 0, keymap: keymapOrNull(state.keymap),
     bpm: state.bpm ? { bpm: state.bpm.bpm, snap: state.bpm.snap, metronome: !!state.bpm.metronome, nudgePct: state.bpm.nudgePct } : null, colSnap: state.colSnap || {}, audio: state.audioSettings || AUDIO_SETTINGS(),
     // os clipes das camadas são os do deck atual; os outros decks guardam as suas linhas (uma por camada)
-    decks: (state.decks || []).map((d, i) => ({ name: d.name, color: d.color || '', closed: !!d.closed, rows: i === (state.deck || 0) ? null : state.layers.map(L => (d.cells[L.id] || []).map(serializeClip)) })),
-    screens: JSON.parse(M.serialize(state.screens)),
+    decks: (state.decks || []).map((d, i) => ({ name: d.name, color: d.color || '', closed: !!d.closed, rows: i === (state.deck || 0) ? null : state.layers.map(L => (d.cells[L.id] || []).map(sClip)) })),
+    screens: telas,
     laser: JSON.parse(serializeLaser(laser.frames, laser.settings, laser.frames.indexOf(laser.active))),
   }, semInternos);
 }
@@ -50,17 +56,18 @@ export async function deserializeComposition(json, ctx) {
   if (ctx.setCols && d.cols) ctx.setCols(d.cols);
   // o quadro do laser é referenciado pela posição na lista
   const clipOpts = { toast: ctx.toast, laserClip: (idx) => { const f = lz && lz.frames[idx]; return f ? ctx.laserClip(f) : null; } };
-  const openClip = async (o) => (ctx.reuse && o && !o.missing && ctx.reuse(o)) || deserializeClip(o, clipOpts);
+  // lost: registro de um clipe que não abriu numa abertura anterior; no desfazer (ctx.reuse) não se tenta abrir de novo
+  const openClip = async (o) => (ctx.reuse && o && !o.missing && ctx.reuse(o)) || (ctx.reuse && o && o.lost ? null : deserializeClip(o, clipOpts));
   const layers = [];
   for (const l of d.layers || []) {
     const L = ctx.mkLayer(l.name || 'Camada');
     L.master = l.master ?? 1; L.volume = l.volume ?? 1; L.opacity = l.opacity ?? 1; L.blend = l.blend || 'normal'; L.bypass = !!l.bypass; L.autopilot = Object.assign(AUTOPILOT(), l.autopilot || {});
-    L.fx = (l.fx || []).map(f => cloneFx(f)); L.transform = Object.assign({ x: 0, y: 0, scale: 1, rot: 0 }, l.transform || {}); L.panim = l.panim ? JSON.parse(JSON.stringify(l.panim)) : undefined; L.transition = l.transition ?? 0; L.transMode = l.transMode || 'alpha'; L.transOpt = Object.assign(MIXER_OPT(), l.transOpt || {}); L.blendOpt = Object.assign(MIXER_OPT(), l.blendOpt || {}); L.group = l.group ?? null; L.solo = !!l.solo; L.bus = l.bus || null;
+    L.fx = (l.fx || []).map(f => cloneFx(f)); L.transform = Object.assign({ x: 0, y: 0, scale: 1, rot: 0 }, l.transform || {}); L.panim = l.panim ? JSON.parse(JSON.stringify(l.panim)) : undefined; L.transition = l.transition ?? 0; L.transMode = l.transMode || 'alpha'; L.transOpt = Object.assign(MIXER_OPT(), l.transOpt || {}); L.blendOpt = Object.assign(MIXER_OPT(), l.blendOpt || {}); L.group = l.group ?? null; L.solo = !!l.solo; L.bus = l.bus || null; L.ignoreColumn = !!l.ignoreColumn; L.savedOn = l.on ?? -1;   // savedOn: o que estava no ar ao salvar (só a reabertura depois de uma queda usa)
     for (let i = 0; i < L.clips.length; i++) {
       const o = (l.clips || [])[i];
       if (o && o.missing) { missing++; continue; }
       L.clips[i] = await openClip(o);
-      if (o && !L.clips[i]) missing++;
+      if (o && !L.clips[i]) { missing++; (L.lost = L.lost || {})[i] = { ...o, lost: true }; }   // não abriu: o registro fica guardado e volta para o arquivo no próximo salvar
     }
     layers.push(L);
   }

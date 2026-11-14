@@ -135,7 +135,8 @@ export class LaserModule {
   // ---------- desfazer ----------
   snapState() { return { json: L.serializeLaser(this.frames, this.settings, this.frames.indexOf(this.active)), si: this.frames.indexOf(this.sel) }; }
   pushUndo() { this.hist.push(this.snapState()); if (this.hist.length > 60) this.hist.shift(); this.redoHist = []; this.syncTools(); }
-  restore(st) { const d = L.deserializeLaser(st.json); this.frames = d.frames; this.settings = d.settings; this.active = d.active; this.sel = this.frames[st.si] || this.frames[0] || null; this.c.onChange(); this.refresh(); }
+  restore(st) { const d = L.deserializeLaser(st.json); d.frames.forEach((f, i) => { if (this.frames[i]) f.id = this.frames[i].id; });   // mesmo id na mesma posição: os clipes de laser da grade continuam apontando para o quadro
+    this.frames = d.frames; this.settings = d.settings; this.active = d.active; this.sel = this.frames[st.si] || this.frames[0] || null; this.c.onChange(); this.refresh(); }
   undo() { if (!this.hist.length) return; this.redoHist.push(this.snapState()); this.restore(this.hist.pop()); }
   redo() { if (!this.redoHist.length) return; this.hist.push(this.snapState()); this.restore(this.redoHist.pop()); }
 

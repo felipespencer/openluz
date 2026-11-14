@@ -246,7 +246,7 @@ export function serialize(screens) {
   return JSON.stringify({ v: 1, screens: screens.map(sc => ({
     uid: sc.uid, name: sc.name, device: sc.device, w: sc.w, h: sc.h, enabled: sc.enabled, opacity: sc.opacity, color: sc.color,
     items: sc.items.map(it => it.type === 'slice'
-      ? { type: 'slice', name: it.name, enabled: it.enabled, source: it.source, in: it.in, flip: it.flip,
+      ? { type: 'slice', name: it.name, enabled: it.enabled, source: it.source, sourceLayer: it.sourceLayer, in: it.in, flip: it.flip,
           warp: { mode: it.warp.mode, curve: it.warp.curve, divX: it.warp.divX, divY: it.warp.divY, rot: it.warp.rot, pts: it.warp.pts },
           soft: it.soft, color: it.color, inMask: it.inMask && { pts: it.inMask.pts, invert: it.inMask.invert } }
       : { type: 'mask', name: it.name, enabled: it.enabled, invert: it.invert, pts: it.pts }),
@@ -261,7 +261,7 @@ export function deserialize(json) {
     for (const it of s.items || []) {
       if (it.type === 'mask') { const m = mkMask(it.name || 'Máscara', (it.pts || []).map(p => [+p[0], +p[1]])); m.enabled = it.enabled !== false; m.invert = !!it.invert; sc.items.push(m); continue; }
       const sl = mkSlice(it.name || 'Slice', it.in || { x: 0, y: 0, w: sc.w, h: sc.h }, { x: 0, y: 0, w: sc.w, h: sc.h });
-      sl.enabled = it.enabled !== false; sl.source = it.source || 'comp';
+      sl.enabled = it.enabled !== false; sl.source = it.source || 'comp'; if (typeof it.sourceLayer === 'number') sl.sourceLayer = it.sourceLayer;   // posição da camada-fonte (quem abre troca pelo id desta abertura)
       Object.assign(sl.in, it.in || {}); Object.assign(sl.flip, it.flip || {});
       if (it.warp) { Object.assign(sl.warp, it.warp); sl.warp.pts = (it.warp.pts || sl.warp.pts).map(p => [+p[0], +p[1]]); }
       if (it.soft) { Object.assign(sl.soft, it.soft); sl.soft.gamma = (it.soft.gamma || [2.2, 2.2, 2.2]).map(Number); }

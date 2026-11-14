@@ -391,7 +391,7 @@ export async function deserializeClip(o, ctx) {
       if (yt) { const D = window.projDesktop; const port = D && D.localPort ? await D.localPort() : 0; url = 'http://127.0.0.1:' + port + '/yt.html?v=' + yt; }   // a porta do servidor local muda a cada abertura
       c = await captureClip({ name: o.cap && o.cap.srcName, url, w: o.cap && o.cap.w, h: o.cap && o.cap.h, youtube: yt }); if (yt) c.name = 'YouTube ' + yt;
     }
-    else if (o.kind === 'laser' && ctx && ctx.laserClip) { c = ctx.laserClip(o.laserId); }
+    else if (o.kind === 'laser' && ctx && ctx.laserClip) { c = ctx.laserClip(o.laserIdx ?? o.laserId); }   // laserIdx: posição do quadro na lista (arquivo antigo só tem o id, que era lido como posição)
     else if (o.kind === 'lasermirror') c = laserMirrorClip();
   } catch (e) { if (ctx && ctx.toast) ctx.toast('Não abriu ' + o.name + ': ' + e.message); return null; }
   if (!c) return null;

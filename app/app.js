@@ -98,7 +98,9 @@ addEventListener('beforeunload', () => { try { if (sessionStorage.getItem('projR
   let why = ''; try { why = sessionStorage.getItem('projRecover') || ''; sessionStorage.removeItem('projRecover'); } catch { }
   let crash = ''; try { crash = await D.log.lastCrash(); } catch { }
   if (!why && !crash) return;
-  try { const j = await D.comps.load('_automatica'); await loadComposition(j, state.name); zeraHist(); toast('O programa reabriu depois de travar (' + (crash || 'placa de vídeo') + ') e recuperou a composição automática. Registro: Projecionista → Abrir o registro.'); }
+  try { const j = await D.comps.load('_automatica'); await loadComposition(j, state.name, { noAr: true }); zeraHist();
+    try { if (localStorage.getItem('projSaidaAberta') === '1') setTimeout(() => openOutputs(), 600); } catch { }   // as saídas que estavam abertas reabrem sozinhas
+    toast('O programa reabriu depois de travar (' + (crash || 'placa de vídeo') + ') e recuperou a composição automática. Registro: Projecionista → Abrir o registro.'); }
   catch { toast('O programa reabriu depois de travar' + (crash ? ': ' + crash : '') + '. Veja OpenLuz → Abrir o registro.'); }
 })();
 // a cada minuto: memória da janela e o que está no ar, para achar vazamentos
@@ -375,7 +377,7 @@ function insertColumn(at) {
   shiftNames(i => i >= at ? i + 1 : i); COLS++; if (state.sel && state.sel.c >= at) state.sel.c++; render();
 }
 function removeColumn(at) {
-  if (COLS <= 1) return;
+  if (COLS <= 1 || at < 0 || at >= COLS) return;   // coluna que já não existe (o mesmo comando duas vezes): sem isso a conta de colunas caía e os clipes da última ficavam sem casa
   for (const L of state.layers) { for (const row of rowsOf(L)) { const c = row[at]; if (c) { if (row === L.clips && L.on === at) { C.stopClip(c); L.on = -1; } dropClip(c); } row.splice(at, 1); } if (L.on > at) L.on--; }
   shiftNames(i => i === at ? -1 : i > at ? i - 1 : i); COLS--;
   if (state.sel) { if (state.sel.c === at) state.sel = null; else if (state.sel.c > at) state.sel.c--; }
@@ -1046,6 +1048,7 @@ function setScreenDevice(sc, v) {
   renderScreens(); if (ao.open) ao.layout();
 }
 function openOutputs(quais) {
+  try { localStorage.setItem('projSaidaAberta', '1'); } catch { }   // lido na reabertura depois de uma queda
   let n = 0, jaAbertas = 0;
   for (const sc of (Array.isArray(quais) ? quais : state.screens)) {
     if (!sc.enabled || !state.screens.includes(sc)) continue;
@@ -1062,6 +1065,7 @@ function openOutputs(quais) {
 }
 // fecha todas as janelas de saída (o botão da barra e o item "Desligada" do menu Saída)
 function closeOutputs() {
+  try { localStorage.setItem('projSaidaAberta', '0'); } catch { }
   for (const sc of state.screens) if (sc.win && !sc.win.closed) { sc.win.close(); sc.win = null; delete window.__projStreams[sc.id]; delete window.__projCanvas[sc.id]; }
   renderScreens();
 }
@@ -1161,7 +1165,9 @@ function resetComposition() {
   state.layers = [mkLayer(5), mkLayer(4), mkLayer(3), mkLayer(2), mkLayer(1)]; state.name = ''; state.sel = null; state.selLayer = 0; state.master = state.opacity = state.speed = 1; engine.master = 1; state.compBypass = engine.compBypass = false;
   engine.compFx = []; engine.compTransform = IDENT_TR(); state.compAutopilot = AUTOPILOT(); state.colNames = {}; state.keymap = null; keymap.refresh(); setCols(8); applySettings(SETTINGS()); render(); renderScreens();
 }
-async function loadComposition(json, name) {
+// slice com Fonte = camada guarda a posição da camada (sourceLayer): aqui vira o id que a camada tem nesta abertura
+function religaFontes(telas, camadas) { (function anda(o) { if (!o || typeof o !== 'object') return; if (typeof o.sourceLayer === 'number') { o.source = o.sourceLayer >= 0 && camadas[o.sourceLayer] ? camadas[o.sourceLayer].id : 'comp'; delete o.sourceLayer; } for (const k in o) anda(o[k]); })(telas); }
+async function loadComposition(json, name, opts = {}) {
   const d = await deserializeComposition(json, { mkLayer, toast, setCols, laserClip: (f) => C.laserClip(f, laser.thumbSvg(f)) });
   dropAll();
   state.layers = d.layers.length ? d.layers : [mkLayer(1)]; state.name = name || d.name || ''; state.sel = null; state.selLayer = 0;
@@ -1171,8 +1177,9 @@ async function loadComposition(json, name) {
   state.decks = d.decks.length ? d.decks.map(k => { const dk = mkDeck(k.name); dk.color = k.color; dk.closed = k.closed; if (k.rows) k.rows.forEach((row, i) => { if (state.layers[i]) dk.cells[state.layers[i].id] = row; }); return dk; }) : [mkDeck('Deck 1')];
   state.deck = Math.min(d.deck || 0, state.decks.length - 1); for (const L of state.layers) state.decks[state.deck].cells[L.id] = L.clips;
   state.keymap = d.keymap; keymap.refresh(); state.master = d.master; state.opacity = 1; state.speed = d.speed; engine.master = state.master; state.compBypass = engine.compBypass = !!d.compBypass; engine.compFx = d.compFx; engine.compTransform = d.compTransform; state.compAutopilot = d.compAutopilot; state.colNames = d.colNames; applySettings(d.settings);
+  if (opts.noAr) for (const L of state.layers) L.on = L.savedOn ?? -1;   // reabertura depois de uma queda: volta ao ar o que estava no ar
   for (const L of state.layers) if (L.on >= 0 && L.clips[L.on]) C.startClip(L.clips[L.on], layerSpeed(L)); else L.on = -1;
-  if (d.screens && d.screens.length) setScreens(d.screens);
+  if (d.screens && d.screens.length) { religaFontes(d.screens, state.layers); setScreens(d.screens); }
   if (d.laser) { laser.frames = d.laser.frames; laser.settings = d.laser.settings; laser.active = d.laser.active; laser.sel = laser.frames[0] || null; if (laser.open) laser.refresh(); }
   if (d.missing) toast(d.missing + (d.missing === 1 ? ' clipe não abriu' : ' clipes não abriram') + ' (arquivo faltando)');
   render(); renderScreens();
@@ -1242,7 +1249,8 @@ async function restoreComp(json) {
     state.deck = Math.min(d.deck || 0, state.decks.length - 1); for (const L of state.layers) state.decks[state.deck].cells[L.id] = L.clips;
     state.master = d.master; state.speed = d.speed; engine.master = state.master; state.compBypass = engine.compBypass = !!d.compBypass; engine.compFx = d.compFx; engine.compTransform = d.compTransform; state.compAutopilot = d.compAutopilot; state.colNames = d.colNames; applySettings(d.settings);
     state.selLayer = Math.max(0, Math.min(state.selLayer, state.layers.length - 1)); if (state.sel && (state.sel.l >= state.layers.length || state.sel.c >= COLS)) state.sel = null;
-    if (!screensSame && d.screens && d.screens.length) swapScreens(d.screens);
+    if (!screensSame && d.screens && d.screens.length) { religaFontes(d.screens, state.layers); swapScreens(d.screens); }
+    else (function anda(o) { if (!o || typeof o !== 'object' || o === window || (o.document && o.close)) return; if (typeof o.source === 'number') { const i = old.findIndex(O => O.id === o.source); if (i >= 0 && state.layers[i]) o.source = state.layers[i].id; } for (const k of ['items', 'slices', 'children']) if (o[k]) for (const x of o[k]) anda(x); })({ items: state.screens });
     if (!laserSame && d.laser) { laser.frames = d.laser.frames; laser.settings = d.laser.settings; laser.active = null; laser.sel = laser.frames[0] || null; if (laser.open) laser.refresh(); }
     render(); renderScreens(); panels.render(); browser.render();
   } finally { hist.busy = false; }
@@ -1651,6 +1659,7 @@ function frame() {
     const s = selectedCell(); if (s && liveClip(s.L) !== s.clip) animClip(s.clip, s.L);
     applyAnims(engine.compTransform, state.bpm); for (const g of state.groups || []) applyAnims(g.transform, state.bpm); }
   // transporte dos vídeos no ar: entrada/saída, modo e direção
+  for (const L of state.layers) { const sai = L.prev && L.prev.clip; if (sai && sai.kind === 'video' && sai !== liveClip(L)) C.tickTransport(sai, dt, layerSpeed(L)); }   // o que sai na transição continua andando
   for (const L of state.layers) { const c = liveClip(L); if (c && c.kind === 'video') { if (C.tickTransport(c, dt, layerSpeed(L))) { c.endedAt = now; if (c.tr.mode === 'onceclear') clearAfterOnce.push(L); } } }
   // o clipe só selecionado (prévia, fora do ar) também obedece ao transporte: ◀, entrada/saída e modo; o "limpa" não tira nada do ar
   { const s = selectedCell(); if (s && s.clip.kind === 'video' && liveClip(s.L) !== s.clip) C.tickTransport(s.clip, dt, layerSpeed(s.L)); }

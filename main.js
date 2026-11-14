@@ -46,6 +46,9 @@ process.on('unhandledRejection', (e) => { logLine('principal-promise', (e && e.s
 try { crashReporter.start({ submitURL: '', uploadToServer: false, compress: false }); } catch { }
 const RECOVER_FILE = () => path.join(app.getPath('userData'), 'recuperar.txt');
 const GPU_FILE = () => path.join(app.getPath('userData'), 'placa-caiu.txt');   // hora da última reabertura por queda da placa
+// toda saída por app.exit (queda da placa, reabrir sozinho) desliga antes a saída do laser, como o before-quit faz no fechar normal
+let desligaLaser = () => { };
+const sairJa = () => { desligaLaser(); setTimeout(() => app.exit(0), 150); };
 app.on('child-process-gone', (_e, d) => {
   logLine('processo', (d.type || '?') + ' ' + (d.name || '') + ' caiu: ' + d.reason + ' (código ' + d.exitCode + ')');
   if (d.type === 'GPU' && !process.env.PROJ_TEST && !relaunching) {
@@ -64,7 +67,7 @@ app.on('child-process-gone', (_e, d) => {
     }
     logLine('processo', 'reabrindo o programa por causa da placa de vídeo');
     try { fs.writeFileSync(GPU_FILE(), String(Date.now())); } catch { }
-    setTimeout(() => { app.relaunch(); app.exit(0); }, 1200);
+    setTimeout(() => { app.relaunch(); sairJa(); }, 1200);
   }
 });
 let relaunching = false;
@@ -403,7 +406,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('log:lastCrash', () => { let c = lastCrash; lastCrash = ''; try { const f = RECOVER_FILE(); if (fs.existsSync(f)) { c = c || fs.readFileSync(f, 'utf8'); fs.unlinkSync(f); } } catch { } return c; });
   ipcMain.handle('log:path', () => LOG_FILE());
   ipcMain.handle('env:test', () => !!process.env.PROJ_TEST);
-  ipcMain.handle('app:relaunch', () => { try { fs.writeFileSync(RECOVER_FILE(), 'a placa de vídeo não voltou'); } catch { } app.relaunch(); app.exit(0); });
+  ipcMain.handle('app:relaunch', () => { try { fs.writeFileSync(RECOVER_FILE(), 'a placa de vídeo não voltou'); } catch { } app.relaunch(); sairJa(); });
   logLine('abriu', 'OpenLuz ' + app.getVersion() + ' · Electron ' + process.versions.electron + ' · ' + process.platform + ' ' + process.arch + (app.isPackaged ? ' · instalado' : ' · desenvolvimento'));
   // diagnóstico: onde cada janela está de verdade (bounds em DIP, tela cheia, monitor que a contém)
   ipcMain.handle('windows', () => BrowserWindow.getAllWindows().map(w => ({ title: w.getTitle(), bounds: w.getBounds(), content: w.getContentBounds(), full: w.isFullScreen(), display: String(screen.getDisplayMatching(w.getBounds()).id) })));
@@ -452,6 +455,7 @@ app.whenReady().then(async () => {
 
   // laser: um LaserCube por vez, controlado pela janela principal
   const laser = new LaserCube();
+  desligaLaser = () => { try { laser.disconnect(); } catch { } logLine('laser', 'laser desligado antes de sair'); };
   // com a saida ligada, a cada 10 s o registro ganha as estatisticas do fluxo de pontos (para achar a causa de piscadas)
   setInterval(() => { try { if (laser.outputOn && laser.ip) { const s = laser.stats; logLine('laser', JSON.stringify({ quadros: s.frames, maiorPausaQuadroMs: s.maxGapMs, quadroApagado: s.blankPumps, bufferVazio: s.underruns, errosPacote: s.errMax, bufLivreMin: s.minFree, pacotes: s.pktsSent, pps: laser.rate, preenchimento: laser.fill })); laser.resetStats(); } } catch { } }, 10000);
   ipcMain.handle('laser:discover', () => laser.discover());
