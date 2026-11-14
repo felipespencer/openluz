@@ -393,7 +393,7 @@ body{ grid-template-rows:30px minmax(0,1fr) 5px var(--botH); }
 .rprops .vazio{ padding:10px; color:var(--ghost); line-height:1.5; }
 /* navegador */
 .rpan .browser{ display:flex; flex-direction:column; min-height:0; padding:0; }
-.rpan .help{ background:#2b2b2b; border-top:2px solid #1b1b1b; flex:none; } .rpan .help .hh{ background:#3a3a3a; padding:3px 8px; font-weight:600; } .rpan .help .hb{ padding:5px 8px; color:#bdbdbd; font-size:11px; line-height:1.4; min-height:34px; }
+.rpan .help{ background:#2b2b2b; border-top:2px solid #1b1b1b; flex:none; } .rpan .help .hh{ background:#3a3a3a; padding:3px 8px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .rpan .help .hb{ padding:5px 8px; color:#bdbdbd; font-size:11px; line-height:1.4; height:47px; overflow-y:auto; }   /* altura fixa (3 linhas): se crescesse com o texto, cobria o item da lista sob o mouse e o clique caía aqui */
 .browser .fbar{ display:flex; gap:4px; padding:4px 6px; align-items:center; flex:none; }
 .browser .fbar select{ flex:1; min-width:0; height:24px; background:#1f1f1f; border:0; color:var(--rt); font:inherit; }
 .browser .fbar input{ flex:1; height:24px; background:#1f1f1f; border:1px solid #333; color:var(--rt); font:inherit; padding:0 6px; min-width:0; }

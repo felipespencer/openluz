@@ -57,8 +57,8 @@ export class APC40 {
     const C = this.ctx, S = C.state;
     if (n === 98) { this.shift = on; return; }
     if (n < 40) {                                     // pads
-      if (!on) return;
       const row = n >> 3, col = (n & 7) + this.colBase;
+      if (!on) { const lp = this.layerAt(row), Lp = lp >= 0 ? S.layers[lp] : null, cp = Lp && Lp.clips[col]; if (cp && cp.trig === 'piano' && Lp.on === col) C.eject(lp); return; }   // soltar o pad tira do ar o clipe piano
       if (this.shift) { if (col < C.cols()) C.triggerColumn(col); return; }   // Shift + pad: a coluna inteira
       const li = this.layerAt(row); if (li < 0 || col >= C.cols()) return;
       const L = S.layers[li], clip = L.clips[col];

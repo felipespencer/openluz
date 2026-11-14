@@ -144,6 +144,8 @@ export class KeyMap {
     const ms = this.held.get(e.code); if (!ms) return; this.held.delete(e.code);
     for (const m of ms) if (m.piano) this.fire(m, 'up');
   }
+  // a janela perdeu o foco com tecla presa (Alt+Tab): o soltar não chega; solta tudo o que é piano
+  releaseAll() { for (const ms of this.held.values()) for (const m of ms) if (m.piano) this.fire(m, 'up'); this.held.clear(); }
   inMode(e) {
     e.preventDefault(); e.stopImmediatePropagation();   // com o modo ligado nenhuma tecla faz o que fazia
     if (e.key === 'Escape') { this.stop(); return; }

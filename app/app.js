@@ -288,16 +288,18 @@ function prunePending() { for (let i = pending.length - 1; i >= 0; i--) { const 
 const snapOf = (col) => state.colSnap[col] ?? state.bpm.snap;
 function queueTrigger(q, snap) {
   const B = state.bpm; q.at = Math.ceil(B.beat / snap - 1e-6) * snap; if (q.at <= B.beat) q.at += snap;
-  const i = pending.findIndex(x => x.li === q.li && x.col === q.col && x.onlyGroup === q.onlyGroup); if (i >= 0) pending.splice(i, 1);
+  const i = pending.findIndex(x => x.li === q.li && x.col === q.col && x.onlyGroup === q.onlyGroup);
+  if (i >= 0 && pending[i].at === q.at) return;   // o mesmo disparo já espera a mesma batida (o Autopilot pede de novo a cada quadro): nada a refazer
+  if (i >= 0) pending.splice(i, 1);
   pending.push(q); render();
 }
-function trigger(li, col, now) {
+function trigger(li, col, now, quiet) {   // quiet: disparo que não é da pessoa (Autopilot): a seleção e o painel Clipe ficam onde estão
   const L = state.layers[li]; if (!L) return;   // camada que não existe mais (fila, teclado, APC40): nada a disparar
   const clip = L.clips[col];
-  state.selLayer = li; state.sel = { l: li, c: col };
+  if (!quiet) { state.selLayer = li; state.sel = { l: li, c: col }; }
   if (!clip) return eject(li);                 // casa vazia: a camada fica preta
   const snap = snapOf(col);
-  if (snap > 0 && !now && L.on !== col) return queueTrigger({ li, col, L }, snap);
+  if (snap > 0 && !now && L.on !== col) return queueTrigger({ li, col, L, quiet }, snap);
   if (L.on !== col) swapClip(L, col);
   else if (clip.kind === 'video') C.startClip(clip, layerSpeed(L));   // já no ar: clicar de novo recomeça do começo (regra de 2026-10-14)
   L.bypass = false;                            // disparar põe a camada no ar
@@ -398,6 +400,7 @@ function switchDeck(i) {
     const row = state.decks[i].cells[L.id] || (state.decks[i].cells[L.id] = Array(COLS).fill(null));
     while (row.length < COLS) row.push(null);
     L.clips = row;
+    if (L.ghost) { const k = row.indexOf(L.ghost); if (k >= 0) { L.on = k; L.ghost = null; } }   // o clipe que seguiu tocando é deste deck: a casa dele volta a marcar "no ar"
   }
   cur.sel = state.sel; cur.selLayer = state.selLayer;   // cada deck lembra o clipe selecionado
   const back = state.decks[i], bs = back.sel;
@@ -455,7 +458,7 @@ function tickBeat() {
   if (pending.length) {
     prunePending();
     const left = [];
-    for (const q of pending) { if (B.beat >= q.at) { if (q.li != null) trigger(q.li, q.col, true); else triggerColumn(q.col, q.onlyGroup, true); } else left.push(q); }
+    for (const q of pending) { if (B.beat >= q.at) { if (q.li != null) trigger(q.li, q.col, true, q.quiet); else triggerColumn(q.col, q.onlyGroup, true); } else left.push(q); }
     pending.length = 0; pending.push(...left);
   }
 }
@@ -476,7 +479,7 @@ function buildBpmBar() {
   bar.append(el('span', 'xl', 'Beat Snap'));
   const s = el('select', 'snap'); s.title = 'Beat Snap: o disparo espera a próxima batida (ou compasso). Por coluna, no menu Coluna.';
   for (const [val, tx] of SNAPS) { const o = el('option', '', tx); o.value = String(val); s.appendChild(o); }
-  s.onchange = () => { B.snap = +s.value; }; bar.appendChild(s);
+  s.onchange = () => { B.snap = +s.value; s.blur(); }; bar.appendChild(s);
   syncBpm();
 }
 function syncBpm() {
@@ -665,14 +668,14 @@ function tickAutopilot(now) {
     if (elapsed < dur && !(clip.kind === 'video' && (clip.tr.mode === 'once' || clip.tr.mode === 'onceclear') && !clip.tr.playing)) { allEnded = false; continue; }
     if (ap.dir === 'off') { if (clip.kind === 'video') { const m = clip.el || clip.player; allEnded = allEnded && (!m || !!m.ended); } continue; }   // clipe preparado não tem el: o reprodutor próprio diz se acabou
     if (ap.dir === 'stop') { eject(li); continue; }
-    if (ap.dir === 'cell') { const tl = Math.min(cap.l, state.layers.length - 1); if (state.layers[tl].clips[cap.c]) { if (tl !== li) clip.startedAt = now; trigger(tl, cap.c); } else clip.startedAt = now; continue; }
+    if (ap.dir === 'cell') { const tl = Math.min(cap.l, state.layers.length - 1); if (state.layers[tl].clips[cap.c]) { if (tl !== li) clip.startedAt = now; trigger(tl, cap.c, false, true); } else clip.startedAt = now; continue; }
     const idx = L.clips.map((c, i) => c ? i : -1).filter(i => i >= 0);
     if (idx.length < 2) { clip.startedAt = now; continue; }
     let next = -1;
     if (ap.dir === 'next') { next = idx.find(i => i > L.on); if (next == null) next = ap.loop ? idx[0] : -1; }
     else if (ap.dir === 'prev') { const b = idx.filter(i => i < L.on); next = b.length ? b[b.length - 1] : ap.loop ? idx[idx.length - 1] : -1; }
     else { const others = idx.filter(i => i !== L.on); next = others[Math.floor(Math.random() * others.length)]; }
-    if (next >= 0) trigger(li, next); else clip.startedAt = now;
+    if (next >= 0) trigger(li, next, false, true); else clip.startedAt = now;
   }
   if (anyOn && allEnded) recorder.onAllEnded();
 }
@@ -768,7 +771,7 @@ function render() {
     for (const [id, name] of [['random', 'Ao acaso'], ...MIXER_OPTS]) { const o = el('option', '', name); o.value = id; ta.appendChild(o); }
     ta.value = L.transMode || 'alpha'; if (!ta.value) ta.value = 'alpha';
     ta.onclick = (e) => e.stopPropagation(); ta.onpointerdown = (e) => e.stopPropagation();
-    ta.onchange = () => { L.transMode = ta.value; if (li === state.selLayer) panels.render(); };
+    ta.onchange = () => { L.transMode = ta.value; ta.blur(); if (li === state.selLayer) panels.render(); };
     const pv = btn('st pv', '|◀', 'Clipe anterior da camada', () => stepClip(li, -1));
     const nx = btn('st nx', '▶|', 'Próximo clipe da camada', () => stepClip(li, 1));
     // modo de mistura da camada na própria faixa, como no Resolume (o mesmo controle do painel Camada)
@@ -776,7 +779,7 @@ function render() {
     for (const [id, name] of MIXER_OPTS) { const o = el('option', '', name); o.value = id; bl.appendChild(o); }
     bl.value = L.blend === 'normal' ? 'alpha' : L.blend; if (bl.value !== (L.blend === 'normal' ? 'alpha' : L.blend)) bl.value = 'alpha';
     bl.onclick = (e) => e.stopPropagation(); bl.onpointerdown = (e) => e.stopPropagation();
-    bl.onchange = () => { L.blend = bl.value; if (li === state.selLayer) panels.render(); };
+    bl.onchange = () => { L.blend = bl.value; bl.blur(); if (li === state.selLayer) panels.render(); };
     const num = state.layers.length - li;
     const nm = el('div', 'nm'); nm.append(el('b', 'num', String(num)), document.createTextNode(L.name)); nm.title = 'Camada ' + num + (L.name !== 'Camada ' + num ? ': ' + L.name : '') + ': clique para selecionar';
     // A e B do crossfader: clicar no lado em que a camada já está tira ela do crossfader (o mesmo do menu da camada)
@@ -810,7 +813,7 @@ function render() {
         if (clip && clip.trig === 'toggle' && L.on === c) { eject(li); return; }
         trigger(li, c);
       };
-      if (clip && clip.trig === 'piano') { cell.onpointerdown = (e) => { if (e.button === 0 && !e.target.classList.contains('nm')) { trigger(li, c); const up = () => { eject(li); removeEventListener('pointerup', up); }; addEventListener('pointerup', up); } }; }
+      if (clip && clip.trig === 'piano') { cell.onpointerdown = (e) => { if (e.button === 0 && !e.target.classList.contains('nm')) { trigger(li, c); const up = () => { removeEventListener('pointerup', up); removeEventListener('blur', up); const q = pending.findIndex(x => x.li === li && x.col === c); if (q >= 0) { pending.splice(q, 1); render(); } else eject(li); }; addEventListener('pointerup', up); addEventListener('blur', up); } }; }
       g.appendChild(cell);
     }
     // nona coluna da APC40 (Scene Launch): um botão por linha, seleciona a camada; acende quando ela está selecionada e mostra se tem clipe no ar
@@ -882,7 +885,7 @@ function previewFile(path, name) { previewPath = path; previewName = name; state
 // desse canvas. O motor só desenha as telas que estão abertas ou abertas no editor.
 state.screens = M.defaultScreens(COMP_W, COMP_H);
 let displays = [];
-if (D) D.displays().then(async (d) => { displays = d; renderScreens(); try { const p = await D.prefs.get(); const test = await D.isTest(); if (!p.noWizard && !test) projectorWizard(true); } catch { } }).catch(() => { });
+if (D) D.displays().then(async (d) => { displays = d; renderScreens(); try { const p = await D.prefs.get(); const test = await D.isTest(); if (!p.noWizard && !test) { projectorWizard(true); D.prefs.set({ ...p, noWizard: true }).catch(() => { }); } } catch { } }).catch(() => { });   // visto uma vez, não volta sozinho ("perguntar sempre" no próprio assistente religa)
 
 // ---------- assistente de projetores ----------
 // Ao abrir (e no menu Saída → Projetores…): um desenho com os projetores como retângulos que se
@@ -906,7 +909,7 @@ function projectorWizard(auto) {
   let any = false;
   for (const s of sel) { const sc = state.screens.find(c => c.device === s.d.id), sl = sc && sc.items.find(i => i.type === 'slice'); if (sl) { s.x = sl.in.x; s.y = sl.in.y; s.vertical = sl.in.h > sl.in.w; any = true; } }
   if (!any) projArrange(sel, 'row'); projNormalize(sel);
-  const o = { open: true, ask: true, drag: null };
+  const o = { open: true, ask: false, drag: null };
   const colors = ['#39ff14', '#6ec1ff', '#ffb02e', '#ff2d90', '#bf5af2', '#ff9500'];
   openDialog({
     title: 'Projetores', width: 820,
@@ -1498,6 +1501,7 @@ const clipMenuItems = () => { const s = selectedCell(), k = s ? s.clip : null, i
 // Atalhos de teclado mapeáveis (modo Edit Keyboard do Resolume): ver keymap.js
 function selectLayer(li) { state.selLayer = li; state.selGroup = state.layers[li].group; panels.tab = 'layer'; render(); }
 const keymap = new KeyMap({ state, trigger, eject, triggerColumn, selectedClip, selectLayer, C, render, toast, browser, textBox: (t, l, v) => askText(t, l, v), editorOpen: () => ao.open || laser.open || textEditor.open });
+addEventListener('blur', () => keymap.releaseAll());   // tecla de clipe piano presa quando a janela perde o foco
 const menuDefs = () => [
   { label: 'OpenLuz', items: () => [
     { label: 'Preferências…', key: 'Ctrl+,', fn: preferencesDialog },
