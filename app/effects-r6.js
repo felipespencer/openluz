@@ -189,22 +189,37 @@ export const R6 = [
   // TurnH/TurnV puxam o centro (valor − 0,5) × min(4 × fundura, 1,2). Speed 0,5 é parado; a escala da velocidade
   // e o Wobble são palpite. Segunda passada (fotos com o efeito recém-posto, fase zerada): Twist torce 4 × (0,5 − valor) × fundura
   // (de ~85 para ~13 de diferença); Kaleidoscope (17 a 47) e Wobble (38 a 60) seguem em aberto.
+  // Plano 02-10 (sondas/tunnel_mapa.py, imagem em que cada pixel carrega a própria posição): cada fundura d é um círculo de raio
+  // 0,0935/d − 0,0933 com o centro em 3,905 × d × (Turn − 0,5) − 0,327 × raio × sen(24 × Wobble × d) (o Wobble é parado e a força dele só
+  // muda a frequência); vale o círculo mais perto que cobre o ponto (os da frente tapam os de trás). Kaleidoscope: 2, 4, 8 ou 16 gomos
+  // (trocas em 0,25 / 0,5 / 0,75), cada gomo mostra a largura inteira e volta nos últimos 11,25°. A imagem escurece para o fundo:
+  // 2 × (1,002 − d), e some para d > 0,91. O túnel deles é uma malha em perspectiva (z = d/(1 − d), raio na tela 0,0935/z) com um anel a
+  // cada 1/32 de d, 30 anéis; entre dois anéis a parede é reta, então Twist, curvas e Wobble valem nos anéis e o meio é interpolado
+  // (é o que deixa a espiral do Twist facetada). Twist gira cada anel 4 × (0,5 − valor) × d de volta. A altura da imagem vai de 0,059 a 1 em cada volta; Twist torce 3,98 × (0,5 − valor) × d.
   def({ id: 'tunnel', name: 'Tunnel', desc: 'Túnel sem fim feito da imagem, com torção, caleidoscópio e curvas.',
     params: [N('pos', 'Position', 'Posição', 0, 0, 1), N('speed', 'Speed', 'Velocidade', 0.5, 0, 1), N('twist', 'Twist', 'Torção', 0.5, 0, 1), N('kal', 'Kaleidoscope', 'Caleidoscópio', 0, 0, 1), N('rot', 'Rotation', 'Giro', 0.5, 0, 1),
       N('turnh', 'TurnH', 'Curva horizontal', 0.5, 0, 1), N('turnv', 'TurnV', 'Curva vertical', 0.5, 0, 1), N('wobh', 'WobbleH', 'Balanço horizontal', 0, 0, 1), N('wobv', 'WobbleV', 'Balanço vertical', 0, 0, 1), B('blackbg', 'Black BG', 'Fundo preto')],
-    glsl: `vec4 fx(vec2 uv){
-      vec2 Q = (uv - 0.5) * uRes / (uRes.y * 0.5); Q.y = -Q.y;
-      vec2 th = vec2(turnh - 0.5, 0.5 - turnv), wb = vec2(wobh, wobv), P = Q; float d = 0.0;
-      for (int i = 0; i < 5; i++) { d = 0.0914 / (length(P) + 0.0907); 
-        P = Q - th * min(4.0 * d, 1.2) - wb * 0.3 * min(4.0 * d, 1.0) * sin(uTime * 2.0 + 12.566 * d); }
-      d = 0.0914 / (length(P) + 0.0907);
-      float n = floor(pow(2.0, 4.0 * kal) + 0.5);
-      float a = fract(atan(P.y, P.x) / 6.2831853 - (0.5 - rot) - (0.5 - twist) * 4.0 * d);
-      a = fract(a * n);
-      float u = 1.0 - a;
-      float v = 0.055 + 0.941 * fract(1.0 - d - pos + (speed - 0.5) * 2.0 * uTime);
-      vec4 c = texture(uTex, vec2(u, 1.0 - v));
+    glsl: `float tnZ(float d){ return d / (1.0 - 0.99786 * d); }
+    vec2 tnW(float d){ return 3.905 * d * tnZ(d) * vec2(turnh - 0.5, turnv - 0.5) - 0.03057 * sin(24.0 * d * vec2(wobh, wobv)); }
+    float tnG(vec2 Q, float d, out vec2 P, out float s, out float k){
+      k = min(floor(d * 32.0), 29.0); float z0 = tnZ(k / 32.0), z1 = tnZ((k + 1.0) / 32.0), z = tnZ(d);
+      s = (z - z0) / (z1 - z0); float dth = 0.7853982 * (0.5 - twist);
+      P = Q - mix(tnW(k / 32.0), tnW((k + 1.0) / 32.0), s) / z;
+      return length(P) - 0.0935 * sqrt((1.0 - s) * (1.0 - s) + s * s + 2.0 * s * (1.0 - s) * cos(dth)) / z; }
+    vec4 fx(vec2 uv){
+      vec2 Q = (uv - 0.5) * uRes / (uRes.y * 0.5), P; float s, k;
+      float d0 = 0.01, d1 = 0.9375; bool hit = false;
+      for (int i = 1; i <= 120; i++) { float d = 0.01 + 0.9275 * float(i) / 120.0; if (tnG(Q, d, P, s, k) >= 0.0) { d1 = d; hit = true; break; } d0 = d; }
       vec4 bg = vec4(0.0, 0.0, 0.0, blackbg > 0.5 ? 1.0 : 0.0);
+      for (int i = 0; i < 8; i++) { float m = 0.5 * (d0 + d1); if (tnG(Q, m, P, s, k) >= 0.0) d1 = m; else d0 = m; }
+      float d = 0.5 * (d0 + d1); tnG(Q, d, P, s, k);
+      if (!hit || d > 0.90625) return bg;
+      float dth = 0.7853982 * (0.5 - twist);
+      float u = fract(atan(P.y, P.x) / 6.2831853 + 0.5 - rot + (0.5 - twist) * 4.0 * k / 32.0 + atan(s * sin(dth), 1.0 - s + s * cos(dth)) / 6.2831853);
+      float n = kal <= 0.0 ? 1.0 : pow(2.0, ceil(4.0 * kal - 0.0001));
+      if (n > 1.5) { float t = fract(u * n), w = n / 32.0; u = t < 1.0 - w ? t : (1.0 - t) * (1.0 - w) / w; }
+      float v = 0.059 + 0.941 * fract(1.0004 - d - pos + (speed - 0.5) * 2.0 * uTime);
+      vec4 c = texture(uTex, vec2(u, 1.0 - v)) * clamp(2.0 * (1.002 - d), 0.0, 1.0);
       return c + bg * (1.0 - c.a); }` }),
   // No Resolume, sem o arquivo de mapa (Image) a saída é vazia: é o que o gabarito mostra em todos os casos.
   // O motor ainda não carrega um arquivo por efeito, então os controles ficam e a saída sai vazia como lá.
