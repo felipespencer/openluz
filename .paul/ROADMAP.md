@@ -265,7 +265,8 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 **Depends on:** nada
 
 **Plans:**
-- [ ] 13-01: primeira vez medida, PRIMEIROS-PASSOS.md (PT/EN), README em dia e caminhos de assinatura do instalador — em aplicação desde 2026-11-14
+- [ ] 13-01: primeira vez medida, PRIMEIROS-PASSOS.md (PT/EN), README em dia e caminhos de assinatura do instalador — aplicado em 2026-11-14 (d46e16c), só local; no checkpoint: publicar ou não
+- [ ] 13-02: convite na grade vazia e aviso de "clique para pôr no ar" — plano criado em 2026-11-14, aguardando aprovação
 
 ## Ideias para um marco futuro
 
