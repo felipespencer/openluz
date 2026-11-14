@@ -3,6 +3,7 @@
 //   UD=%TEMP%\openluz-primeira-vez  (vazia, só com o arquivo .migrado-de-openlume)
 //   PROJ_USERDATA=<UD> "%LOCALAPPDATA%\Programs\OpenLuz\OpenLuz.exe" --remote-debugging-port=9333
 // Uso: node tools/primeira-vez.mjs     -> fotos em tools/compare/saida/primeira-vez/ e o relato na tela
+//      node tools/primeira-vez.mjs --ajuda   -> só as verificações do convite e do aviso (13-02), no programa aberto como novato
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +28,42 @@ const diz = (t) => console.log(t);
 const brilho = `(() => { const c = P.engine.canvas, g = document.createElement('canvas'); g.width = 64; g.height = 36; const x = g.getContext('2d'); x.drawImage(c, 0, 0, 64, 36); const d = x.getImageData(0, 0, 64, 36).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2]; return Math.round(s / (64 * 36 * 3)); })()`;
 const aba = (t) => `[...document.querySelectorAll('#browserTabs span')].find(e => e.textContent.trim() === ${JSON.stringify(t)})`;
 
+const visto = (id) => `(() => { const e = document.getElementById('${id}'); if (!e || e.hidden || !e.isConnected) return null; const r = e.getBoundingClientRect(); return r.width > 40 && r.height > 10 ? { t: e.textContent, pe: getComputedStyle(e).pointerEvents, x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; })()`;
+if (process.argv.includes('--ajuda')) {
+  let ok = 0, ruim = 0; const confere = (nome, passou, obs = '') => { passou ? ok++ : ruim++; diz((passou ? 'OK   ' : 'FALHA ') + nome + (obs ? '  [' + obs + ']' : '')); };
+  const casa = (l, c) => `document.querySelector('.cell[data-layer="${l}"][data-col="${c}"]')`;
+  try {
+    for (let i = 0; i < 3 && await ev(`return document.querySelectorAll('.dlgOver').length;`) > 0; i++) await cl(`[...document.querySelectorAll('.dlgOver button')].find(b => /Pular|Cancelar|Fechar/.test(b.textContent))`);
+    const vazia = await ev(`return S.layers.every(L => L.clips.every(c => !c)) && S.layers.every(L => L.on < 0);`);
+    if (!vazia) throw new Error('o programa não está como novato: há clipe na grade');
+    const g = await ev(`return ${visto('gridHint')};`);
+    confere('AC-1 grade vazia mostra o convite', !!g && /Arraste/.test(g.t) && /Fontes/.test(g.t), g ? g.t : 'não aparece');
+    confere('AC-1 o convite não recebe o mouse', !!g && g.pe === 'none');
+    confere('AC-2 sem clipe, o aviso de clicar não aparece', !(await ev(`return ${visto('airHint')};`)));
+    diz('     [' + await foto('ajuda-grade-vazia') + ']');
+    if (g) { const em = await ev(`const e = document.elementFromPoint(${g.x}, ${g.y}); return e ? e.className : '';`); confere('AC-1 o clique no meio do convite cai numa casa', /cell/.test(em), em); }
+    await cl(aba('Fontes')); const item = `[...document.querySelectorAll('#browserPan .item')].find(e => e.textContent.trim() === 'Checkered')`;
+    await cl(casa(2, 3)); await ev(`(${item}).scrollIntoView({ block: 'center' }); return 1;`); await cl(item, 2); await wait(400);
+    confere('clipe posto na casa (camada 2, coluna 3) e nada no ar', await ev(`return !!S.layers[2].clips[3] && S.layers.every(L => L.on < 0);`));
+    confere('AC-1 o convite some com o primeiro clipe', !(await ev(`return ${visto('gridHint')};`)));
+    const a = await ev(`return ${visto('airHint')};`);
+    confere('AC-2 com clipe e nada no ar, aparece o aviso', !!a && /Clique na miniatura do clipe/.test(a.t) && a.pe === 'none', a ? a.t : 'não aparece');
+    diz('     [' + await foto('ajuda-falta-clicar') + ']');
+    await cl(casa(2, 3)); await wait(500);
+    confere('clique na casa põe no ar', await ev(`return S.layers[2].on === 3;`));
+    confere('AC-2 o aviso some com o clipe no ar', !(await ev(`return ${visto('airHint')};`)));
+    await cl(casa(2, 0)); await wait(400);   // clique numa casa vazia tira a camada do ar
+    confere('camada fora do ar de novo', await ev(`return S.layers.every(L => L.on < 0);`));
+    confere('AC-3 depois da primeira vez, o aviso não volta', !(await ev(`return ${visto('airHint')};`)));
+    confere('AC-3 a preferência ficou guardada', await ev(`const p = await window.projDesktop.prefs.get(); return p.airedOnce === true;`));
+    await cl(`document.querySelector('#btnOut')`); await wait(2500);
+    const saida = (await paginas()).find(p => p.url.includes('output'));
+    if (saida) { const o = await liga(saida); const r = await o.send('Runtime.evaluate', { expression: `document.body.innerText + '|' + !!document.getElementById('airHint') + !!document.getElementById('gridHint')`, returnByValue: true }); o.ws.close();
+      confere('janela de saída sem texto de ajuda', !/Clique na miniatura|Arraste um/.test(r.result.result.value) && /falsefalse$/.test(r.result.result.value), JSON.stringify(r.result.result.value).slice(0, 80)); } else confere('janela de saída abriu', false);
+    await cl(`document.querySelector('#btnOut')`); await wait(800);
+  } catch (e) { ruim++; diz('PAROU: ' + String(e.message).slice(0, 240)); }
+  diz(`\n${ok} aprovadas, ${ruim} reprovadas`); ws.close(); process.exit(ruim ? 1 : 0);
+}
 try {
   diz('1. ABRIU  [' + await foto('abriu') + ']');
   diz('   diálogos na frente: ' + JSON.stringify(await ev(`return [...document.querySelectorAll('.dlgOver')].map(d => d.textContent.slice(0, 80));`)));

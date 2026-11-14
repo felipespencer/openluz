@@ -28,7 +28,7 @@ Colocar o clipe na casa ainda não o mostra: ele só fica guardado ali.
 
 ## 4. Pôr no ar
 
-**Clique na casa.** O clipe vai para o ar e aparece no quadro **Composição**, em cima à direita.
+**Clique na miniatura do clipe.** O clipe vai para o ar e aparece no quadro **Composição**, em cima à direita.
 
 ![Clipe no ar](docs/primeiros-passos/no-ar.jpg)
 
@@ -91,7 +91,7 @@ Placing a clip in a cell does not show it yet; it is only stored there.
 
 ## 4. Take it live
 
-**Click the cell.** The clip goes live and shows in the **Composição** (Composition) monitor, top right.
+**Click the clip's thumbnail.** The clip goes live and shows in the **Composição** (Composition) monitor, top right.
 
 - Clicking another clip in the same layer switches to it.
 - The **✕** at the start of the row takes the layer off air.

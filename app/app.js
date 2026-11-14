@@ -116,6 +116,20 @@ setTimeout(() => { try { seg.start(); } catch (e) { console.warn('recorte: não 
 const audio = new AudioEngine(); C.setAudioEngine(audio); state.audioSettings = audio.settings; state.bpm.audio = audio.levels; state.bpm.audioBy = { comp: audio.compLevels, mic: audio.micLevels }; state.bpm.audioBand = (src, f0, f1) => audio.bandLevel(src, f0, f1);   // a FFT entra nas animações pelo relógio
 const monCanvas = document.createElement('canvas'); monCanvas.width = COMP_W; monCanvas.height = COMP_H;
 $('outScr').appendChild(monCanvas);
+// Ajuda de primeira vez (13-02): convite na grade vazia e aviso de que falta clicar para pôr no ar. São elementos da janela de
+// controle, fora do canvas do motor: nada disso vai para a saída, a gravação ou a webcam virtual.
+const airHint = document.createElement('div'); airHint.id = 'airHint'; airHint.textContent = 'Clique na miniatura do clipe para pôr no ar'; airHint.hidden = true; $('outScr').appendChild(airHint);
+const gridHint = document.createElement('div'); gridHint.id = 'gridHint'; gridHint.hidden = true;
+gridHint.innerHTML = '<b>Arraste um vídeo ou uma imagem para uma casa</b><span>ou dê duplo clique em algo da aba Fontes</span>';
+let airedOnce = null;   // null: ainda não li as preferências (o aviso espera); true: a pessoa já pôs um clipe no ar neste computador
+const airedSave = () => { try { localStorage.setItem('projJaPosNoAr', '1'); } catch { } if (D) D.prefs.get().then(p => D.prefs.set({ ...p, airedOnce: true })).catch(() => { }); };
+function firstHints() {
+  const has = state.layers.some(L => L.clips.some(Boolean)) || state.decks.some(d => Object.values(d.cells).some(row => row && row.some(Boolean)));
+  const air = state.layers.some(L => L.on >= 0);
+  if (air && airedOnce === false) { airedOnce = true; airedSave(); }
+  gridHint.hidden = has; if (!has) $('grid').appendChild(gridHint);
+  airHint.hidden = !(has && !air && airedOnce === false);
+}
 const monCtx = monCanvas.getContext('2d');
 $('compInfo').textContent = COMP_W + '×' + COMP_H;
 
@@ -822,6 +836,7 @@ function render() {
     g.appendChild(scb);
   });
   wrap.scrollTop = st; wrap.scrollLeft = sl;
+  firstHints();
   renderDecks(); renderPreview(); panels.render(); apc.refresh();
   syncLaser();
 }
@@ -1634,6 +1649,8 @@ installShortcuts(SHORTCUTS, () => ao.open || laser.open || !!(textEditor && text
 (async () => {
   let prefs = {}; if (D) { try { prefs = await D.prefs.get(); } catch { } }
   if (prefs.recDir && !window.__recDir) recorder.c.dir = prefs.recDir; $('fpsBox').hidden = !prefs.showFps;
+  let ja = !!prefs.airedOnce; try { ja = ja || localStorage.getItem('projJaPosNoAr') === '1'; } catch { }
+  airedOnce = ja; firstHints();   // ajuda de primeira vez: só agora sei se a pessoa já pôs um clipe no ar neste computador
   initSplitters(prefs).onSave((sizes) => { if (D) D.prefs.get().then(p => D.prefs.set({ ...p, sizes })).catch(() => { }); });
 })();
 

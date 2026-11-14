@@ -73,7 +73,7 @@ input[type=range]{ accent-color:var(--accent); height:14px; margin:0; }
 .gcol{ background:#202329; border:0; border-radius:0; border-bottom:1px solid var(--line); border-right:1px solid var(--line); color:var(--ghost); font-size:10px; }
 .gcol:hover{ color:var(--txt); background:var(--bg3); } .gcol.on{ color:#0b0b0d; background:var(--accent); }
 .lh.ing{ box-shadow:inset 3px 0 0 var(--gc); } .lh.ing.sel{ box-shadow:inset 3px 0 0 var(--gc), inset 6px 0 0 var(--sel); }
-#grid{ display:grid; grid-template-columns:286px repeat(var(--cols), minmax(104px,1fr)) 54px; min-width:1100px; }
+#grid{ position:relative; display:grid; grid-template-columns:286px repeat(var(--cols), minmax(104px,1fr)) 54px; min-width:1100px; }
 .gh.sceneH{ font-size:10px; letter-spacing:.06em; color:var(--ghost); }
 .sceneBtn{ border:0; border-radius:0; border-bottom:1px solid var(--line); background:#1d1e22; color:var(--ghost); font-size:13px; font-weight:700; cursor:pointer; }
 .sceneBtn:hover{ background:var(--bg3); color:var(--txt); } .sceneBtn.on{ color:var(--accent); } .sceneBtn.sel{ background:var(--sel); color:#0b0b0d; }
@@ -143,7 +143,7 @@ button.gh:hover{ color:var(--txt); background:var(--bg3); }
 #mons{ display:grid; grid-template-rows:auto auto 1fr; gap:8px; padding:8px; background:var(--bg2); min-height:0; overflow:auto; }
 .mon .cap{ display:flex; justify-content:space-between; gap:8px; color:var(--dim); font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px; }
 .mon .cap span:last-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:none; letter-spacing:0; }
-.mon .scr{ aspect-ratio:16/9; background:#000; border:1px solid var(--line); overflow:hidden; display:flex; }
+.mon .scr{ position:relative; aspect-ratio:16/9; background:#000; border:1px solid var(--line); overflow:hidden; display:flex; }
 .mon .scr canvas, .mon .scr video, .mon .scr img{ width:100%; height:100%; object-fit:contain; display:block; }
 
 #bot{ display:grid; grid-template-columns:360px minmax(0,1fr) 330px; min-height:0; border-top:1px solid var(--line); }
@@ -642,3 +642,8 @@ input[type=range].sa{ height:14px; } input[type=range].sa::-webkit-slider-runnab
 .rprops .iabox.iagen .iav img{ width:100%; height:100%; object-fit:cover; display:block; } .rprops .iabox.iagen .iav.on{ border-color:#b48cff; }
 .rprops .iaac{ position:absolute; right:2px; top:2px; display:flex; gap:2px; opacity:0; transition:.15s; } .rprops .iav:hover .iaac{ opacity:1; }
 .rprops .iaac button{ height:18px; min-width:18px; padding:0 4px; border:0; border-radius:2px; background:rgba(0,0,0,.75); color:#fff; font:inherit; font-size:11px; cursor:pointer; }
+/* ajuda de primeira vez (13-02): só na janela de controle; não recebe o mouse, para não atrapalhar arrastar e soltar */
+#gridHint{ position:absolute; left:286px; right:54px; top:38px; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; pointer-events:none; color:var(--dim); text-align:center; padding:0 16px; }
+#gridHint b{ font-size:15px; font-weight:600; color:var(--fg, #ddd); } #gridHint span{ font-size:12px; }
+#gridHint[hidden], #airHint[hidden]{ display:none; }
+#airHint{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; color:#cfcfcf; font-size:13px; text-align:center; padding:0 10px; }
