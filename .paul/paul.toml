@@ -21,7 +21,7 @@ status = "in_progress"
 plans_completed = 4
 
 [loop]
-position = "PLAN"
+position = "APPLY"
 plan = "02-10"
 plan_path = "phases/02-efeitos-do-resolume/02-10-PLAN.md"
 

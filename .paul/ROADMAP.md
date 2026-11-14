@@ -114,9 +114,9 @@ imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarca
 - [x] 02-06: Texto com IA (✦ Montar com IA; Gemini, Groq, Ollama, Claude) — fechado em 2026-11-05 com a beta.52
 - [x] 02-07: Grid Cloner, SearchLight, WarpSpeed, LUT — fechado em 2026-11-06 com a beta.53
 - [ ] 02-08: Slice Delay e Strokes
-- [ ] 02-09: gabarito dos efeitos (fotos do Resolume em disco, confere offline) e três rodadas de igualar — feito em 2026-11-12/13 SEM plano, só com 02-09-LOTES.md; o SUMMARY sai no 02-10
-- [ ] 02-10: Distortion, Tunnel (Kaleidoscope, Wobble) e CRT pelas sondas com imagem de teste — plano criado em 2026-11-13, aguardando aprovação
-- [ ] 02-11 em diante: Bloom (Iterations 5, Knee), Triangulate, Sphere, Stingy Sphere, Snowy, WarpSpeed, os seis Depth (licença antes), Slice Delay e o resto da lista
+- [x] 02-09: gabarito dos efeitos (fotos do Resolume em disco, confere offline) e três rodadas de igualar — feito em 2026-11-12/13 SEM plano; registrado depois em 02-09-SUMMARY.md, sem checkpoint do Felipe
+- [ ] 02-10: Distortion (3,52 → 0,00) e Tunnel (21,6 → 3,63) pelas sondas — aplicado em 2026-11-13, no checkpoint; o CRT não coube (28,86 medido) e vai para o 02-11
+- [ ] 02-11 em diante: CRT (plano próprio), Bloom (Iterations 5, Knee), Triangulate, Sphere, Stingy Sphere, Snowy, WarpSpeed, os seis Depth (licença antes), Slice Delay e o resto da lista
 
 ### Phase 3: Celular e plugins
 
