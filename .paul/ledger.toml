@@ -430,3 +430,21 @@ action = "plan"
 phase = 13
 plan = "13-02"
 at = "2026-11-14T21:10:00-03:00"
+
+[[entry]]
+action = "apply"
+phase = 13
+plan = "13-02"
+at = "2026-11-14T22:40:00-03:00"
+
+[[entry]]
+action = "unify"
+phase = 13
+plan = "13-02"
+at = "2026-11-14T22:45:00-03:00"
+
+[[entry]]
+action = "apply"
+phase = 7
+plan = "07-03"
+at = "2026-11-14T22:50:00-03:00"

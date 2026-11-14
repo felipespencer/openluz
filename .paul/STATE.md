@@ -62,9 +62,9 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [12-09: loop fechado (lote A; 0.3.0-beta.1 instalada e aprovada)]
   ✓        ✓        ✓     [12-10: loop fechado (lote C1; não entrou em beta instalada)]
   ✓        ✓        ✓     [12-11: loop fechado (lote B2; 0.3.0-beta.2 pública)]
-  ✓        ○        ○     [07-03: plano de medição da Saída avançada × Resolume criado, aguardando aprovação]
+  ✓        ◐        ○     [07-03: aprovado em 2026-11-14 ("Tá bem" / "Vem nessa" à ordem 07-03 primeiro; "roda"); APPLY iniciado: só mede, não muda o programa]
   ✓        ✓        ○     [13-01: porta de entrada aplicada, sem push; no checkpoint de decisão]
-  ✓        ◐        ○     [13-02: aprovado ("1") e aplicado em 1acc7ae, só local. primeira-vez --ajuda 13/13 (reprovava 4 no código antigo), show-passada 16/0, lotes A 9, C1 10, B2 9; selftest + 24 baterias aprovados; a rodada foi INTERROMPIDA por falta de memória no computador antes de nativos, rede, gravar, lote2, lote3 e as que vêm depois: faltam essas para fechar a Tarefa 2. Texto do aviso virou "Clique na miniatura do clipe para pôr no ar" (o nome só abre a prévia). Felipe pediu 3D na Saída avançada (2026-11-14): ordem combinada 07-03 primeiro, depois plano de desenho do 3D com maquete]
+  ✓        ✓        ✓     [13-02: FECHADO em 2026-11-14 — convite e aviso (1acc7ae, só local); 13/13, show-passada, lotes A/C1/B2, selftest e 30 baterias (em duas partes, a primeira rodada caiu por falta de memória); textos aprovados pelo Felipe; beta.3 sem resposta. Pedido de 3D na Saída avançada: depois do 07-03, plano de desenho com maquete]
 ```
 
 ## Accumulated Context

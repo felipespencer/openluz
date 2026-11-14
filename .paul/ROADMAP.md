@@ -196,7 +196,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 **Plans:**
 - [x] 07-01: Soft Edge por degradê e seleção na sobreposição (registro do entregue + alças na aba Saída) — ok do Felipe em 2026-11-03
 - [x] 07-02: botão direito com o mesmo menu do Resolume 7.28 (pedido de 2026-11-05)
-- [ ] 07-03: medir a Saída avançada contra a Advanced Output do Resolume e listar as diferenças ("eu acho que o advanced não está igual ao resolume", 2026-11-14) — plano criado, aguardando aprovação
+- [ ] 07-03: medir a Saída avançada contra a Advanced Output do Resolume e listar as diferenças ("eu acho que o advanced não está igual ao resolume", 2026-11-14) — aprovado e em aplicação desde 2026-11-14
 
 ### Phase 8: Webcam virtual
 
@@ -266,7 +266,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 
 **Plans:**
 - [ ] 13-01: primeira vez medida, PRIMEIROS-PASSOS.md (PT/EN), README em dia e caminhos de assinatura do instalador — aplicado em 2026-11-14 (d46e16c), só local; no checkpoint: publicar ou não
-- [ ] 13-02: convite na grade vazia e aviso de "clique para pôr no ar" — plano criado em 2026-11-14, aguardando aprovação
+- [x] 13-02: convite na grade vazia e aviso de "clique na miniatura para pôr no ar" — fechado em 2026-11-14 (1acc7ae, só local)
 
 ## Ideias para um marco futuro
 
