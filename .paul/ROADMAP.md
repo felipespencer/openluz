@@ -197,7 +197,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 - [x] 07-01: Soft Edge por degradê e seleção na sobreposição (registro do entregue + alças na aba Saída) — ok do Felipe em 2026-11-03
 - [x] 07-02: botão direito com o mesmo menu do Resolume 7.28 (pedido de 2026-11-05)
 - [x] 07-03: Saída avançada medida contra a Advanced Output do Resolume; 28 diferenças (07-03-DIFERENCAS.md) — fechado em 2026-11-15 ("tudo, começa pelos gestos")
-- [ ] 07-04: gestos iguais aos do Resolume (pixels inteiros, Shift, Ctrl, Alt, anel de giro, roda) — aplicado em 2026-11-15, só local; no checkpoint (o Felipe testa na mão)
+- [x] 07-04: gestos iguais aos do Resolume (pixels inteiros, Shift, Ctrl, Alt, anel de giro, roda) — fechado em 2026-11-15 (f6905d2, só local; aprovado sem teste na mão)
 - [ ] 07-05 em diante: painéis (máscara com números, Is Key, Black BG, guia), origens da entrada, presets, menu da grade; slice polígono e exportar SVG por último
 
 ### Phase 8: Webcam virtual
