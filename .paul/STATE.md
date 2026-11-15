@@ -62,7 +62,8 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [12-09: loop fechado (lote A; 0.3.0-beta.1 instalada e aprovada)]
   ✓        ✓        ✓     [12-10: loop fechado (lote C1; não entrou em beta instalada)]
   ✓        ✓        ✓     [12-11: loop fechado (lote B2; 0.3.0-beta.2 pública)]
-  ✓        ✓        ○     [07-03: Tarefas 1 e 2 feitas em 2026-11-14 — 07-03-DIFERENCAS.md (28 linhas: gestos Shift/Ctrl/Alt/roda/inteiros, presets, origens da entrada, painel da máscara, Is Key/Black BG, guia) e tools/compare/sondas/ao_resolume.py; programa intocado, XML do Resolume restaurado, tudo fechado. NO CHECKPOINT: Felipe diz "tudo" ou os números das linhas. Não medido: pontos/bezier, aba de entrada, anel de giro do nosso lado, Shift+seta no Resolume]
+  ✓        ✓        ✓     [07-03: FECHADO em 2026-11-15 — 28 diferenças em 07-03-DIFERENCAS.md; Felipe: "tudo, começa pelos gestos"]
+  ✓        ○        ○     [07-04: plano dos gestos (linhas 1 a 13) criado em 2026-11-15, aguardando aprovação. OpenLuz de desenvolvimento ABERTO na porta 9334 a pedido do Felipe ("abre aqui a ultima versao"), perfil de novato em %TEMP%\openluz-bancada-9334: fechar com abre-dev fecha 9334 quando ele disser]
   ✓        ✓        ○     [13-01: porta de entrada aplicada, sem push; no checkpoint de decisão]
   ✓        ✓        ✓     [13-02: FECHADO em 2026-11-14 — convite e aviso (1acc7ae, só local); 13/13, show-passada, lotes A/C1/B2, selftest e 30 baterias (em duas partes, a primeira rodada caiu por falta de memória); textos aprovados pelo Felipe; beta.3 sem resposta. Pedido de 3D na Saída avançada: depois do 07-03, plano de desenho com maquete]
 ```
