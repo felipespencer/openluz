@@ -200,7 +200,8 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 - [x] 07-04: gestos iguais aos do Resolume (pixels inteiros, Shift, Ctrl, Alt, anel de giro, roda) — fechado em 2026-11-15 (f6905d2, só local; aprovado sem teste na mão)
 - [x] 07-05: painel da máscara com números e giro, máscara nova quadrada, lista de zoom — fechado em 2026-11-15 (3fcec7d, só local)
 - [x] 07-06: menu de presets como no Resolume (Salvar, Salvar como, Apagar, Renomear, Novo, Mostrar na pasta, Abrir) — fechado em 2026-11-15, só local
-- [ ] 07-07 em diante: Is Key, Black BG, imagem de guia, origens da entrada, "Mostrar na saída", Inverter padrão (medir a saída antes); slice polígono e exportar SVG por último
+- [ ] 07-07: Is Key e Black BG medidos na saída do Resolume e feitos iguais — em aplicação desde 2026-11-15
+- [ ] 07-08 em diante: imagem de guia, origens da entrada, "Mostrar na saída", Inverter padrão (medir a saída antes); slice polígono e exportar SVG por último
 
 ### Phase 8: Webcam virtual
 
