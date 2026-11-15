@@ -428,6 +428,18 @@ app.whenReady().then(async () => {
     fs.mkdirSync(PRESET_DIR(), { recursive: true }); writeAtomic(presetFile(name), json); return true;
   });
   ipcMain.handle('presets:remove', async (_e, name) => { await paraLixeira(presetFile(name)); return true; });
+  ipcMain.handle('presets:rename', async (_e, de, para) => {   // gravar por cima de outro é confirmado no editor; o antigo de mesmo nome vai para a Lixeira
+    const a = presetFile(de), b = presetFile(para); if (!fs.existsSync(a)) throw new Error('o preset não existe mais');
+    if (a.toLowerCase() !== b.toLowerCase() && fs.existsSync(b)) await paraLixeira(b);
+    fs.renameSync(a, b); return true;
+  });
+  ipcMain.handle('presets:show', (_e, name) => { const f = presetFile(name); if (!fs.existsSync(f)) throw new Error('o preset não existe mais'); shell.showItemInFolder(f); return true; });
+  ipcMain.handle('presets:pick', async () => {   // Abrir…: um .json de qualquer pasta
+    const r = await dialog.showOpenDialog(mainWin, { title: 'Abrir preset de saída', properties: ['openFile'], filters: [{ name: 'Preset de saída', extensions: ['json'] }] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const f = r.filePaths[0]; if (fs.statSync(f).size > 4e6) throw new Error('arquivo grande demais para ser um preset');
+    return { name: path.basename(f, '.json'), json: fs.readFileSync(f, 'utf8') };
+  });
   // disco: pastas, preferências, composições e gravações
   ipcMain.handle('fs:roots', () => roots());
   ipcMain.handle('fs:list', (_e, dir) => listDir(String(dir)));

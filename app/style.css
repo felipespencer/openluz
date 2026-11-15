@@ -198,6 +198,7 @@ button.gh:hover{ color:var(--txt); background:var(--bg3); }
 #ao .menu .mrow.save input{ flex:1; height:22px; background:#1b1b1b; border:1px solid #111; color:var(--rt); padding:0 6px; font:inherit; min-width:0; }
 #ao .menu .mrow.save button{ height:22px; border:0; background:var(--rh); }
 #ao .menu .sep{ height:1px; background:#111; margin:2px 0; }
+#ao .menu button:disabled{ color:var(--ghost); cursor:default; background:none; } #ao .menu .hdr{ padding:8px 12px 4px; color:var(--dim); font-size:11px; font-weight:600; } #ao .menu .vazio{ padding:4px 12px 10px; color:var(--ghost); font-size:11px; }
 
 #aoTop{ display:grid; grid-template-columns:260px minmax(0,1fr) auto; align-items:center; gap:8px; padding:7px 6px 0; }
 #aoTop .presets{ position:relative; }

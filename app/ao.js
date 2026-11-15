@@ -6,7 +6,7 @@
 import * as M from './screens.js';
 import { outlinePath, meshLinesPath, bbox, localToOut, outToLocal } from './warp.js';
 import { el, fmtN, ICON, propsKit } from './panel.js';
-import { confirmBox } from './menus.js';
+import { confirmBox, askText } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
@@ -816,25 +816,49 @@ export class AdvancedOutput {
   }
 
   // ---------- presets ----------
+  // Menu Presets, como o do Resolume: Salvar, Salvar como…, Apagar, Renomear…, Novo, Mostrar na pasta, Abrir… e a lista.
+  // O que age sobre o preset carregado fica apagado enquanto não há um.
   async refreshPresets() {
     const m = $('aoPresetMenu'); m.textContent = '';
-    const names = this.c.presets ? await this.c.presets.list() : [];
+    const names = this.c.presets ? await this.c.presets.list() : [], P = this.c.presets, tem = !!this.presetName;
     $('aoPresetName').textContent = this.presetName || 'Presets';
-    for (const n of names) { const b = el('button', n === this.presetName ? 'on' : '', n); b.type = 'button'; b.onclick = () => this.loadPreset(n); m.appendChild(b); }
-    if (names.length) m.appendChild(el('div', 'sep'));
-    const row = el('div', 'mrow save'); const i = el('input'); i.placeholder = 'nome do preset'; i.value = this.presetName;
-    i.onclick = (e) => e.stopPropagation(); i.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') this.savePreset(i.value); };
-    const b = el('button', '', 'Salvar'); b.type = 'button'; b.onclick = (e) => { e.stopPropagation(); this.savePreset(i.value); };
-    row.append(i, b); m.appendChild(row);
-    if (this.presetName) { const d = el('button', '', 'Apagar "' + this.presetName + '"'); d.type = 'button'; d.onclick = () => this.deletePreset(); m.appendChild(d); }
+    const item = (rot, liga, fn, k) => { const b = el('button', '', rot); b.type = 'button'; b.dataset.p = k; b.disabled = !liga; b.onclick = (e) => { e.stopPropagation(); this.closeMenus(); fn(); }; m.appendChild(b); };
+    item('Salvar', tem && !!P, () => this.savePreset(this.presetName), 'save');
+    item('Salvar como…', !!P, async () => { const n = await askText('Salvar preset como', 'Nome', this.presetName); if (n) this.savePreset(n); }, 'saveas');
+    item('Apagar', tem && !!P, () => this.deletePreset(), 'remove');
+    item('Renomear…', tem && !!P && !!P.rename, () => this.renamePreset(), 'rename');
+    item('Novo', true, () => this.newPreset(), 'new');
+    item('Mostrar na pasta', tem && !!P && !!P.show, () => { P.show(this.presetName).catch(() => this.c.toast('Não achei o arquivo do preset')); }, 'show');
+    item('Abrir…', !!P && !!P.pick, () => this.pickPreset(), 'pick');
+    m.appendChild(el('div', 'sep')); m.appendChild(el('div', 'hdr', 'Presets'));
+    for (const n of names) { const b = el('button', 'pr' + (n === this.presetName ? ' on' : ''), n); b.type = 'button'; b.onclick = () => this.loadPreset(n); m.appendChild(b); }
+    if (!names.length) m.appendChild(el('div', 'vazio', 'nenhum preset salvo'));
+  }
+  applyPresetJson(json, name) {
+    this.pushUndo(); this.c.setScreens(M.deserialize(json)); this.presetName = name;
+    const sc = this.screens()[0]; this.sel = { screen: sc, item: sc.items[0] || null };
+    this.c.onChange(); this.layout(); this.refresh(); this.refreshPresets();
+  }
+  newPreset() {   // Novo: uma tela com a composição inteira, sem nome; Ctrl+Z traz de volta o que havia
+    this.applyPresetJson(M.serialize(M.defaultScreens(this.c.compW, this.c.compH)), ''); this.c.toast('Saída nova: uma tela com a composição inteira');
+  }
+  async renamePreset() {
+    const de = this.presetName, P = this.c.presets; if (!de || !P || !P.rename) return;
+    const para = await askText('Renomear preset', 'Nome', de); if (!para || para === de) return;
+    const nomes = await P.list();
+    if (para.toLowerCase() !== de.toLowerCase() && nomes.some(n => String(n).toLowerCase() === para.toLowerCase()) && !(await confirmBox('Renomear preset', 'Já existe um preset chamado "' + para + '". Gravar por cima dele?'))) return;
+    try { await P.rename(de, para); this.presetName = para; await this.refreshPresets(); this.c.toast('Preset renomeado para "' + para + '"'); }
+    catch (e) { this.c.toast('Não consegui renomear: ' + e.message); }
+  }
+  async pickPreset() {   // Abrir…: um arquivo de preset de qualquer pasta
+    try { const r = await this.c.presets.pick(); if (!r) return; this.applyPresetJson(r.json, ''); this.c.toast('Preset "' + r.name + '" aberto de fora da pasta; use Salvar como… para guardá-lo aqui'); }
+    catch (e) { this.c.toast('Não consegui abrir o arquivo: ' + e.message); }
   }
   async loadPreset(name) {
     this.closeMenus(); if (!name || !this.c.presets) return;
     try {
       const json = await this.c.presets.load(name);
-      this.pushUndo(); this.c.setScreens(M.deserialize(json)); this.presetName = name;
-      const sc = this.screens()[0]; this.sel = { screen: sc, item: sc.items[0] || null };
-      this.c.onChange(); this.layout(); this.refresh(); this.refreshPresets(); this.c.toast('Preset "' + name + '" carregado');
+      this.applyPresetJson(json, name); this.c.toast('Preset "' + name + '" carregado');
     } catch (e) { this.c.toast('Não consegui abrir o preset: ' + e.message); }
   }
   async savePreset(name) {

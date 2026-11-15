@@ -37,6 +37,9 @@ contextBridge.exposeInMainWorld('projDesktop', {
     load: (name) => ipcRenderer.invoke('presets:load', name),
     save: (name, json) => ipcRenderer.invoke('presets:save', name, json),
     remove: (name) => ipcRenderer.invoke('presets:remove', name),
+    rename: (de, para) => ipcRenderer.invoke('presets:rename', de, para),
+    show: (name) => ipcRenderer.invoke('presets:show', name),
+    pick: () => ipcRenderer.invoke('presets:pick'),
   },
   comps: {
     list: () => ipcRenderer.invoke('comps:list'),
