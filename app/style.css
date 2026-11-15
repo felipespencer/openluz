@@ -247,7 +247,7 @@ button.gh:hover{ color:var(--txt); background:var(--bg3); }
 #aoView svg .ledgrid{ fill:none; stroke:#fff; stroke-opacity:.08; stroke-width:1; vector-effect:non-scaling-stroke; pointer-events:none; }
 #aoView svg .hdg{ cursor:grab; }
 #aoView svg .hd{ fill:#1b1b1b; stroke:var(--teal); stroke-width:1.5; vector-effect:non-scaling-stroke; cursor:grab; }
-#aoView svg .hdc{ fill:none; stroke:var(--teal); stroke-width:1.5; vector-effect:non-scaling-stroke; }
+#aoView svg .hdc{ fill:transparent; stroke:var(--teal); stroke-width:1.5; vector-effect:non-scaling-stroke; cursor:alias; }
 #aoView svg .hd.anc{ fill:var(--teal); } #aoView svg .hd.cur{ stroke:#fff; stroke-width:2.5; }
 #aoView svg .handle{ stroke:var(--teal); stroke-width:1; stroke-dasharray:3 3; opacity:.8; vector-effect:non-scaling-stroke; pointer-events:none; }
 /* degradês de emenda: faixa, linha A→B e alças; ajustado à mão fica laranja */

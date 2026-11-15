@@ -84,6 +84,11 @@ export class AdvancedOutput {
     this.svg.addEventListener('contextmenu', (e) => { e.preventDefault(); if (this.sel && this.sel.item && !this.drawing) this.ctxMenu(e.clientX, e.clientY); });
     $('aoList').addEventListener('contextmenu', (e) => e.preventDefault());
     $('aoStage').addEventListener('pointerdown', (e) => this.panDown(e));
+    $('aoStage').addEventListener('wheel', (e) => {   // roda do mouse: zoom de 5% por passo, como no Resolume
+      if (!this.open || !e.deltaY) return; e.preventDefault();
+      const k = Math.max(0.1, Math.min(3, this.scale * (e.deltaY < 0 ? 1.05 : 1 / 1.05)));
+      this.zoom = String(Math.round(k * 1000) / 1000); this.layout(); this.syncTools();
+    }, { passive: false });
     addEventListener('keydown', (e) => this.key(e));
     addEventListener('keyup', (e) => { if (e.key === ' ') this.space = false; });
     addEventListener('resize', () => { if (this.open) this.layout(); });
@@ -131,7 +136,11 @@ export class AdvancedOutput {
     $('aoMove').hidden = $('aoPts').hidden = this.tab !== 'out';
     $('aoSnap').classList.toggle('on', this.snap); $('aoPan').classList.toggle('on', this.pan); $('aoGridBtn').classList.toggle('on', this.grid || this.led);
     $('aoUndo').disabled = !this.hist.length; $('aoRedo').disabled = !this.redoHist.length;
-    $('aoZoom').value = this.zoom;
+    { const z = $('aoZoom'); let o = z.querySelector('#aoZoomCur');   // zoom da roda do mouse: entra na lista como a porcentagem atual
+      const fixo = [...z.options].some(x => x !== o && x.value === String(this.zoom));
+      if (!fixo) { if (!o) { o = document.createElement('option'); o.id = 'aoZoomCur'; z.appendChild(o); } o.value = String(this.zoom); o.textContent = Math.round(+this.zoom * 100) + '%'; o.hidden = false; }
+      else if (o) o.remove();
+      z.value = String(this.zoom); }
     $('aoGridMenu').querySelector('[data-g=grid]').classList.toggle('on', this.grid); $('aoGridMenu').querySelector('[data-g=led]').classList.toggle('on', this.led);
     $('aoInfo').textContent = `Composição ${this.c.compW}×${this.c.compH}`;
     $('aoStage').classList.toggle('panning', this.pan);
@@ -335,8 +344,8 @@ export class AdvancedOutput {
     const k = 1 / this.scale, H = [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]];
     H.forEach(([fx, fy], i) => {
       const x = r.x + r.w * fx, y = r.y + r.h * fy, corner = fx !== 0.5 && fy !== 0.5;
+      if (corner) this.svg.appendChild(svgEl('circle', { cx: x, cy: y, r: 14 * k, class: 'hdc', 'data-k': 'rot', 'data-i': i, 'data-id': item.id }));   // anel: gira em volta do centro, como no Resolume
       const g = svgEl('g', { class: 'hdg', 'data-k': 'resize', 'data-i': i, 'data-id': item.id });
-      if (corner) g.appendChild(svgEl('circle', { cx: x, cy: y, r: 14 * k, class: 'hdc' }));
       g.appendChild(svgEl('rect', { x: x - 5 * k, y: y - 5 * k, width: 10 * k, height: 10 * k, class: 'hd' }));
       this.svg.appendChild(g);
     });
@@ -379,9 +388,13 @@ export class AdvancedOutput {
     const found = this.findItem(t.dataset.id) || this.sel;
     const wasSel = found.item === (this.sel && this.sel.item);
     if (!wasSel) this.select(found.screen, found.item);
-    const it = found.item; this.lastDown.item = it;   // o item que este clique acertou: o segundo clique do par age nele, mesmo que o up do primeiro tenha passado a seleção adiante
+    let it = found.item; this.lastDown.item = it;   // o item que este clique acertou: o segundo clique do par age nele, mesmo que o up do primeiro tenha passado a seleção adiante
     this.svg.setPointerCapture(e.pointerId);
     const redo0 = this.redoHist; this.pushUndo();
+    if (k === 'body' && e.altKey && it && found.screen) {   // Alt + arrastar o corpo: nasce uma cópia e é ela que anda (um Ctrl+Z desfaz tudo)
+      const sc = found.screen, n = M.cloneItem(it); n.name = M.uniqueName(sc, it.name); sc.items.splice(sc.items.indexOf(it) + 1, 0, n);
+      this.sel = { screen: sc, item: n }; it = n; this.lastDown.item = n; this.refresh();
+    }
     const d = this.drag = { k, i: +t.dataset.i, it, last: p, start: p, wasSel, moved: false, redo0 };
     if (k[0] === 'g' && k.length <= 3) {   // alça de degradê: o automático vira ajustado na hora em que é tocado
       const g0 = this.grads(it)[d.i]; if (!g0) { this.drag = null; return; }
@@ -390,7 +403,11 @@ export class AdvancedOutput {
     }
     this.selG = -1;
     if (k === 'anchor' || k === 'maskpt' || k === 'inmaskpt') { this.selPt = d.i; this.selPtK = k; this.draw(); this.renderProps(); }
-    if (k === 'resize' || k === 'body') d.rect = this.tab === 'in' ? { ...it.in } : it.type === 'slice' ? M.outRect(it) : bbox(it.pts);
+    if (k === 'resize' || k === 'body' || k === 'rot') d.rect = this.tab === 'in' ? { ...it.in } : it.type === 'slice' ? M.outRect(it) : bbox(it.pts);
+    if (k === 'rot') {
+      d.c = [d.rect.x + d.rect.w / 2, d.rect.y + d.rect.h / 2]; d.a0 = Math.atan2(p[1] - d.c[1], p[0] - d.c[0]);
+      d.rot0 = it.type === 'mask' ? 0 : this.tab === 'in' ? (it.in.rot || 0) : (it.warp.rot || 0); if (it.type === 'mask') d.pts0 = it.pts.map(q => [...q]);
+    }
   }
   move(e) {
     const p = this.pt(e);
@@ -415,19 +432,30 @@ export class AdvancedOutput {
       g.a = g.a.map(Math.round); g.b = g.b.map(Math.round); M.touch(it);
       this.draw(); this.renderProps(); this.c.onChange(); return;
     }
-    if (d.k === 'body') {
-      let r = { x: d.rect.x + p[0] - d.start[0], y: d.rect.y + p[1] - d.start[1], w: d.rect.w, h: d.rect.h };
-      r = this.snapRect(r, it);
+    if (d.k === 'rot') {   // anel: gira em volta do centro; com Shift, de 15 em 15 graus
+      let deg = d.rot0 + (Math.atan2(p[1] - d.c[1], p[0] - d.c[0]) - d.a0) * 180 / Math.PI;
+      deg = e.shiftKey ? Math.round(deg / 15) * 15 : Math.round(deg * 10) / 10; deg = ((deg + 180) % 360 + 360) % 360 - 180;
+      if (it.type === 'mask') { const a = deg * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a); it.pts = d.pts0.map(([x, y]) => [d.c[0] + (x - d.c[0]) * c - (y - d.c[1]) * sn, d.c[1] + (x - d.c[0]) * sn + (y - d.c[1]) * c]); M.touch(it); }
+      else if (this.tab === 'in') { it.in.rot = deg; M.touch(it); }
+      else M.rotateOut(it, deg);
+    } else if (d.k === 'body') {
+      let tx = p[0] - d.start[0], ty = p[1] - d.start[1];
+      if (e.shiftKey) { if (Math.abs(tx) >= Math.abs(ty)) ty = 0; else tx = 0; }   // Shift: só anda no eixo em que o mouse andou mais
+      let r = { x: d.rect.x + tx, y: d.rect.y + ty, w: d.rect.w, h: d.rect.h };
+      r = this.gridRect(r, it, false, e.ctrlKey || e.metaKey);
       if (it.type === 'mask') { const b = bbox(it.pts); M.touch(it); it.pts.forEach(q => { q[0] += r.x - b.x; q[1] += r.y - b.y; }); }
       else if (this.tab === 'in') { it.in.x = r.x; it.in.y = r.y; M.touch(it); }
       else M.fitOutRect(it, r);
     } else if (d.k === 'resize') {
       const H = [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]][d.i];
-      const r0 = d.rect, tx = p[0] - d.start[0], ty = p[1] - d.start[1];
-      let x0 = r0.x, y0 = r0.y, x1 = r0.x + r0.w, y1 = r0.y + r0.h;
-      if (H[0] === 0) x0 += tx; if (H[0] === 1) x1 += tx; if (H[1] === 0) y0 += ty; if (H[1] === 1) y1 += ty;
-      let r = { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.max(8, Math.abs(x1 - x0)), h: Math.max(8, Math.abs(y1 - y0)) };
-      r = this.snapRect(r, it, true);
+      const r0 = d.rect, tx = p[0] - d.start[0], ty = p[1] - d.start[1], alt = e.altKey;
+      // quanto a largura e a altura mudam; com Alt o item cresce para os dois lados (o centro não sai do lugar)
+      let dw = (H[0] === 1 ? tx : H[0] === 0 ? -tx : 0) * (alt ? 2 : 1), dh = (H[1] === 1 ? ty : H[1] === 0 ? -ty : 0) * (alt ? 2 : 1);
+      if (e.shiftKey && H[0] !== 0.5 && H[1] !== 0.5) { const sc = (dw * r0.w + dh * r0.h) / (r0.w * r0.w + r0.h * r0.h); dw = r0.w * sc; dh = r0.h * sc; }   // Shift no canto: mantém a proporção
+      const livre = e.ctrlKey || e.metaKey, nw = Math.max(8, livre ? Math.abs(r0.w + dw) : Math.round(Math.abs(r0.w + dw))), nh = Math.max(8, livre ? Math.abs(r0.h + dh) : Math.round(Math.abs(r0.h + dh)));
+      const lado = (f, a0, len0, n, d2) => f === 0.5 ? a0 : alt ? a0 + len0 / 2 - n / 2 : f === 0 ? (len0 + d2 >= 0 ? a0 + len0 - n : a0 + len0) : (len0 + d2 >= 0 ? a0 : a0 - n);
+      let r = { x: lado(H[0], r0.x, r0.w, nw, dw), y: lado(H[1], r0.y, r0.h, nh, dh), w: H[0] === 0.5 ? r0.w : nw, h: H[1] === 0.5 ? r0.h : nh };
+      r = this.gridRect(r, it, true, e.ctrlKey || e.metaKey, e.shiftKey || alt);
       if (it.type === 'mask') { const b = bbox(it.pts); M.touch(it); it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * (r.w / (b.w || 1)); q[1] = r.y + (q[1] - b.y) * (r.h / (b.h || 1)); }); }
       else if (this.tab === 'in') { Object.assign(it.in, r); M.touch(it); } else M.fitOutRect(it, r);
     } else if (d.k === 'anchor') { const q = this.ledSnap(p); const a = it.warp.pts[d.i]; M.moveAnchor(it, d.i, q[0] - a[0], q[1] - a[1]); }
@@ -478,6 +506,14 @@ export class AdvancedOutput {
     this.pushUndo(); L.splice(best + 1, 0, inm ? inToLocal(it, bq) : bq); this.selPt = best + 1; this.selPtK = inm ? 'inmaskpt' : 'maskpt'; touchIt(); this.c.onChange(); this.draw(); this.renderProps(); return true;
   }
   ledSnap(p) { return this.led ? [Math.round(p[0] / 8) * 8, Math.round(p[1] / 8) * 8] : p; }
+  // Arrastar e redimensionar andam em pixels inteiros, com o ímã quando ligado; com Ctrl, nem um nem outro (como no Resolume).
+  // travado: Shift ou Alt no canto, em que o ímã estragaria a proporção ou o centro; aí só o tamanho é arredondado.
+  gridRect(r, it, resizing, livre, travado) {
+    if (livre) return r;
+    if (!travado) r = this.snapRect(r, it, resizing);
+    r.x = Math.round(r.x); r.y = Math.round(r.y); if (resizing) { r.w = Math.max(8, Math.round(r.w)); r.h = Math.max(8, Math.round(r.h)); }
+    return r;
+  }
   // Ímã: borda do retângulo gruda nas bordas dos outros itens e da tela; grade LED gruda nos 8 px
   snapRect(r, it, resizing) {
     if (this.led) { r.x = Math.round(r.x / 8) * 8; r.y = Math.round(r.y / 8) * 8; if (resizing) { r.w = Math.max(8, Math.round(r.w / 8) * 8); r.h = Math.max(8, Math.round(r.h / 8) * 8); } }

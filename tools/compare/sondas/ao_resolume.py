@@ -58,9 +58,9 @@ while i < len(args):
         time.sleep(0.2); u.mouse_event(4, 0, 0, 0, 0); time.sleep(0.2)
         if mod: u.keybd_event(mod, 0, 2, 0)
         time.sleep(0.5); i = o + 4
-    elif a == 'mk':
-        mod = MODS[args[i+1]]; v = KEYS.get(args[i+2]) or int(args[i+2], 16)
-        u.keybd_event(mod, 0, 0, 0); u.keybd_event(v, 0, 0, 0); u.keybd_event(v, 0, 2, 0); u.keybd_event(mod, 0, 2, 0); time.sleep(0.5); i += 3
+    elif a == 'mk':   # as setas vão com a marca de tecla estendida: sem ela, Shift+seta vira o teclado numérico e o Windows solta o Shift
+        mod = MODS[args[i+1]]; v = KEYS.get(args[i+2]) or int(args[i+2], 16); ext = 1 if v in (0x25, 0x26, 0x27, 0x28, 0x2E) else 0
+        u.keybd_event(mod, 0, 0, 0); time.sleep(0.1); u.keybd_event(v, 0, ext, 0); u.keybd_event(v, 0, ext | 2, 0); time.sleep(0.1); u.keybd_event(mod, 0, 2, 0); time.sleep(0.5); i += 3
     elif a in ('wh', 'mwh'):
         mod = MODS[args[i+1]] if a == 'mwh' else None; o = i + (2 if a == 'mwh' else 1)
         mv(args[o], args[o+1])
