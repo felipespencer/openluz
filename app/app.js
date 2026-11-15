@@ -900,6 +900,7 @@ function previewFile(path, name) { previewPath = path; previewName = name; state
 // desse canvas. O motor só desenha as telas que estão abertas ou abertas no editor.
 state.screens = M.defaultScreens(COMP_W, COMP_H);
 let displays = [];
+if (D && D.onDisplays) D.onDisplays((d) => { displays = d; renderScreens(); if (ao.open) ao.renderProps(); toast(d.length === 1 ? 'Só o monitor de controle ligado' : d.length + ' monitores ligados'); });   // projetor ligado ou tirado com o programa aberto (achado 36)
 if (D) D.displays().then(async (d) => { displays = d; renderScreens(); try { const p = await D.prefs.get(); const test = await D.isTest(); if (!p.noWizard && !test) { projectorWizard(true); D.prefs.set({ ...p, noWizard: true }).catch(() => { }); } } catch { } }).catch(() => { });   // visto uma vez, não volta sozinho ("perguntar sempre" no próprio assistente religa)
 
 // ---------- assistente de projetores ----------
@@ -1065,6 +1066,17 @@ function setScreenDevice(sc, v) {
   if (sc.win && !sc.win.closed) { sc.win.close(); sc.win = null; delete window.__projStreams[sc.id]; delete window.__projCanvas[sc.id]; setTimeout(openOutputs, 150); }
   renderScreens(); if (ao.open) ao.layout();
 }
+// Tela desligada não projeta: se a saída dela está aberta, fecha; se foi fechada por isso e a tela volta a ser ligada, reabre
+// (achado 38: a tela desligada continuava no projetor enquanto os slices vizinhos já tinham perdido a emenda com ela).
+function syncOutputs() {
+  let reabrir = null;
+  for (const sc of state.screens) {
+    const aberta = !!(sc.win && !sc.win.closed);
+    if (!sc.enabled && aberta) { sc.win.close(); sc.win = null; delete window.__projStreams[sc.id]; delete window.__projCanvas[sc.id]; sc.voltaSaida = true; }
+    else if (sc.enabled && sc.voltaSaida && !aberta) { sc.voltaSaida = false; (reabrir || (reabrir = [])).push(sc); }
+  }
+  if (reabrir) setTimeout(() => openOutputs(reabrir), 150);
+}
 function openOutputs(quais) {
   try { localStorage.setItem('projSaidaAberta', '1'); } catch { }   // lido na reabertura depois de uma queda
   let n = 0, jaAbertas = 0;
@@ -1084,13 +1096,16 @@ function openOutputs(quais) {
 // fecha todas as janelas de saída (o botão da barra e o item "Desligada" do menu Saída)
 function closeOutputs() {
   try { localStorage.setItem('projSaidaAberta', '0'); } catch { }
-  for (const sc of state.screens) if (sc.win && !sc.win.closed) { sc.win.close(); sc.win = null; delete window.__projStreams[sc.id]; delete window.__projCanvas[sc.id]; }
+  for (const sc of state.screens) { sc.voltaSaida = false; if (sc.win && !sc.win.closed) { sc.win.close(); sc.win = null; delete window.__projStreams[sc.id]; delete window.__projCanvas[sc.id]; } }
   renderScreens();
 }
 // um botão só liga e desliga a saída: desligada, abre; no ar, fecha (e fica aceso enquanto estiver no ar)
 $('btnOut').onclick = () => { if (state.screens.some(sc => sc.win && !sc.win.closed)) closeOutputs(); else openOutputs(); };
-function renderScreens() {
+function renderScreens(relogio) {
   syncOverlay();
+  // chamada do relógio com um seletor da lista aberto ou com foco: não refazer, senão o seletor fecha antes da escolha (achado 43)
+  if (relogio === true) { const f = document.activeElement; if (f && f.tagName === 'SELECT' && f.closest('#scrList')) return; }
+  syncOutputs();
   const list = $('scrList'); list.textContent = '';
   let on = 0;
   for (const sc of state.screens) {
@@ -1108,7 +1123,7 @@ function renderScreens() {
   $('btnOut').textContent = on ? 'Fechar saída' : 'Abrir saída'; $('btnOut').classList.toggle('on', on > 0); $('btnOut').title = on ? 'Fecha as janelas de saída. A saída continua montada: é só abrir de novo.' : 'Abre uma janela de saída por tela. Com um projetor ligado, ela já abre nele em tela cheia.';
   $('compName').textContent = state.name || 'sem nome';
 }
-setInterval(renderScreens, 1000);
+setInterval(() => renderScreens(true), 1000);
 
 const ao = new AdvancedOutput({
   get compW() { return state.settings.w; }, get compH() { return state.settings.h; }, compCanvas: monCanvas,
@@ -1597,7 +1612,7 @@ const menuDefs = () => [
     { label: 'Desligada', check: !open, fn: closeOutputs },
     { label: 'Tela cheia', sub: () => displays.length ? displays.map(d => ({ label: d.label, check: open && sc.device === d.id, fn: () => { sc.device = d.id; sc.enabled = true; if (sc.win && !sc.win.closed) sc.win.close(); openOutputs(); } })) : [{ label: 'nenhum monitor listado', disabled: true }] },
     { label: 'Janela', check: open && sc.device === 'window', fn: () => { sc.device = 'window'; sc.enabled = true; if (sc.win && !sc.win.closed) sc.win.close(); openOutputs(); } },
-    { label: 'Automático (projetor ligado)', check: open && sc.device === 'auto', fn: () => { sc.device = 'auto'; sc.enabled = true; if (sc.win && !sc.win.closed) sc.win.close(); openOutputs(); } }, '-',
+    { label: 'Automático (projetor ligado)', check: open && sc.device === 'auto', fn: () => { sc.enabled = true; sc.voltaSaida = false; if (sc.win && !sc.win.closed) setScreenDevice(sc, 'auto'); else { sc.device = 'auto'; openOutputs(); } } }, '-',
     { label: 'Mostrar saídas (trazer para a frente)', disabled: !open, fn: () => openOutputs() },
     { label: 'Projetores…', fn: () => projectorWizard(false) },
     { label: 'Avançada…', fn: () => ao.show() },

@@ -194,13 +194,18 @@ function createMain() {
   // janela de saída: output.html?screen=ID&display=<id do monitor | window | auto>
   // "auto" pega o primeiro monitor que não é o do controle e ainda não tem saída aberta
   const taken = new Map();   // display id → janela de saída que o ocupa
+  // monitor ligado, tirado ou mudado com o programa aberto: a janela de controle recebe a lista nova
+  const avisaMonitores = () => { if (!win.isDestroyed()) win.webContents.send('displays:changed', displayList()); };
+  for (const evn of ['display-added', 'display-removed', 'display-metrics-changed']) screen.on(evn, avisaMonitores);
+  win.on('closed', () => { for (const evn of ['display-added', 'display-removed', 'display-metrics-changed']) screen.removeListener(evn, avisaMonitores); });
   const outWins = new Set();  // todas as janelas de saída abertas (para o botão "Mostrar saídas" trazê-las para a frente)
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (!url.startsWith(ORIGIN + '/output.html')) return { action: 'deny' };
     const q = new URL(url).searchParams, want = q.get('display') || 'auto';
     const main = screen.getDisplayMatching(win.getBounds());
     let ext = null;
-    if (want === 'auto') ext = screen.getAllDisplays().find(d => d.id !== main.id && !taken.has(d.id)) || null;
+    const livre = (d) => !taken.has(d.id) || taken.get(d.id).isDestroyed();   // janela já destruída não segura o monitor
+    if (want === 'auto') ext = screen.getAllDisplays().find(d => d.id !== main.id && livre(d)) || null;
     else if (want !== 'window') ext = screen.getAllDisplays().find(d => String(d.id) === want) || null;
     const base = { backgroundColor: '#000000', title: 'OpenLuz — saída', autoHideMenuBar: true, webPreferences: PREFS };
     const opts = ext

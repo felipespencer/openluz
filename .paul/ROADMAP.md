@@ -260,7 +260,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [x] 12-09: lote A, o que derruba um show (27/N4, 49, 24, 22, 21, 75, 5, 16) — fechado em 2026-11-14 com a 0.3.0-beta.1 instalada ("aprovado")
 - [x] 12-10: lote C1 (N1, N3, N5, 72, 73, 74) — fechado em 2026-11-14 (cb36a72; "aprovado"); ainda fora da beta instalada
 - [x] 12-11: lote B2 (39, 40, 44, 42, N2) — fechado em 2026-11-14 (72b3bf9) com a 0.3.0-beta.2 pública ("Continua")
-- [ ] 12-12: lote B1 (36, 37, 38, 41, 43) com os projetores ligados ("liguei outro projetor talvez agora seja melhor pra vc testar", 2026-11-15) — plano criado, aguardando aprovação
+- [ ] 12-12: lote B1 (36, 37, 38, 41, 43) com os projetores ligados ("liguei outro projetor talvez agora seja melhor pra vc testar", 2026-11-15) — aplicado em 2026-11-15, só local; no checkpoint (43, 37, 38 consertados; 36 sem prova de cabo; 41 não reproduzível com escala 100%)
 - [ ] parado no "risco 1" (decisão do Felipe, 2026-11-14): C2, D, E, F só se ele pedir
 
 ### Phase 13: Porta de entrada
