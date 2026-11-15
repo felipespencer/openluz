@@ -764,6 +764,8 @@ export class AdvancedOutput {
       if (this.tab === 'out') {
         const f = s.flip.x && s.flip.y ? 'xy' : s.flip.x ? 'x' : s.flip.y ? 'y' : 'no';
         P.appendChild(this.picons('Espelhar', 'Espelhar|Espelha a saída do slice na horizontal, na vertical ou nas duas.', [['no', 'flipN', 'Sem espelhar'], ['x', 'flipX', 'Horizontal'], ['y', 'flipY', 'Vertical'], ['xy', 'flipXY', 'Ambos']], f, v => { s.flip.x = v === 'x' || v === 'xy'; s.flip.y = v === 'y' || v === 'xy'; M.touch(s); }));
+        P.appendChild(this.pcheck('É chave', 'É chave|O slice sai em branco na medida da transparência da imagem (sinal de recorte para mesa de corte), no lugar da imagem.', !!s.key, v => { s.key = v; M.touch(s); }));
+        P.appendChild(this.pcheck('Fundo preto', 'Fundo preto|Põe preto por baixo do slice: onde a imagem dele é transparente, não aparece o que está atrás.', !!s.blackBg, v => { s.blackBg = v; M.touch(s); }));
         this.colorRows(P, s.color);
       }
       // soft edge: cabeçalho com a caixa, parâmetros quando ligado

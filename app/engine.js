@@ -47,6 +47,7 @@ void main(){
 const FS_SLICE = `#version 300 es
 precision highp float;
 in vec2 vUv; in vec2 vLuv; out vec4 o;
+uniform int uKey; uniform int uBlack;   // É chave: o slice sai branco na medida da transparência; Fundo preto: preto opaco na forma do slice
 uniform sampler2D uTex; uniform vec2 uBC; uniform vec3 uRGB;
 uniform int uUseSoft; uniform vec3 uSoftP; uniform vec3 uGamma;
 #define NG 8
@@ -81,7 +82,8 @@ void main(){
     c.rgb *= pow(vec3(f), 1.0 / uGamma);
   }
   if (uUseMask != 0) c *= texture(uMask, vec2(vLuv.x, 1.0 - vLuv.y)).r;
-  o = c;
+  if (uBlack != 0) { o = vec4(0.0, 0.0, 0.0, 1.0); return; }
+  o = uKey != 0 ? vec4(c.a) : c;
 }`;
 // passe final da tela: cor, opacidade e máscaras de saída
 const VS_QUAD = `#version 300 es
@@ -120,7 +122,7 @@ export class Engine {
     const gl = this.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: true });
     if (!gl) throw new Error('WebGL2 indisponível');
     this.progLayer = this.program(VS_LAYER, FS_LAYER, ['uScale', 'uPos', 'uRot', 'uAspect', 'uOp', 'uPre', 'uTex', 'uSrc']);
-    this.progSlice = this.program(VS_SLICE, FS_SLICE, ['uScreen', 'uIn', 'uRot', 'uFlip', 'uSrc', 'uTex', 'uBC', 'uRGB', 'uUseSoft', 'uSoftP', 'uGamma', 'uNG', 'uGA', 'uGB', 'uInSize', 'uUseMask', 'uMask']);
+    this.progSlice = this.program(VS_SLICE, FS_SLICE, ['uScreen', 'uIn', 'uRot', 'uFlip', 'uSrc', 'uTex', 'uBC', 'uRGB', 'uUseSoft', 'uSoftP', 'uGamma', 'uNG', 'uGA', 'uGB', 'uInSize', 'uUseMask', 'uMask', 'uKey', 'uBlack']);
     this.progScreen = this.program(VS_QUAD, FS_SCREEN, ['uTex', 'uMask', 'uUseMask', 'uBC', 'uRGB', 'uOp']);
     this.progCopy = this.program(VS_QUAD, FS_COPY, ['uTex', 'uOpaque']);
     this.progMix = this.program(VS_QUAD, FS_MIX, ['uA', 'uB', 'uK', 'uTrans', 'uMode', 'uColor', 'uSmooth', 'uTime', 'uRes', 'uSeed']);
@@ -837,6 +839,10 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, this.white); gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(P.u.uMask, 1); gl.uniform1i(P.u.uUseMask, 0);
       }
+      // Fundo preto (Black BG do Resolume): preto opaco na forma do slice, por baixo dele; É chave (Is Key): só a transparência, em branco
+      gl.uniform1i(P.u.uKey, s.key ? 1 : 0);
+      if (s.blackBg) { gl.uniform1i(P.u.uBlack, 1); gl.drawElements(gl.TRIANGLES, g.n, gl.UNSIGNED_INT, 0); }
+      gl.uniform1i(P.u.uBlack, 0);
       gl.drawElements(gl.TRIANGLES, g.n, gl.UNSIGNED_INT, 0);
     }
     // passe final: cor da tela, opacidade e máscaras de saída

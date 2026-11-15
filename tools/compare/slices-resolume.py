@@ -1,5 +1,5 @@
 # Escreve a Saída avançada do Resolume com várias slices (entrada = saída), para medir efeitos que dependem das slices.
-# Uso: py tools/compare/slices-resolume.py <layout>      layouts: 4 (tamanhos, lugares e nomes diferentes), 2, 9, original
+# Uso: py tools/compare/slices-resolume.py <layout>      layouts: 4 (tamanhos, lugares e nomes diferentes), 2, 9, kb, original
 # Guarda a cópia do arquivo original em tools/compare/saida/AdvancedOutput.original.xml na primeira vez.
 # Só com o Arena fechado: ele lê o arquivo ao abrir e grava ao sair.
 import os, re, shutil, sys
@@ -12,6 +12,7 @@ LAYOUTS = {
     # nome, x, y, w, h — ordens todas diferentes: X 3,1,2,0  Y 2,3,0,1  área 2,1,0,3  largura 2,3,1,0  altura 1,0,2,3  nome 2,0,3,1
     '4': [('B', 1200, 600, 600, 420), ('D', 100, 640, 560, 400), ('A', 700, 50, 400, 500), ('C', 50, 80, 500, 550)],
     '2': [('Esq', 0, 0, 960, 1080), ('Dir', 960, 0, 960, 1080)],
+    'kb': [('Fundo', 0, 0, 1920, 1080), ('Cima', 480, 270, 960, 540)],   # 07-07: Is Key e Black BG (o último da lista fica na frente)
     '9': [(f'S{f * 3 + c + 1}', c * 640, f * 360, 640, 360) for f in range(3) for c in range(3)],
 }
 
