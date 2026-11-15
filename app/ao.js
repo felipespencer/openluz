@@ -47,7 +47,7 @@ export class AdvancedOutput {
         </div>
         <div id="aoCenter">
           <div class="tb">
-            <select id="aoZoom" data-help="Zoom|Aproxima ou afasta a vista, ou ajusta à composição."><option value="fit">Ajustar</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="1">100%</option><option value="2">200%</option></select>
+            <select id="aoZoom" data-help="Zoom|Aproxima ou afasta a vista, ou ajusta à composição."><option value="fit">Ajustar</option><option value="0.1">10%</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select>
             ${ibtn('aoUndo', 'undo', 'Desfazer|Desfaz a última mudança.')}${ibtn('aoRedo', 'redo', 'Refazer|Refaz o que você acabou de desfazer.')}
             ${ibtn('aoPan', 'hand', 'Mão|Arrasta a vista. Segurar a barra de espaço faz o mesmo.')}${ibtn('aoSnap', 'snap', 'Ímã|Gruda as bordas do slice nas bordas dos outros slices e da tela.')}
             <span class="gridWrap"><button type="button" id="aoGridBtn" class="ib" data-help="Grade|Mostra o nome e a borda do slice no projetor, com o cursor; ou uma grade de 8×8 px para alinhar.">${ICON.grid}${ICON.caret}</button>
@@ -406,7 +406,7 @@ export class AdvancedOutput {
     if (k === 'resize' || k === 'body' || k === 'rot') d.rect = this.tab === 'in' ? { ...it.in } : it.type === 'slice' ? M.outRect(it) : bbox(it.pts);
     if (k === 'rot') {
       d.c = [d.rect.x + d.rect.w / 2, d.rect.y + d.rect.h / 2]; d.a0 = Math.atan2(p[1] - d.c[1], p[0] - d.c[0]);
-      d.rot0 = it.type === 'mask' ? 0 : this.tab === 'in' ? (it.in.rot || 0) : (it.warp.rot || 0); if (it.type === 'mask') d.pts0 = it.pts.map(q => [...q]);
+      d.rot0 = it.type === 'mask' ? (it.rot || 0) : this.tab === 'in' ? (it.in.rot || 0) : (it.warp.rot || 0); if (it.type === 'mask') d.pts0 = it.pts.map(q => [...q]);
     }
   }
   move(e) {
@@ -435,7 +435,7 @@ export class AdvancedOutput {
     if (d.k === 'rot') {   // anel: gira em volta do centro; com Shift, de 15 em 15 graus
       let deg = d.rot0 + (Math.atan2(p[1] - d.c[1], p[0] - d.c[0]) - d.a0) * 180 / Math.PI;
       deg = e.shiftKey ? Math.round(deg / 15) * 15 : Math.round(deg * 10) / 10; deg = ((deg + 180) % 360 + 360) % 360 - 180;
-      if (it.type === 'mask') { const a = deg * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a); it.pts = d.pts0.map(([x, y]) => [d.c[0] + (x - d.c[0]) * c - (y - d.c[1]) * sn, d.c[1] + (x - d.c[0]) * sn + (y - d.c[1]) * c]); M.touch(it); }
+      if (it.type === 'mask') { const a = (deg - d.rot0) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a); it.pts = d.pts0.map(([x, y]) => [d.c[0] + (x - d.c[0]) * c - (y - d.c[1]) * sn, d.c[1] + (x - d.c[0]) * sn + (y - d.c[1]) * c]); it.rot = deg; M.touch(it); }
       else if (this.tab === 'in') { it.in.rot = deg; M.touch(it); }
       else M.rotateOut(it, deg);
     } else if (d.k === 'body') {
@@ -560,7 +560,7 @@ export class AdvancedOutput {
     } else if (kind === 'maskDraw') { this.setTab('out'); this.drawing = { kind: 'mask', pts: [] }; }
     else {
       const shape = { maskRect: 'rect', maskCircle: 'circle', maskTri: 'triangle', maskHex: 'hexagon', maskHeart: 'heart' }[kind] || 'rect';
-      const m = M.mkMask('Máscara ' + (sc.items.filter(i => i.type === 'mask').length + 1), M.maskShape(shape, sc.w * 0.35, sc.h * 0.3, sc.w * 0.3, sc.h * 0.4));
+      const m = M.mkMask('Máscara ' + (sc.items.filter(i => i.type === 'mask').length + 1), M.maskShape(shape, (sc.w - sc.h * 0.7) / 2, sc.h * 0.15, sc.h * 0.7, sc.h * 0.7));   // quadrada, 70% da altura, no centro, como no Resolume
       sc.items.push(m); this.sel = { screen: sc, item: m }; this.setTab('out');
     }
     this.c.onChange(); this.refresh();
@@ -744,6 +744,9 @@ export class AdvancedOutput {
       this.colorRows(P, sc.color);
       if (this.screens().length > 1) { const rm = el('button', 'wide', 'Apagar esta tela'); rm.type = 'button'; rm.onclick = () => this.removeScreen(sc); P.appendChild(rm); }
     } else if (it.type === 'mask') {
+      // X, Y, Esquerda, Topo, Largura e Altura são a caixa da forma; mexer num deles move ou estica os pontos
+      this.rectRows(P, bbox(it.pts), (r) => { const b = bbox(it.pts); it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * (r.w / (b.w || 1)); q[1] = r.y + (q[1] - b.y) * (r.h / (b.h || 1)); }); M.touch(it); }, 'Máscara');
+      P.appendChild(this.pnum('Giro', 'Giro da máscara|Gira a forma em volta do centro.', it.rot || 0, { min: -180, max: 180, step: 1, unit: '°', bar: true, reset: 0 }, v => M.rotateMask(it, v)));
       P.appendChild(this.pcheck('Inverter', 'Inverter máscara|Troca entre apagar o que está dentro ou o que está fora da forma.', it.invert, v => { it.invert = v; M.touch(it); }));
       P.appendChild(this.prow('Pontos', 'Pontos|Quantos pontos tem a forma. Arraste-os no modo Editar pontos.', el('span', 'pinfo', String(it.pts.length))));
       const rm = el('button', 'wide', 'Apagar máscara'); rm.type = 'button'; rm.onclick = () => this.removeItem(it); P.appendChild(rm);

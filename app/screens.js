@@ -26,7 +26,13 @@ export function mkSlice(name, inRect, outRect) {
     inMask: null, rev: 1 };
   return s;
 }
-export function mkMask(name, pts) { return { id: seq++, type: 'mask', name, enabled: true, invert: false, pts, rev: 1 }; }
+export function mkMask(name, pts) { return { id: seq++, type: 'mask', name, enabled: true, invert: false, rot: 0, pts, rev: 1 }; }
+// gira a máscara em volta do centro da caixa dela, até o ângulo pedido (o giro fica guardado em rot)
+export function rotateMask(m, deg) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of m.pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, a = (deg - (m.rot || 0)) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  m.pts = m.pts.map(([x, y]) => [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c]); m.rot = deg; touch(m);
+}
 export const touch = (o) => { o.rev = (o.rev || 0) + 1; return o; };
 
 // Muda o tamanho da tela levando junto, na mesma proporção, as formas de saída dos slices e
@@ -255,7 +261,7 @@ export function serialize(screens) {
       ? { type: 'slice', name: it.name, enabled: it.enabled, source: it.source, sourceLayer: it.sourceLayer, in: it.in, flip: it.flip,
           warp: { mode: it.warp.mode, curve: it.warp.curve, divX: it.warp.divX, divY: it.warp.divY, rot: it.warp.rot, pts: it.warp.pts },
           soft: it.soft, color: it.color, inMask: it.inMask && { pts: it.inMask.pts, invert: it.inMask.invert } }
-      : { type: 'mask', name: it.name, enabled: it.enabled, invert: it.invert, pts: it.pts }),
+      : { type: 'mask', name: it.name, enabled: it.enabled, invert: it.invert, rot: it.rot || 0, pts: it.pts }),
   })) });
 }
 export function deserialize(json) {
@@ -265,7 +271,7 @@ export function deserialize(json) {
     if (s.uid) sc.uid = String(s.uid);   // arquivo antigo não tem: fica o uid novo do mkScreen e a tela casa pela ordem
     sc.enabled = s.enabled !== false; sc.opacity = s.opacity ?? 1; Object.assign(sc.color, s.color || {});
     for (const it of s.items || []) {
-      if (it.type === 'mask') { const m = mkMask(it.name || 'Máscara', (it.pts || []).map(p => [+p[0], +p[1]])); m.enabled = it.enabled !== false; m.invert = !!it.invert; sc.items.push(m); continue; }
+      if (it.type === 'mask') { const m = mkMask(it.name || 'Máscara', (it.pts || []).map(p => [+p[0], +p[1]])); m.enabled = it.enabled !== false; m.invert = !!it.invert; m.rot = +it.rot || 0; sc.items.push(m); continue; }
       const sl = mkSlice(it.name || 'Slice', it.in || { x: 0, y: 0, w: sc.w, h: sc.h }, { x: 0, y: 0, w: sc.w, h: sc.h });
       sl.enabled = it.enabled !== false; sl.source = it.source || 'comp'; if (typeof it.sourceLayer === 'number') sl.sourceLayer = it.sourceLayer;   // posição da camada-fonte (quem abre troca pelo id desta abertura)
       Object.assign(sl.in, it.in || {}); Object.assign(sl.flip, it.flip || {});
