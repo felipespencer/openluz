@@ -273,7 +273,9 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [ ] 12-12: lote B1 (36, 37, 38, 41, 43) com os projetores ligados ("liguei outro projetor talvez agora seja melhor pra vc testar", 2026-11-15) — aplicado em 2026-11-15, só local; no checkpoint (43, 37, 38 consertados; 36 sem prova de cabo; 41 não reproduzível com escala 100%)
 - [x] 12-13: clique na grade não se perde quando ela é refeita entre apertar e soltar (Autopilot; item 74) — fechado em 2026-11-16, só local
 - [x] 12-14: com a saída aberta, o programa não deixa o Windows apagar a tela nem dormir por inatividade — fechado em 2026-11-16, só local
-- [ ] 12-15: Test Card também no quadro Composição (pedido de 2026-11-16) — aplicado, só local; falta a regressão das baterias
+- [x] 12-15: Test Card também no quadro Composição — fechado em 2026-11-16, só local
+- [x] 12-16: Menu Saída vira OUTPUT — fechado em 2026-11-16, só local
+- [x] 12-17: Composição nova abre Projetores e Nova composição — fechado em 2026-11-16, só local
 - [ ] parado no "risco 1" (decisão do Felipe, 2026-11-14): C2, D, E, F só se ele pedir
 
 ### Phase 13: Porta de entrada
