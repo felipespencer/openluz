@@ -100,6 +100,45 @@ try {
   confere('"Apagar este polígono" tira o item', (await P0()) === null);
   await ctrlZ(); confere('Ctrl+Z traz o polígono de volta', !!(await P0()));
 
+  // ---- 07-14: acrescentar e apagar pontos com duplo clique, no modo Editar pontos
+  const PN = (nome) => ev(`const it = P.ao.screens()[0].items.find(i => i.type === 'poly' && i.name === ${JSON.stringify(nome)}); return it ? { e: it.inPts.map(p => [...p]), s: it.outPts.map(p => [...p]) } : null;`);
+  const nPolys = () => ev(`return P.ao.screens()[0].items.filter(i => i.type === 'poly').length;`);
+  await cl(`[...document.querySelectorAll('#aoList .row.item')].find(r => /Polígono/.test(r.textContent))`); await wait(300);
+  await cl(`document.querySelector('#aoPts')`); await wait(300); st = await palco();
+  const meio = [(p.s[0][0] + p.s[1][0]) / 2, (p.s[0][1] + p.s[1][1]) / 2];
+  await click(X(meio[0]), Y(meio[1]), 2); q = await PN('Polígono');
+  confere('duplo clique na linha: o ponto entra nas duas formas (na outra, no meio do lado)', q.s.length === 4 && q.e.length === 4 && perto(q.s[1][0], meio[0], 4) && perto(q.s[1][1], meio[1], 4) && perto(q.e[1][0], (p.e[0][0] + p.e[1][0]) / 2, 0.01) && perto(q.e[1][1], (p.e[0][1] + p.e[1][1]) / 2, 0.01), j([arr(q.e), arr(q.s)]));
+  b = await naTela(cen(p.s)); confere('com o ponto novo a imagem continua no lugar', cor(a, b), j([a, b]));
+  await click(X(q.s[1][0]), Y(q.s[1][1]), 2); q = await PN('Polígono');
+  confere('duplo clique num ponto: ele sai das duas formas', q.s.length === 3 && q.e.length === 3 && igual(q.s, p.s) && igual(q.e, p.e), j([q.e.length, q.s.length]));
+  await click(X(p.s[2][0]) - 3, Y(p.s[2][1]) - 3, 2); q = await PN('Polígono');
+  confere('o polígono não fica com menos de três pontos', q.s.length === 3 && q.e.length === 3);
+  await ctrlZ(); q = await PN('Polígono'); confere('Ctrl+Z traz o ponto apagado de volta', q.s.length === 4 && q.e.length === 4, j([q.e.length, q.s.length]));
+  await ctrlZ(); q = await PN('Polígono'); confere('e outro Ctrl+Z desfaz o ponto acrescentado', q.s.length === 3 && igual(q.s, p.s));
+  // na aba de entrada o duplo clique faz o mesmo, espelhado
+  await cl(`document.querySelector('#aoTabIn')`); await wait(400); await cl(`document.querySelector('#aoPts')`); await wait(300); st = await palco();
+  await click(X(meio[0]), Y(meio[1]), 2); q = await PN('Polígono');
+  confere('na aba de entrada: o ponto entra na entrada onde foi o clique e na saída no meio do lado', q.e.length === 4 && q.s.length === 4 && perto(q.e[1][0], meio[0], 4) && perto(q.s[1][0], (p.s[0][0] + p.s[1][0]) / 2, 0.01), j([arr(q.e), arr(q.s)]));
+  await ctrlZ();
+
+  // ---- 07-14: lápis
+  await cl(`[...document.querySelectorAll('#aoList .row.item')].find(r => /Composição inteira/.test(r.textContent)).querySelector('.ck')`); await wait(300);   // o slice comum volta a aparecer na aba de entrada, junto dos polígonos
+  confere('o menu "+" tem o lápis do polígono', await ev(`return !!document.querySelector('#aoAddMenu [data-add="polyDraw"]');`));
+  await cl(`document.querySelector('#aoTabOut')`); await wait(300);
+  await cl(`document.querySelector('#aoAdd')`); await cl(`document.querySelector('#aoAddMenu [data-add="polyDraw"]')`); await wait(500);
+  confere('o lápis leva para a aba de entrada e começa o desenho', await ev(`return P.ao.tab === 'in' && !!P.ao.drawing && P.ao.drawing.kind === 'poly';`));
+  st = await palco(); const D5 = [[400, 300], [900, 220], [1400, 380], [1300, 800], [600, 760]], n0 = await nPolys();
+  for (let i = 0; i < 4; i++) await click(X(D5[i][0]), Y(D5[i][1]));
+  await click(X(D5[4][0]), Y(D5[4][1]), 2); await wait(400);
+  q = await PN('Polígono 2');
+  confere('quatro cliques e um duplo clique: nasce "Polígono 2" com cinco pontos, iguais na entrada e na saída', q && q.e.length === 5 && q.s.length === 5 && igual(q.e, D5, 4) && igual(q.s, q.e, 0.01) && (await nPolys()) === n0 + 1, q ? j(arr(q.e)) : 'não nasceu');
+  const a5 = await naComp(cen(D5)), b5 = await naTela(cen(D5)); confere('a tela mostra a composição dentro do polígono desenhado', cor(a5, b5) && a5.some(v => v > 20), j([a5, b5]));
+  await cl(`document.querySelector('#aoAdd')`); await cl(`document.querySelector('#aoAddMenu [data-add="polyDraw"]')`); await wait(400); st = await palco();
+  confere('o lápis começa de novo com um slice comum e polígonos na aba de entrada', await ev(`return !!P.ao.drawing && P.ao.tab === 'in';`));
+  await click(X(300), Y(300)); await click(X(500), Y(320)); await key('Escape', 27); await wait(300);
+  confere('Esc no meio do desenho cancela sem criar nada (e não fecha a Saída avançada)', (await nPolys()) === n0 + 1 && await ev(`return !P.ao.drawing && P.ao.open;`));
+  for (let i = 0; i < 2 && await ev(`return document.querySelectorAll('.dlgOver').length;`) > 0; i++) await cl(`[...document.querySelectorAll('.dlgOver button')][0]`);
+
   await ev(`try { await D.presets.remove('prova-0713'); } catch { } return 1;`);
   await cl(`document.querySelector('#aoCancel')`); await wait(500);
   for (let i = 0; i < 2 && await ev(`return document.querySelectorAll('.dlgOver').length;`) > 0; i++) await cl(`[...document.querySelectorAll('.dlgOver button')].pop()`);

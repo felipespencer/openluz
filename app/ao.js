@@ -42,7 +42,7 @@ export class AdvancedOutput {
           <div class="tb"><button type="button" id="aoAdd" class="ib" data-help="Adicionar itens|Acrescenta telas, slices e máscaras à sua configuração de saída.">${ICON.plus}${ICON.caret}</button>
             <div id="aoAddMenu" class="menu" hidden>
               <button type="button" data-add="screen">Tela</button><button type="button" data-add="slice">Slice</button>
-              <div class="mrow"><span>Polígono</span><i data-add="polyTri" title="Slice em triângulo; os pontos da entrada e da saída são independentes">${ICON.tri}</i></div>
+              <div class="mrow"><span>Polígono</span><i data-add="polyTri" title="Slice em triângulo; os pontos da entrada e da saída são independentes">${ICON.tri}</i><i data-add="polyDraw" title="Desenhar o polígono: clique ponto a ponto na composição, duplo clique fecha, Esc cancela">${ICON.pen}</i></div>
               <div class="mrow"><span>Máscara de saída</span><i data-add="maskRect">${ICON.rect}</i><i data-add="maskCircle">${ICON.circle}</i><i data-add="maskTri">${ICON.tri}</i><i data-add="maskHex">${ICON.hex}</i><i data-add="maskDraw">${ICON.pen}</i></div>
             </div></div>
           <div id="aoList"></div>
@@ -314,7 +314,7 @@ export class AdvancedOutput {
       svg.appendChild(svgEl('path', { d: d.join(''), class: 'ledgrid' }));
     }
     if (this.tab === 'in') { // emendas entre slices com soft edge
-      const sl = on.map(o => o.item);
+      const sl = on.map(o => o.item).filter(i => i.type === 'slice');   // só slices comuns têm emenda (o polígono não tem soft edge)
       for (let i = 0; i < sl.length; i++) for (let j = i + 1; j < sl.length; j++) {
         const A = sl[i], B = sl[j]; if (!A.soft.on || !B.soft.on || A.source !== B.source) continue;
         const x0 = Math.max(A.in.x, B.in.x), x1 = Math.min(A.in.x + A.in.w, B.in.x + B.in.w), y0 = Math.max(A.in.y, B.in.y), y1 = Math.min(A.in.y + A.in.h, B.in.y + B.in.h);
@@ -432,7 +432,12 @@ export class AdvancedOutput {
   down(e) {
     if (e.button !== 0 || this.pan || this.space) return;
     const p = this.pt(e);
-    if (this.drawing) { this.drawing.pts.push(this.drawing.kind === 'inmask' ? inToLocal(this.sel.item, p) : this.ledSnap(p)); this.draw(); return; }
+    if (this.drawing) {
+      // duplo clique fecha o desenho. Contado aqui, no pointerdown: o svg é redesenhado a cada clique e o navegador não gera o dblclick
+      const agora = performance.now(), u = this.lastDraw; this.lastDraw = { t: agora, x: e.clientX, y: e.clientY };
+      if (u && agora - u.t < 400 && Math.hypot(e.clientX - u.x, e.clientY - u.y) < 6) { this.lastDraw = null; this.finishDrawing(); return; }
+      this.drawing.pts.push(this.drawing.kind === 'inmask' ? inToLocal(this.sel.item, p) : this.ledSnap(p)); this.draw(); return;
+    }
     const t = e.target.closest('[data-k]'), k = t && t.dataset.k;
     if (!k) { if (this.sel) { this.sel = { screen: this.sel.screen, item: null }; this.selPt = -1; this.refresh(); } return; }
     const now = performance.now(), L0 = this.lastDown; this.lastDown = { t: now, x: e.clientX, y: e.clientY };
@@ -550,13 +555,14 @@ export class AdvancedOutput {
     if (!it) return false;
     const k = t && t.dataset.id == it.id ? t.dataset.k : 'body';   // a linha da máscara pode estar coberta por outro item no segundo clique
     const inm = it.type === 'slice' && this.tab === 'in' && it.inMask, out = it.type === 'mask' && this.mode === 'pts' && this.tab === 'out';
-    if (!inm && !out) return false;
+    const pol = it.type === 'poly' && this.mode === 'pts', outra = pol ? (this.tab === 'in' ? it.outPts : it.inPts) : null;   // polígono: o que entra ou sai numa forma entra ou sai na outra
+    if (!inm && !out && !pol) return false;
     if (!this.sel || this.sel.item !== it) { const f = this.findItem(it.id); if (f) this.select(f.screen, it); }
     const L = inm ? it.inMask.pts : it.pts, toPx = inm ? (q) => localToIn(it, q) : (q) => q;
     const touchIt = () => { if (inm) it.inMask.rev++; M.touch(it); };
-    if (k === 'maskpt' || k === 'inmaskpt') {
+    if (k === 'maskpt' || k === 'inmaskpt' || k === 'polypt') {
       if (L.length <= 3) return true;
-      this.pushUndo(); L.splice(+t.dataset.i, 1); this.selPt = -1; touchIt(); this.c.onChange(); this.draw(); this.renderProps(); return true;
+      this.pushUndo(); L.splice(+t.dataset.i, 1); if (outra) outra.splice(+t.dataset.i, 1); this.selPt = -1; touchIt(); this.c.onChange(); this.draw(); this.renderProps(); return true;
     }
     if (k !== 'body') return false;
     let best = -1, bd = Infinity, bq = null;   // lado mais perto do clique, e o pé da perpendicular
@@ -566,7 +572,9 @@ export class AdvancedOutput {
       if (d < bd) { bd = d; best = i; bq = q; }
     }
     if (best < 0 || bd * this.scale > 12) return false;   // só perto da linha: duplo clique solto no meio da forma não cria ponto
-    this.pushUndo(); L.splice(best + 1, 0, inm ? inToLocal(it, bq) : bq); this.selPt = best + 1; this.selPtK = inm ? 'inmaskpt' : 'maskpt'; touchIt(); this.c.onChange(); this.draw(); this.renderProps(); return true;
+    this.pushUndo();
+    if (outra) { const a = outra[best], b = outra[(best + 1) % outra.length]; outra.splice(best + 1, 0, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); }   // na outra forma, o ponto novo nasce no meio do lado
+    L.splice(best + 1, 0, inm ? inToLocal(it, bq) : bq); this.selPt = best + 1; this.selPtK = inm ? 'inmaskpt' : pol ? 'polypt' : 'maskpt'; touchIt(); this.c.onChange(); this.draw(); this.renderProps(); return true;
   }
   ledSnap(p) { return this.led ? [Math.round(p[0] / 8) * 8, Math.round(p[1] / 8) * 8] : p; }
   // Arrastar e redimensionar andam em pixels inteiros, com o ímã quando ligado; com Ctrl, nem um nem outro (como no Resolume).
@@ -595,9 +603,18 @@ export class AdvancedOutput {
   }
   finishDrawing() {
     const d = this.drawing; this.drawing = null;
+    if (d && d.kind === 'poly') {   // os dois cliques do duplo clique caem no mesmo lugar: pontos repetidos saem
+      const lim = 3 / this.scale; d.pts = d.pts.filter((q, i, L) => i === 0 || Math.hypot(q[0] - L[i - 1][0], q[1] - L[i - 1][1]) > lim);
+      if (d.pts.length > 3 && Math.hypot(d.pts[0][0] - d.pts[d.pts.length - 1][0], d.pts[0][1] - d.pts[d.pts.length - 1][1]) <= lim) d.pts.pop();
+    }
     if (d && d.pts.length >= 3) {
       this.pushUndo();
       if (d.kind === 'inmask') { this.sel.item.inMask = { pts: d.pts, invert: false, rev: 1 }; M.touch(this.sel.item); }
+      else if (d.kind === 'poly') {   // a saída nasce igual à entrada, na proporção da tela
+        const sc = this.curScreen(), kx = sc.w / this.c.compW, ky = sc.h / this.c.compH;
+        const pl = M.mkPoly(sc.items.some(i => i.name === 'Polígono') ? M.uniqueName(sc, 'Polígono') : 'Polígono', d.pts.map(q => [q[0], q[1]]), d.pts.map(q => [q[0] * kx, q[1] * ky]));
+        sc.items.push(pl); this.sel = { screen: sc, item: pl };
+      }
       else { const sc = this.curScreen(); const m = M.mkMask('Máscara ' + (sc.items.filter(i => i.type === 'mask').length + 1), d.pts); m.invert = true; sc.items.push(m); this.sel = { screen: sc, item: m }; }
     }
     this.c.onChange(); this.refresh();
@@ -624,6 +641,8 @@ export class AdvancedOutput {
       const pl = M.mkPoly(M.uniqueName(sc, 'Polígono'), M.polyTriangle(W, H), M.polyTriangle(sc.w, sc.h));
       if (!sc.items.some(i => i.name === 'Polígono')) pl.name = 'Polígono';
       sc.items.push(pl); this.sel = { screen: sc, item: pl };
+    } else if (kind === 'polyDraw') {   // lápis do polígono, como no Resolume: desenha-se na aba de entrada; duplo clique fecha, Esc cancela
+      this.setTab('in'); this.drawing = { kind: 'poly', pts: [] }; this.c.toast('Clique para pôr os pontos do polígono na composição; duplo clique fecha, Esc cancela');
     } else if (kind === 'maskDraw') { this.setTab('out'); this.drawing = { kind: 'mask', pts: [] }; }
     else {
       const shape = { maskRect: 'rect', maskCircle: 'circle', maskTri: 'triangle', maskHex: 'hexagon', maskHeart: 'heart' }[kind] || 'rect';
