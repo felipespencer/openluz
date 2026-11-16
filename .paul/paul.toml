@@ -21,9 +21,9 @@ status = "in_progress"
 plans_completed = 6
 
 [loop]
-position = "APPLY"
-plan = "12-17"
-plan_path = "phases/12-revisao-geral/12-17-PLAN.md"
+position = "UNIFY"
+plan = "07-15"
+plan_path = "phases/07-saida-avancada/07-15-PLAN.md"
 
 [satellite]
 groom = true
@@ -31,4 +31,4 @@ groom = true
 [stats]
 total_plans = 16
 total_phases = 0
-last_activity = "2026-11-11T19:40:00-03:00"
+last_activity = "2026-11-16T16:10:00-03:00"
