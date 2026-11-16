@@ -575,7 +575,7 @@ export class AdvancedOutput {
     if (d && d.pts.length >= 3) {
       this.pushUndo();
       if (d.kind === 'inmask') { this.sel.item.inMask = { pts: d.pts, invert: false, rev: 1 }; M.touch(this.sel.item); }
-      else { const sc = this.curScreen(); const m = M.mkMask('Máscara ' + (sc.items.filter(i => i.type === 'mask').length + 1), d.pts); sc.items.push(m); this.sel = { screen: sc, item: m }; }
+      else { const sc = this.curScreen(); const m = M.mkMask('Máscara ' + (sc.items.filter(i => i.type === 'mask').length + 1), d.pts); m.invert = true; sc.items.push(m); this.sel = { screen: sc, item: m }; }
     }
     this.c.onChange(); this.refresh();
   }
@@ -601,6 +601,7 @@ export class AdvancedOutput {
     else {
       const shape = { maskRect: 'rect', maskCircle: 'circle', maskTri: 'triangle', maskHex: 'hexagon', maskHeart: 'heart' }[kind] || 'rect';
       const m = M.mkMask('Máscara ' + (sc.items.filter(i => i.type === 'mask').length + 1), M.maskShape(shape, (sc.w - sc.h * 0.7) / 2, sc.h * 0.15, sc.h * 0.7, sc.h * 0.7));   // quadrada, 70% da altura, no centro, como no Resolume
+      m.invert = true;   // como no Resolume, a máscara nova nasce com Inverter ligado: a imagem aparece só dentro da forma (medido na saída, 07-10)
       sc.items.push(m); this.sel = { screen: sc, item: m }; this.setTab('out');
     }
     this.c.onChange(); this.refresh();

@@ -24,7 +24,7 @@ const linha = (rot) => `[...document.querySelectorAll('#aoProps > *')].find(r =>
 const campo = (rot) => ev(`const r = ${linha(rot)}; return r ? r.querySelector('.val').textContent.trim() : null;`);
 const poe = async (rot, v) => { await cl(`(${linha(rot)} || {querySelector(){return null}}).querySelector('.val')`); await key('a', 65, 2); await digita(String(v)); await key('Enter', 13); await wait(300); };
 const G = () => ev(`const a = P.ao, it = a.sel && a.sel.item; if (!it) return null; const xs = it.pts.map(p => p[0]), ys = it.pts.map(p => p[1]);
-  return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), rot: it.rot, p0: it.pts[0], nome: it.name, n: a.sel.screen.items.length, tipo: it.type };`);
+  return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), rot: it.rot, inv: it.invert, p0: it.pts[0], nome: it.name, n: a.sel.screen.items.length, tipo: it.type };`);
 const txt = (g) => g ? [g.x, g.y, g.w, g.h].map(v => Math.round(v * 100) / 100).join(' ') + ' rot ' + g.rot : 'sem seleção';
 const eq = (a, b, t = 0.01) => Math.abs(a - b) <= t;
 
@@ -37,6 +37,10 @@ try {
   const b = await G(); const lado = tela.h * 0.7;
   confere('máscara nova nasce quadrada, 70% da altura, no centro', b && b.tipo === 'mask' && eq(b.w, lado) && eq(b.h, lado) && eq(b.x, (tela.w - lado) / 2) && eq(b.y, tela.h * 0.15), txt(b));
   if (tela.w === 1920 && tela.h === 1080) confere('numa tela 1920×1080: 756×756 em (582, 162), como no Resolume', eq(b.x, 582) && eq(b.y, 162) && eq(b.w, 756) && eq(b.h, 756), txt(b));
+  // medido no Resolume (07-10-MEDIDAS.md): a máscara nasce com Invert ligado e a imagem aparece só dentro da forma
+  confere('máscara nova nasce com Inverter ligado, como no Resolume', b.inv === true && await ev(`const r = [...document.querySelectorAll('#aoProps > *')].find(x => x.textContent.trim().startsWith('Inverter')); return !!r && r.querySelector('.ck').classList.contains('on');`));
+  const px = await ev(`const a = P.ao.screens(); P.engine.testCard = true; const r = P.engine.probeScreen(a[0], P.state.layers, a, [[0.5, 0.5], [0.05, 0.5]]); P.engine.testCard = false; return r;`);
+  confere('na tela, a imagem aparece dentro da máscara nova e fica preta fora', px[0].some(v => v > 30) && px[1].every(v => v === 0), JSON.stringify(px));
   const campos = {}; for (const r of ['X', 'Y', 'Esquerda', 'Topo', 'Largura', 'Altura', 'Giro']) campos[r] = await campo(r);
   confere('o painel da máscara tem X, Y, Esquerda, Topo, Largura, Altura e Giro', Object.values(campos).every(v => v !== null), JSON.stringify(campos));
   confere('os campos mostram a caixa da forma', parseFloat(campos.X) === b.x + b.w / 2 && parseFloat(campos.Y) === b.y + b.h / 2 && parseFloat(campos.Esquerda) === b.x && parseFloat(campos.Topo) === b.y && parseFloat(campos.Largura) === b.w && parseFloat(campos.Altura) === b.h && parseFloat(campos.Giro) === 0);
