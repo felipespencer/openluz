@@ -1743,7 +1743,7 @@ function frame() {
   webcam.tick();
   // monitor e prévia são cópias de 1080p: com saídas abertas (e sem gravar), o monitor vai a cada 2 quadros e a prévia a cada 3
   const nOut = state.screens.filter(sc => sc.win && !sc.win.closed).length, gravando = recorder.state === 'recording';
-  if (!nOut || gravando || loop.frames % 2 === 0) engine.blit(monCtx);
+  if (!nOut || gravando || loop.frames % 2 === 0) { if (state.testCard) engine.cardToCanvas(); engine.blit(monCtx); }   // Test Card ligado: o quadro Composição mostra o test card, como as saídas (pedido de 2026-11-16)
   thumbSources();
   const pc = previewCell();
   if (pc && pc.clip.kind !== 'laser' && prevCanvas.isConnected && (!nOut || loop.frames % 3 === 0)) {

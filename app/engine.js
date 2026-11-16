@@ -777,6 +777,11 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
     ctx.drawImage(this.canvas, 0, this.canvas.height - h, w, h, 0, 0, w, h);
   }
 
+  // Test Card no canvas, para o quadro Composição da janela de controle mostrar o mesmo que as telas recebem
+  cardToCanvas() {
+    const t = this.renderSource(this.testCardClip || (this.testCardClip = { id: '__testcard', kind: 'source', source: 'testcard', params: {} }));
+    if (t) this.copyTo(t, this.W, this.H);
+  }
   // ---------- telas ----------
   sourceTex(slice, layers) {
     const src = slice.source;
