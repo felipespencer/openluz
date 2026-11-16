@@ -68,6 +68,10 @@
         if(ov.width !== innerWidth || ov.height !== innerHeight){ ov.width = innerWidth; ov.height = innerHeight; }
         ctx.clearRect(0, 0, ov.width, ov.height);
         var kx = innerWidth / h.w, ky = innerHeight / h.h;
+        if(h.guide){   // guia de saída, com "Mostrar na saída" ligado na Saída avançada
+          if(!window.__guiaImg || window.__guiaImg.__u !== h.guide.url){ window.__guiaImg = new Image(); window.__guiaImg.__u = h.guide.url; window.__guiaImg.src = h.guide.url; }
+          if(window.__guiaImg.complete && window.__guiaImg.naturalWidth){ ctx.globalAlpha = h.guide.op; ctx.drawImage(window.__guiaImg, 0, 0, ov.width, ov.height); ctx.globalAlpha = 1; }
+        }
         if(h.grid){
           ctx.strokeStyle = '#39FF14'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
           ctx.beginPath(); h.grid.outline.forEach(function(p, i){ i ? ctx.lineTo(p[0] * kx, p[1] * ky) : ctx.moveTo(p[0] * kx, p[1] * ky); }); ctx.closePath(); ctx.stroke();

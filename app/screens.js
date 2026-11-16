@@ -254,9 +254,15 @@ export function setInMask(slice, kind) {
 }
 
 // ---------- salvar e abrir ----------
+// imagem de guia vinda de arquivo: só entra se for uma imagem embutida, com opacidade entre 0 e 1
+function guia(g) {
+  if (!g || typeof g.url !== 'string' || !g.url.startsWith('data:image/')) return null;
+  return { name: String(g.name || 'guia'), w: +g.w || 0, h: +g.h || 0, op: Math.min(1, Math.max(0, g.op ?? 0.25)), url: g.url };
+}
 export function serialize(screens) {
   return JSON.stringify({ v: 1, screens: screens.map(sc => ({
     uid: sc.uid, name: sc.name, device: sc.device, w: sc.w, h: sc.h, enabled: sc.enabled, opacity: sc.opacity, color: sc.color,
+    guideIn: sc.guideIn || null, guideOut: sc.guideOut || null,   // imagens de guia (só do editor): { name, w, h, op, url }
     items: sc.items.map(it => it.type === 'slice'
       ? { type: 'slice', name: it.name, enabled: it.enabled, source: it.source, sourceLayer: it.sourceLayer, in: it.in, flip: it.flip,
           warp: { mode: it.warp.mode, curve: it.warp.curve, divX: it.warp.divX, divY: it.warp.divY, rot: it.warp.rot, pts: it.warp.pts },
@@ -270,6 +276,7 @@ export function deserialize(json) {
     const sc = mkScreen(s.name || 'Tela', { device: s.device, w: s.w, h: s.h });
     if (s.uid) sc.uid = String(s.uid);   // arquivo antigo não tem: fica o uid novo do mkScreen e a tela casa pela ordem
     sc.enabled = s.enabled !== false; sc.opacity = s.opacity ?? 1; Object.assign(sc.color, s.color || {});
+    sc.guideIn = guia(s.guideIn); sc.guideOut = guia(s.guideOut);
     for (const it of s.items || []) {
       if (it.type === 'mask') { const m = mkMask(it.name || 'Máscara', (it.pts || []).map(p => [+p[0], +p[1]])); m.enabled = it.enabled !== false; m.invert = !!it.invert; m.rot = +it.rot || 0; sc.items.push(m); continue; }
       const sl = mkSlice(it.name || 'Slice', it.in || { x: 0, y: 0, w: sc.w, h: sc.h }, { x: 0, y: 0, w: sc.w, h: sc.h });

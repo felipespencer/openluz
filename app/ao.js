@@ -18,7 +18,7 @@ export class AdvancedOutput {
   // ctx: { compW, compH, compCanvas, screens(), setScreens(list), layers(), screenCanvas(sc), onChange(), helpers, toast, displays(), displayLabel(id), presets }
   constructor(ctx) {
     this.c = ctx;
-    this.open = false; this.tab = 'in'; this.mode = 'move'; this.snap = false; this.grid = true; this.led = false; this.pan = false; this.zoom = 'fit';
+    this.open = false; this.tab = 'in'; this.mode = 'move'; this.snap = false; this.showOut = true; this.grid = true; this.led = false; this.pan = false; this.zoom = 'fit';
     this.sel = null; this.selPt = -1; this.selPtK = null; this.selG = -1; this.nudgeT = 0; this.drawing = null; this.cursor = null; this.drag = null; this.scale = 1;
     this.snapshot = ''; this.presetName = ''; this.clip = null;   // slice ou máscara copiado pelo botão direito (Copiar/Recortar)
     this.hist = []; this.redoHist = []; this.space = false;
@@ -51,13 +51,13 @@ export class AdvancedOutput {
             ${ibtn('aoUndo', 'undo', 'Desfazer|Desfaz a última mudança.')}${ibtn('aoRedo', 'redo', 'Refazer|Refaz o que você acabou de desfazer.')}
             ${ibtn('aoPan', 'hand', 'Mão|Arrasta a vista. Segurar a barra de espaço faz o mesmo.')}${ibtn('aoSnap', 'snap', 'Ímã|Gruda as bordas do slice nas bordas dos outros slices e da tela.')}
             <span class="gridWrap"><button type="button" id="aoGridBtn" class="ib" data-help="Grade|Mostra o nome e a borda do slice no projetor, com o cursor; ou uma grade de 8×8 px para alinhar.">${ICON.grid}${ICON.caret}</button>
-              <div id="aoGridMenu" class="menu" hidden><button type="button" data-g="grid">Mostrar grade do slice</button><button type="button" data-g="led">Grade LED 8×8</button><button type="button" data-g="ident">Identificar slices</button></div></span>
+              <div id="aoGridMenu" class="menu" hidden><button type="button" data-g="grid">Mostrar grade do slice</button><button type="button" data-g="led">Grade LED 8×8</button><button type="button" data-g="ident">Identificar slices</button><div class="sep"></div><button type="button" data-g="out">Mostrar na saída</button></div></span>
             <span class="sp"></span>
             ${ibtn('aoPts', 'pts', 'Modo Editar pontos|Muda a posição ou a curva de cada ponto do slice. Setas movem o ponto selecionado 1 px; com Shift, 10 px. Tecla T alterna entre Editar pontos e Transformar.', 'Editar pontos')}
             ${ibtn('aoMove', 'move', 'Modo Transformar|Muda a posição, o giro ou o tamanho do slice inteiro. Setas movem o slice 1 px; com Shift, 10 px. Tecla T alterna entre Editar pontos e Transformar.', 'Transformar')}
             <button type="button" id="aoAutomape" class="txt" data-help="Automape|Mapeia sozinho a partir de uma foto: o projetor mostra uma malha, você fotografa de cima da lente, a IA acha as superfícies e cria slices e máscaras aqui.">Automape</button>
           </div>
-          <div id="aoStage"><div id="aoView"><canvas id="aoCv"></canvas><svg id="aoSvg"></svg></div></div>
+          <div id="aoStage"><div id="aoView"><canvas id="aoCv"></canvas><img id="aoGuide" alt="" hidden><svg id="aoSvg"></svg></div></div>
           <div id="aoFoot"><button type="button" id="aoCancel" data-help="Cancelar|Fecha a Saída avançada e devolve tudo como estava antes.">Cancelar</button><button type="button" id="aoOk" data-help="Salvar e fechar|Fecha a Saída avançada aplicando todas as mudanças.">Salvar e fechar</button></div>
         </div>
         <div id="aoRight"><div class="ptitle" id="aoPropT"></div><div id="aoProps"></div></div>
@@ -74,7 +74,7 @@ export class AdvancedOutput {
     const menu = (btn, box) => { $(btn).onclick = (e) => { e.stopPropagation(); const h = $(box).hidden; this.closeMenus(); $(box).hidden = !h; }; };
     menu('aoAdd', 'aoAddMenu'); menu('aoGridBtn', 'aoGridMenu'); menu('aoPresetBtn', 'aoPresetMenu');
     $('aoAddMenu').onclick = (e) => { const b = e.target.closest('[data-add]'); if (b) { this.closeMenus(); this.add(b.dataset.add); } };
-    $('aoGridMenu').onclick = (e) => { const b = e.target.closest('[data-g]'); if (!b) return; this.closeMenus(); if (b.dataset.g === 'grid') this.grid = !this.grid; else if (b.dataset.g === 'led') this.led = !this.led; else this.identify(); this.syncTools(); this.draw(); };
+    $('aoGridMenu').onclick = (e) => { const b = e.target.closest('[data-g]'); if (!b) return; this.closeMenus(); if (b.dataset.g === 'grid') this.grid = !this.grid; else if (b.dataset.g === 'led') this.led = !this.led; else if (b.dataset.g === 'out') this.showOut = !this.showOut; else this.identify(); this.syncTools(); this.draw(); };
     addEventListener('click', () => this.closeMenus());
     this.svg.addEventListener('pointerdown', (e) => this.down(e));
     this.svg.addEventListener('pointermove', (e) => this.move(e));
@@ -141,7 +141,7 @@ export class AdvancedOutput {
       if (!fixo) { if (!o) { o = document.createElement('option'); o.id = 'aoZoomCur'; z.appendChild(o); } o.value = String(this.zoom); o.textContent = Math.round(+this.zoom * 100) + '%'; o.hidden = false; }
       else if (o) o.remove();
       z.value = String(this.zoom); }
-    $('aoGridMenu').querySelector('[data-g=grid]').classList.toggle('on', this.grid); $('aoGridMenu').querySelector('[data-g=led]').classList.toggle('on', this.led);
+    $('aoGridMenu').querySelector('[data-g=grid]').classList.toggle('on', this.grid); $('aoGridMenu').querySelector('[data-g=led]').classList.toggle('on', this.led); $('aoGridMenu').querySelector('[data-g=out]').classList.toggle('on', this.showOut);
     $('aoInfo').textContent = `Composição ${this.c.compW}×${this.c.compH}`;
     $('aoStage').classList.toggle('panning', this.pan);
   }
@@ -219,18 +219,21 @@ export class AdvancedOutput {
     const sc = this.curScreen(); if (!sc) return;
     // só a grade e o cursor são da Saída avançada; Test Card, malha e Identificar ficam como estão (Felipe, 2026-11-03:
     // com a Saída avançada aberta o nome do Test Card sumia, porque esta função regravava os ajudantes a cada quadro)
-    const h = { ...(window.__projHelpers[sc.id] || {}) }; delete h.grid; delete h.cursor; delete h.w; delete h.h;
-    if (this.grid && this.tab === 'out') {
-      const it = this.sel && this.sel.item;
-      if (it && it.type === 'slice') h.grid = { name: it.name, outline: outlinePoints(it) };
-      if (this.cursor) h.cursor = this.cursor;
+    const h = { ...(window.__projHelpers[sc.id] || {}) }; delete h.grid; delete h.cursor; delete h.guide; delete h.w; delete h.h;
+    if (this.showOut && this.tab === 'out') {   // "Mostrar na saída": o que ajuda a achar o slice na parede vai também para o projetor
+      if (this.grid) {
+        const it = this.sel && this.sel.item;
+        if (it && it.type === 'slice') h.grid = { name: it.name, outline: outlinePoints(it) };
+        if (this.cursor) h.cursor = this.cursor;
+      }
+      if (sc.guideOut) h.guide = { url: sc.guideOut.url, op: sc.guideOut.op };
     }
     for (const o of this.screens()) if (o !== sc) this.dropHelpers(o);
     this.c.helpers.set(sc, Object.keys(h).length ? h : null);
   }
   dropHelpers(sc) {
-    const cur = window.__projHelpers[sc.id]; if (!cur || (!cur.grid && !cur.cursor)) return;
-    const h = { ...cur }; delete h.grid; delete h.cursor; delete h.w; delete h.h;
+    const cur = window.__projHelpers[sc.id]; if (!cur || (!cur.grid && !cur.cursor && !cur.guide)) return;
+    const h = { ...cur }; delete h.grid; delete h.cursor; delete h.guide; delete h.w; delete h.h;
     this.c.helpers.set(sc, Object.keys(h).length ? h : null);
   }
   panDown(e) {
@@ -259,7 +262,44 @@ export class AdvancedOutput {
     this.sel = { screen, item }; this.selPt = -1; this.selG = -1; this.syncTools(); if (this.tab === 'out') this.layout(); this.refresh(); }
 
   // ---------- desenho do palco ----------
+  // imagem de guia da tela atual: a de entrada na aba de entrada, a de saída na de saída, por cima da imagem e por baixo dos slices
+  syncGuide() {
+    const sc = this.curScreen(), g = sc && (this.tab === 'in' ? sc.guideIn : sc.guideOut), im = $('aoGuide');
+    im.hidden = !g; if (!g) { if (im.getAttribute('src')) im.removeAttribute('src'); return; }
+    if (im.getAttribute('src') !== g.url) im.src = g.url; im.style.opacity = g.op;
+  }
+  // carrega um arquivo de imagem como guia; guarda uma cópia reduzida (até 1280 px) dentro da própria saída
+  async loadGuide(sc, k, file) {
+    if (!file) return;
+    try {
+      const bmp = await createImageBitmap(file), f = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * f)); c.height = Math.max(1, Math.round(bmp.height * f));
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      this.pushUndo(); sc[k] = { name: file.name, w: bmp.width, h: bmp.height, op: (sc[k] && sc[k].op) ?? 0.25, url: c.toDataURL('image/jpeg', 0.85) };
+      this.c.onChange(); this.refresh();
+    } catch (e) { this.c.toast('Não consegui abrir essa imagem como guia'); }
+  }
+  guideRows(P, sc) {
+    const k = this.tab === 'in' ? 'guideIn' : 'guideOut', g = sc[k], tit = this.tab === 'in' ? 'Guia de entrada' : 'Guia de saída';
+    P.appendChild(this.phead(tit, tit + '|Uma imagem de referência por cima do palco do editor (uma foto da parede, uma planta). Com "Mostrar na saída" ligado, a guia de saída também vai para o projetor.'));
+    const pick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.id = 'aoGuideFile'; i.hidden = true; i.onchange = () => { this.loadGuide(sc, k, i.files[0]); i.remove(); }; document.querySelector('#aoGuideFile')?.remove(); $('ao').appendChild(i); i.click(); };
+    const row = el('div', 'prow guia'); row.dataset.help = tit + '|Carregue uma imagem ou solte o arquivo aqui.';
+    row.ondragover = (e) => { e.preventDefault(); row.classList.add('alvo'); }; row.ondragleave = () => row.classList.remove('alvo');
+    row.ondrop = (e) => { e.preventDefault(); row.classList.remove('alvo'); const f = [...e.dataTransfer.files].find(x => x.type.startsWith('image/')); if (f) this.loadGuide(sc, k, f); };
+    if (!g) {
+      const b = el('button', 'gload', 'Carregar…'); b.type = 'button'; b.onclick = pick; row.append(b, el('span', 'gdica', 'ou solte uma imagem aqui'));
+    } else {
+      const th = el('img', 'gthumb'); th.src = g.url; th.alt = '';
+      const tx = el('div', 'gtxt'); tx.append(el('b', '', g.name), el('span', '', g.w + '×' + g.h));
+      const x = el('button', 'gx', '✕'); x.type = 'button'; x.title = 'Tirar a guia'; x.onclick = () => { this.pushUndo(); sc[k] = null; this.c.onChange(); this.refresh(); };
+      const t = el('button', 'gmais', '…'); t.type = 'button'; t.title = 'Trocar a imagem'; t.onclick = pick;
+      row.append(th, tx, x, t);
+    }
+    P.appendChild(row);
+    if (g) P.appendChild(this.pnum('Opacidade', 'Opacidade da guia|Quanto a guia aparece por cima da imagem.', Math.round(g.op * 100), { min: 0, max: 100, step: 1, unit: ' %', bar: true, reset: 25 }, v => { g.op = v / 100; }));
+  }
   draw() {
+    this.syncGuide();
     const svg = this.svg; svg.textContent = '';
     const [W, H] = this.stageSize(), it = this.sel && this.sel.item, k = 1 / this.scale;
     const on0 = this.itemsOnStage(), on = [...on0.filter(o => o.item !== it), ...on0.filter(o => o.item === it)];   // o selecionado por último: fica por cima, com as alças (Felipe, 2026-10-30: "quando pego numa slice seleciona a outra que tá atrás")
@@ -742,6 +782,7 @@ export class AdvancedOutput {
       P.appendChild(this.pnum('Altura', 'Altura da tela|Altura da tela em pixels. Num monitor, é o monitor que manda.', sc.h, { min: 16, max: 16384, step: 1 }, v => { M.resizeScreen(sc, sc.w, v); this.layout(); }));
       P.appendChild(this.pnum('Opacidade', 'Opacidade|Escurece ou acende a tela inteira.', Math.round(sc.opacity * 100), { min: 0, max: 100, step: 1, unit: ' %', bar: true, reset: 100 }, v => { sc.opacity = v / 100; }));
       this.colorRows(P, sc.color);
+      this.guideRows(P, sc);
       if (this.screens().length > 1) { const rm = el('button', 'wide', 'Apagar esta tela'); rm.type = 'button'; rm.onclick = () => this.removeScreen(sc); P.appendChild(rm); }
     } else if (it.type === 'mask') {
       // X, Y, Esquerda, Topo, Largura e Altura são a caixa da forma; mexer num deles move ou estica os pontos

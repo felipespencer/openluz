@@ -1047,7 +1047,7 @@ function setScreens(list, abrir) {
   for (const n of list) {
     const o = par.get(n), aberta = !!(o && o.win && !o.win.closed);
     if (o && o.device === n.device && o.w === n.w && o.h === n.h) {
-      o.uid = n.uid; o.name = n.name; o.enabled = n.enabled; o.opacity = n.opacity; o.color = n.color; o.items = n.items; o.rev = (o.rev || 0) + 1;
+      o.uid = n.uid; o.name = n.name; o.enabled = n.enabled; o.opacity = n.opacity; o.color = n.color; o.items = n.items; o.guideIn = n.guideIn || null; o.guideOut = n.guideOut || null; o.rev = (o.rev || 0) + 1;
       if (!n.enabled && aberta) fecharSaida(o);
       out.push(o);
     } else {
