@@ -22,8 +22,8 @@ plans_completed = 6
 
 [loop]
 position = "UNIFY"
-plan = "07-15"
-plan_path = "phases/07-saida-avancada/07-15-PLAN.md"
+plan = "07-16"
+plan_path = "phases/07-saida-avancada/07-16-PLAN.md"
 
 [satellite]
 groom = true
@@ -31,4 +31,4 @@ groom = true
 [stats]
 total_plans = 16
 total_phases = 0
-last_activity = "2026-11-16T16:10:00-03:00"
+last_activity = "2026-11-16T17:00:00-03:00"

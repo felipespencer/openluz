@@ -210,7 +210,7 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 - [x] 07-13: slice polígono: modelo, motor, triângulo pelo menu, Transformar e Editar pontos nas duas abas — fechado em 2026-11-16, só local
 - [x] 07-14: polígono com lápis e acrescentar/apagar pontos — fechado em 2026-11-16, só local
 - [x] 07-15: Exportar SVG no menu Presets, no formato medido no Resolume — fechado em 2026-11-16, só local
-- [ ] 07-16 em diante: Prévia e outra tela como entrada
+- [x] 07-16: Prévia e outra tela como fonte do slice — fechado em 2026-11-16, só local; a lista do 07-03 terminou
 
 ### Phase 8: Webcam virtual
 
