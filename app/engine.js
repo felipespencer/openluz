@@ -527,7 +527,7 @@ void main(){
   }
   // crossfader: quanto cada bus (A ou B) aparece, pela posição (0 = A, 1 = B) e pela curva
   busFactor(bus) {
-    const x = this.xfade; if (!bus || !x) return 1;
+    const x = this.xfade; if (!bus || !x || this._noBus) return 1;   // _noBus: passe de um bus do crossfader como fonte de slice
     const p = Math.max(0, Math.min(1, x.pos));
     if (x.curve === 'cut') return bus === 'A' ? (p <= 0.5 ? 1 : 0) : (p >= 0.5 ? 1 : 0);
     if (x.curve === 'power') return bus === 'A' ? Math.cos(p * Math.PI / 2) : Math.sin(p * Math.PI / 2);
@@ -551,8 +551,10 @@ void main(){
   // efeitos do clipe e da camada, misturada no alvo pelo modo de mistura da camada. target é um fbo {fb, t}.
   drawLayer(L, W, H, target) {
     const gl = this.gl;
-    const op = (L.master ?? 1) * L.opacity * this.busFactor(L.bus);   // M (master) × V (opacidade) da camada, como no Resolume
-    if (L.bypass || op <= 0 || (this.soloL && !L.solo)) return;
+    // _rawOp e _rawBy: passes de fonte de slice que ignoram a opacidade ou o bypass/solo da camada (Input Opacity e Input Bypass/Solo desligados)
+    const op = (this._rawOp ? 1 : (L.master ?? 1) * L.opacity) * this.busFactor(L.bus);   // M (master) × V (opacidade) da camada, como no Resolume
+    if (!this._rawBy && (L.bypass || (this.soloL && !L.solo))) return;
+    if (op <= 0) return;
     const clip = L.on >= 0 ? L.clips[L.on] : (L.ghost || null);   // ghost: o clipe de outro deck que continua no ar
     let k = 1;
     if (L.prev && L.prev.clip && this.clipReady(L.prev.clip)) {
@@ -596,6 +598,44 @@ void main(){
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
+  // textura auxiliar de fonte de slice, guardada junto das de camada (some com elas quando o tamanho muda)
+  auxFbo(key, W, H) {
+    const gl = this.gl; let f = this.layerFbo.get(key);
+    if (!f) { f = this.fbo(W, H); this.layerFbo.set(key, f); }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, f.fb); gl.viewport(0, 0, W, H); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    return f;
+  }
+  // camadas e grupos que passam no filtro, de baixo para cima, num alvo transparente; os grupos entram com os efeitos e a opacidade deles
+  drawTree(layers, target, W, H, quer) {
+    const gl = this.gl, groups = this.groups || [];
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const L = layers[i], g = L.group != null ? groups.find(x => x.id === L.group) : null;
+      if (!g) { if (quer(L, null)) this.drawLayer(L, W, H, target); continue; }
+      let j = i; while (j - 1 >= 0 && layers[j - 1].group === L.group) j--;
+      const members = []; for (let k = i; k >= j; k--) members.push(layers[k]);
+      i = j;
+      if (!quer(L, g) || g.bypass || g.opacity <= 0) continue;
+      const f = this.auxFbo('tmpg', W, H);
+      for (const m of members) this.drawLayer(m, W, H, f);
+      this.compositeInto(target, f.t, g.fx, g.transform, g.opacity, normMixer(g.blend), g.blendOpt, W, H, 1000 + g.id);
+    }
+  }
+  // fontes de slice além da composição e da camada simples: camada sem a opacidade ou sem o bypass/solo dela, Bus A, Bus B e o grupo selecionado
+  renderSliceSources(layers, W, H) {
+    const nd = this.need; if (!nd) return;
+    for (const [key, v] of nd.variants) {
+      const f = this.auxFbo(key, W, H), L = layers.find(x => x.id === v.id); if (!L) continue;
+      this._rawOp = v.ro; this._rawBy = v.rb; try { this.drawLayer(L, W, H, f); } finally { this._rawOp = this._rawBy = false; }
+    }
+    for (const b of nd.bus) {   // só o que está naquele bus, sem depender da posição do crossfader
+      const f = this.auxFbo('bus' + b, W, H);
+      this._noBus = true; try { this.drawTree(layers, f, W, H, (L, g) => (g ? g.bus : L.bus) === b); } finally { this._noBus = false; }
+    }
+    if (nd.group) {
+      const f = this.auxFbo('selgroup', W, H), id = this.selGroupId;
+      if (id != null) { this._noBus = true; try { this.drawTree(layers, f, W, H, (L, g) => !!g && g.id === id); } finally { this._noBus = false; } }
+    }
+  }
   // layers: de cima para baixo (como na grade). Desenha de baixo para cima na composição.
   // layerIds: camadas que algum slice usa como fonte direta; cada uma ganha a sua textura.
   render(layers, layerIds = new Set(), time = performance.now() / 1000) {
@@ -630,6 +670,7 @@ void main(){
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       this.drawLayer(L, W, H, f);
     }
+    this.renderSliceSources(layers, W, H);
     // efeitos da composição e o master
     const out = this.applyChain(this.comp.t, W, H, this.compFx);
     const ct = this.compTransform;   // posição, escala e giro da composição inteira (painel Composição)
@@ -738,8 +779,16 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
 
   // ---------- telas ----------
   sourceTex(slice, layers) {
-    if (slice.source === 'comp') return this.comp.t;
-    const f = this.layerFbo.get(slice.source);
+    const src = slice.source;
+    if (src === 'comp') return this.comp.t;
+    let key;
+    if (src === 'busA' || src === 'busB') key = 'bus' + src[3];
+    else if (src === 'selgroup') key = 'selgroup';
+    else {   // uma camada: a escolhida ou a que estiver selecionada na grade
+      const id = src === 'sel' ? this.selLayerId : src, ro = slice.inOpacity === false, rb = slice.inBypass === false;
+      key = ro || rb ? id + '|' + (ro ? 'o' : '') + (rb ? 'b' : '') : id;
+    }
+    const f = this.layerFbo.get(key);
     return f ? f.t : null;
   }
   geomFor(slice) {
@@ -883,5 +932,17 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
   }
   probe(layers, pts) { this.render(layers); return this.readPts(pts, this.W, this.H); }
   probeScreen(screen, layers, screens, pts) { this.render(layers, this.neededLayers(screens)); this.renderScreen(screen, layers, screens); return this.readPts(pts, screen.w, screen.h); }
-  neededLayers(screens) { const s = new Set(); for (const sl of allSlices(screens)) if (sl.source !== 'comp') s.add(sl.source); return s; }
+  // o que os slices pedem como fonte: devolve as camadas simples (uma textura por camada) e guarda em this.need as outras
+  neededLayers(screens) {
+    const s = new Set(); this.need = { variants: new Map(), bus: new Set(), group: false };
+    for (const sl of allSlices(screens)) {
+      const src = sl.source; if (src === 'comp') continue;
+      if (src === 'busA' || src === 'busB') { this.need.bus.add(src[3]); continue; }
+      if (src === 'selgroup') { this.need.group = true; continue; }
+      const id = src === 'sel' ? this.selLayerId : src; if (id == null) continue;
+      const ro = sl.inOpacity === false, rb = sl.inBypass === false;
+      if (!ro && !rb) s.add(id); else this.need.variants.set(id + '|' + (ro ? 'o' : '') + (rb ? 'b' : ''), { id, ro, rb });
+    }
+    return s;
+  }
 }

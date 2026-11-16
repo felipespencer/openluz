@@ -793,8 +793,13 @@ export class AdvancedOutput {
       const rm = el('button', 'wide', 'Apagar máscara'); rm.type = 'button'; rm.onclick = () => this.removeItem(it); P.appendChild(rm);
     } else {
       const s = it;
-      const srcs = [['comp', 'Composição'], ...this.c.layers().map(L => [String(L.id), L.name])];
-      P.appendChild(this.pselect('Fonte', 'Fonte|De onde o slice tira a imagem: a composição inteira ou uma camada direto.', srcs, String(s.source), v => { s.source = v === 'comp' ? 'comp' : +v; M.touch(s); }));
+      // fontes agrupadas como no Resolume: composição, crossfader (Bus A e B), grupos e camadas
+      const srcs = [['comp', 'Composição', 'Composição'], ['busA', 'Bus A', 'Crossfader'], ['busB', 'Bus B', 'Crossfader'], ['selgroup', 'Grupo selecionado', 'Grupos'], ['sel', 'Camada selecionada', 'Camadas'], ...this.c.layers().map(L => [String(L.id), L.name, 'Camadas'])];
+      P.appendChild(this.pselect('Fonte', 'Fonte|De onde o slice tira a imagem: a composição inteira, um lado do crossfader, o grupo ou a camada selecionados na grade, ou uma camada fixa.', srcs, String(s.source), v => { s.source = ['comp', 'busA', 'busB', 'selgroup', 'sel'].includes(v) ? v : +v; M.touch(s); }));
+      if (s.source === 'sel' || typeof s.source === 'number') {   // lendo uma camada: seguir ou não a opacidade e o bypass/solo dela (Input Opacity e Input Bypass/Solo do Resolume)
+        P.appendChild(this.pcheck('Opacidade da camada', 'Opacidade da camada|Ligado, o slice acompanha a opacidade da camada. Desligado, mostra a camada inteira mesmo que ela esteja apagada na composição.', s.inOpacity !== false, v => { s.inOpacity = v; M.touch(s); }));
+        P.appendChild(this.pcheck('Bypass/Solo da camada', 'Bypass/Solo da camada|Ligado, o slice some quando a camada está em bypass ou outra está em solo. Desligado, continua mostrando a camada.', s.inBypass !== false, v => { s.inBypass = v; M.touch(s); }));
+      }
       if (this.tab === 'in') {
         this.rectRows(P, s.in, (r) => { Object.assign(s.in, r); M.touch(s); }, 'Entrada');
         P.appendChild(this.pnum('Giro', 'Giro da entrada|Gira o recorte da composição.', s.in.rot, { min: -180, max: 180, step: 1, unit: '°', bar: true, reset: 0 }, v => { s.in.rot = v; M.touch(s); }));

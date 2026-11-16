@@ -1714,6 +1714,7 @@ function frame() {
   { const s = previewCell(), vis = new Set(state.layers.map(L => liveClip(L)).filter(Boolean)); if (s && s.clip) vis.add(s.clip); for (const c of vis) tickFace(c, now, engine, state.bpm, engine.W / engine.H); }   // Seguir rosto: pede quadros ao detector e anda o recorte   // modelo 3D: a cena anda e é desenhada uma vez por quadro   // Text Animator: valores animados chegando a cada pedaço com atraso
   // espelho do laser: o desenho do LaserCube vai para a projeção
   { const s = previewCell(); for (const L of state.layers) { const c = liveClip(L); for (const m of [c, s && s.clip]) if (m && m.kind === 'lasermirror' && m.paintedAt !== now) { m.paintedAt = now; paintScan(m.el.getContext('2d'), 1080, 1080, laser.scanNow(now), false); m.rev++; } } }
+  engine.selLayerId = (state.layers[state.selLayer] || {}).id ?? null; engine.selGroupId = state.selGroup ?? null;   // fontes de slice "Camada selecionada" e "Grupo selecionado"
   engine.render(state.layers, engine.neededLayers(state.screens), now);
   webcam.tick();
   // monitor e prévia são cópias de 1080p: com saídas abertas (e sem gravar), o monitor vai a cada 2 quadros e a prévia a cada 3

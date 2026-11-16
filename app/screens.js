@@ -266,7 +266,7 @@ export function serialize(screens) {
     items: sc.items.map(it => it.type === 'slice'
       ? { type: 'slice', name: it.name, enabled: it.enabled, source: it.source, sourceLayer: it.sourceLayer, in: it.in, flip: it.flip,
           warp: { mode: it.warp.mode, curve: it.warp.curve, divX: it.warp.divX, divY: it.warp.divY, rot: it.warp.rot, pts: it.warp.pts },
-          soft: it.soft, color: it.color, key: !!it.key, blackBg: !!it.blackBg, inMask: it.inMask && { pts: it.inMask.pts, invert: it.inMask.invert } }
+          soft: it.soft, color: it.color, key: !!it.key, blackBg: !!it.blackBg, inOpacity: it.inOpacity !== false, inBypass: it.inBypass !== false, inMask: it.inMask && { pts: it.inMask.pts, invert: it.inMask.invert } }
       : { type: 'mask', name: it.name, enabled: it.enabled, invert: it.invert, rot: it.rot || 0, pts: it.pts }),
   })) });
 }
@@ -281,7 +281,7 @@ export function deserialize(json) {
       if (it.type === 'mask') { const m = mkMask(it.name || 'Máscara', (it.pts || []).map(p => [+p[0], +p[1]])); m.enabled = it.enabled !== false; m.invert = !!it.invert; m.rot = +it.rot || 0; sc.items.push(m); continue; }
       const sl = mkSlice(it.name || 'Slice', it.in || { x: 0, y: 0, w: sc.w, h: sc.h }, { x: 0, y: 0, w: sc.w, h: sc.h });
       sl.enabled = it.enabled !== false; sl.source = it.source || 'comp'; if (typeof it.sourceLayer === 'number') sl.sourceLayer = it.sourceLayer;   // posição da camada-fonte (quem abre troca pelo id desta abertura)
-      Object.assign(sl.in, it.in || {}); Object.assign(sl.flip, it.flip || {}); sl.key = !!it.key; sl.blackBg = !!it.blackBg;
+      Object.assign(sl.in, it.in || {}); Object.assign(sl.flip, it.flip || {}); sl.key = !!it.key; sl.blackBg = !!it.blackBg; sl.inOpacity = it.inOpacity !== false; sl.inBypass = it.inBypass !== false;
       if (it.warp) { Object.assign(sl.warp, it.warp); sl.warp.pts = (it.warp.pts || sl.warp.pts).map(p => [+p[0], +p[1]]); }
       if (it.soft) { Object.assign(sl.soft, it.soft); sl.soft.gamma = (it.soft.gamma || [2.2, 2.2, 2.2]).map(Number); }
       sl.soft.grads = ((it.soft && it.soft.grads) || []).map(g => ({ id: seq++, edge: g.edge || null, on: g.on !== false, a: [+g.a[0], +g.a[1]], b: [+g.b[0], +g.b[1]], n1: +g.n1 || 8, n2: +g.n2 || 8, roundOn: g.roundOn !== false, round: g.round ?? 0.5 }));
