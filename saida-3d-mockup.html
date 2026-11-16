@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenLuz — maquete da aba 3D da Saída avançada</title>
+<!-- Maquete para aprovação (plano 14-01). Nada aqui está no programa. Precisa de internet: o three.js vem de uma CDN,
+     como na maquete de modelos 3D. Abra o arquivo no Chrome. -->
+<style>
+  :root{ --rb:#1b1b1b; --rp:#2b2b2b; --rh:#3a3a3a; --rl:#1f1f1f; --rt:#d4d4d4; --rd:#8a8a8a; --teal:#6fe6c6; --tealDark:#0f2a24; --stage:#333; --warn:#ffb02e; }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{ background:var(--rb); color:var(--rt); font:12px/1.35 "Segoe UI",system-ui,sans-serif; display:grid; grid-template-rows:auto 1fr auto; overflow:hidden; }
+  button{ font:inherit; color:var(--rt); background:var(--rh); border:1px solid #111; border-radius:3px; height:26px; padding:0 10px; cursor:pointer; }
+  button:hover{ border-color:var(--rd); } button.on{ background:var(--teal); color:#062019; border-color:var(--teal); }
+  button.pri{ background:var(--teal); color:#062019; font-weight:600; }
+  #aviso{ background:#3a2f12; color:#ffd88a; padding:5px 12px; font-size:11px; border-bottom:1px solid #111; }
+  #top{ display:flex; align-items:center; gap:8px; padding:6px 8px; background:var(--rb); }
+  #top .tabs{ display:flex; gap:2px; margin-left:270px; }
+  #top .tabs span{ padding:5px 28px; background:var(--rl); color:var(--rd); border-radius:3px 3px 0 0; cursor:default; }
+  #top .tabs span.on{ background:var(--rh); color:var(--rt); }
+  #top .tabs span.novo{ position:relative; } #top .tabs span.novo::after{ content:"novo"; position:absolute; top:-5px; right:4px; font-size:9px; color:var(--teal); }
+  #top .info{ margin-left:auto; color:var(--rd); }
+  #main{ display:grid; grid-template-columns:262px 1fr 262px; gap:6px; padding:0 6px; min-height:0; }
+  .col{ background:var(--rp); min-height:0; display:flex; flex-direction:column; }
+  .ptitle{ background:var(--rh); padding:8px 8px; font-weight:600; }
+  .tb{ display:flex; align-items:center; gap:4px; padding:5px 6px; background:var(--rh); position:relative; }
+  .tb .sp{ flex:1; }
+  .menu{ position:absolute; left:6px; top:34px; background:#2a2a2a; border:1px solid #111; z-index:20; min-width:190px; box-shadow:0 6px 18px #000a; }
+  .menu button{ display:block; width:100%; text-align:left; border:0; border-bottom:1px solid #222; border-radius:0; height:32px; background:none; }
+  .menu button:hover{ background:var(--rh); } .menu .hdr{ padding:7px 10px 3px; color:var(--rd); font-size:11px; }
+  #lista{ overflow:auto; flex:1; }
+  .grp{ padding:8px 8px 3px; color:var(--rd); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  .row{ display:flex; align-items:center; gap:7px; padding:7px 10px 7px 16px; border-bottom:1px solid #222; cursor:pointer; }
+  .row:hover{ background:#333; } .row.sel{ background:var(--teal); color:#062019; }
+  .row .dot{ width:9px; height:9px; border-radius:2px; background:var(--teal); } .row.sel .dot{ background:#062019; }
+  .row.proj .dot{ border-radius:50%; background:var(--warn); } .row.off{ color:var(--rd); } .row.off .dot{ opacity:.35; }
+  .row small{ margin-left:auto; color:inherit; opacity:.65; }
+  #ajuda{ border-top:1px solid #111; } #ajuda .hh{ background:var(--rh); padding:6px 8px; font-weight:600; } #ajuda .hb{ padding:8px; color:#bbb; height:168px; overflow:auto; }
+  #ajuda ol{ margin:0; padding-left:16px; } #ajuda li{ margin-bottom:4px; }
+  #palco{ position:relative; background:var(--stage); min-height:0; }
+  #gl{ position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; }
+  #visao{ position:absolute; right:10px; bottom:10px; width:34%; aspect-ratio:16/9; border:1px solid var(--teal); pointer-events:none; }
+  #visao b{ position:absolute; left:0; top:-19px; font-weight:400; color:var(--teal); font-size:11px; background:#000a; padding:1px 6px; }
+  #dica{ position:absolute; left:10px; top:8px; color:#aaa; font-size:11px; background:#0007; padding:3px 8px; border-radius:3px; pointer-events:none; }
+  #props{ overflow:auto; flex:1; }
+  .prow{ display:grid; grid-template-columns:96px 1fr; align-items:center; border-bottom:1px solid #222; min-height:26px; }
+  .prow .pl{ padding:0 8px; color:#bbb; } .prow .pv{ display:flex; align-items:center; gap:4px; padding:0 6px; }
+  .prow .val{ min-width:46px; } .prow .pm{ height:18px; width:20px; padding:0; border:0; background:none; color:var(--rd); }
+  .prow .bar{ flex:1; height:10px; background:#111; position:relative; } .prow .bar i{ position:absolute; left:0; top:0; bottom:0; background:var(--teal); opacity:.75; }
+  .prow select{ flex:1; background:#1f1f1f; color:var(--rt); border:1px solid #111; height:20px; font:inherit; }
+  .phead{ background:var(--rh); padding:6px 8px; margin-top:1px; }
+  .nota{ padding:8px; color:var(--rd); font-size:11px; }
+  #foot{ display:flex; align-items:center; gap:8px; padding:7px 8px; }
+  #foot .sp{ flex:1; } #foot .st{ color:var(--rd); }
+  #toast{ position:fixed; left:50%; bottom:54px; transform:translateX(-50%); background:#0c2a23; border:1px solid var(--teal); color:#d9fff4; padding:9px 14px; border-radius:4px; max-width:560px; display:none; z-index:50; white-space:pre-line; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+</head>
+<body>
+<div>
+  <div id="aviso">Maquete para aprovação — nada disto está no programa ainda. A cena, os números e os botões funcionam aqui dentro; "Gerar slices" só mostra o que seria criado.</div>
+  <div id="top">
+    <button style="width:254px;text-align:left;color:var(--rd)">Presets ▾</button>
+    <div class="tabs" style="margin-left:8px"><span>Seleção de entrada</span><span>Transformação de saída</span><span class="on novo">3D</span></div>
+    <span class="info">Composição 1920×1080</span>
+  </div>
+</div>
+<div id="main">
+  <div class="col">
+    <div class="tb"><button id="mais">＋ ▾</button><span class="sp"></span><button id="dup" title="Duplicar o selecionado">Duplicar</button><button id="del" title="Apagar o selecionado">Apagar</button>
+      <div class="menu" id="menuMais" hidden>
+        <div class="hdr">Superfície</div>
+        <button data-add="plano">Plano (parede, empena, tela)</button>
+        <button data-add="caixa">Caixa (cubo, coluna, palco)</button>
+        <button data-add="modelo">Modelo 3D… (GLB, OBJ)</button>
+        <div class="hdr">Projetor</div>
+        <button data-add="proj">Projetor</button>
+      </div>
+    </div>
+    <div id="lista"></div>
+    <div id="ajuda"><div class="hh">Como funciona</div><div class="hb"><ol>
+      <li><b>Monte a cena</b> como ela é de verdade: a parede, o cubo, o palco, em metros.</li>
+      <li><b>Ponha o projetor</b> onde ele está e aponte. O quadro de baixo mostra o que ele precisa mandar.</li>
+      <li><b>Gerar slices</b> cria, na Transformação de saída, um slice já deformado para cada face. O ajuste fino continua lá, como hoje.</li>
+    </ol></div></div>
+  </div>
+  <div class="col" id="palco">
+    <canvas id="gl"></canvas>
+    <div id="dica">arrastar: girar a vista · roda: zoom · botão direito: deslizar · clique: selecionar · Shift + arrastar no objeto: mover no chão</div>
+    <div id="visao"><b id="visaoT">Visão do Projetor 1 — o que vai para a saída</b></div>
+  </div>
+  <div class="col">
+    <div class="ptitle" id="propT">—</div>
+    <div id="props"></div>
+  </div>
+</div>
+<div id="foot">
+  <button id="calib" title="Usa a foto do Automape para pôr o projetor no lugar certo sozinho">Achar o projetor por foto (Automape)…</button>
+  <span class="st" id="st"></span><span class="sp"></span>
+  <button class="pri" id="gerar">Gerar slices na Saída avançada</button><button>Cancelar</button><button>Salvar e fechar</button>
+</div>
+<div id="toast"></div>
+
+<script type="module">
+import * as THREE from 'three';
+const $ = (id) => document.getElementById(id), el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const cv = $('gl'), renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.autoClear = false;
+const scene = new THREE.Scene();
+
+// "composição": um desenho animado no lugar do que está no ar
+const comp = document.createElement('canvas'); comp.width = 960; comp.height = 540; const cx = comp.getContext('2d');
+const compTex = new THREE.CanvasTexture(comp); compTex.colorSpace = THREE.SRGBColorSpace;
+function drawComp(t) {
+  const g = cx.createLinearGradient(0, 0, 960, 0); ['#e11', '#fb0', '#2c3', '#0cc', '#22f', '#c2e', '#e11'].forEach((c, i) => g.addColorStop(i / 6, c)); cx.fillStyle = g; cx.fillRect(0, 0, 960, 540);
+  cx.fillStyle = 'rgba(0,0,0,.35)'; for (let i = 0; i < 12; i++) cx.fillRect(((i * 120 + t * 90) % 1080) - 60, 0, 34, 540);
+  cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.strokeRect(6, 6, 948, 528); cx.beginPath(); cx.moveTo(0, 270); cx.lineTo(960, 270); cx.moveTo(480, 0); cx.lineTo(480, 540); cx.stroke();
+  cx.fillStyle = '#fff'; cx.font = 'bold 84px Segoe UI'; cx.textAlign = 'center'; cx.fillText('OpenLuz', 480, 300); compTex.needsUpdate = true;
+}
+
+// material das superfícies: mostra a composição só onde algum projetor ligado alcança; fora disso, a superfície apagada
+const projU = { uTex: { value: compTex }, uVP: { value: [new THREE.Matrix4(), new THREE.Matrix4()] }, uOn: { value: [0, 0] }, uPos: { value: [new THREE.Vector3(), new THREE.Vector3()] }, uModo: { value: 0 } };
+const surfMat = (uvRect) => new THREE.ShaderMaterial({ uniforms: { ...projU, uRect: { value: new THREE.Vector4(...uvRect) }, uSel: { value: 0 } }, side: THREE.DoubleSide,
+  vertexShader: `varying vec2 vUv; varying vec3 vW; varying vec3 vN; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform sampler2D uTex; uniform mat4 uVP[2]; uniform float uOn[2]; uniform vec3 uPos[2]; uniform vec4 uRect; uniform float uSel; uniform float uModo; varying vec2 vUv; varying vec3 vW; varying vec3 vN;
+    void main(){ vec3 img = texture2D(uTex, uRect.xy + vUv * uRect.zw).rgb; float luz = 0.0;
+      for (int i = 0; i < 2; i++) { vec4 c = uVP[i] * vec4(vW, 1.0); vec3 n = c.xyz / c.w; float dentro = step(0.0, c.w) * step(abs(n.x), 1.0) * step(abs(n.y), 1.0); float frente = step(0.02, dot(normalize(uPos[i] - vW), vN)); luz = max(luz, uOn[i] * dentro * frente); }
+      vec3 apagada = vec3(0.13) + 0.05 * vec3(step(0.96, fract(vUv.x * 8.0)) + step(0.96, fract(vUv.y * 8.0)));
+      vec3 col = uModo > 0.5 ? img : mix(apagada, img, luz);
+      if (uSel > 0.5 && uModo < 0.5) col += 0.10 * vec3(0.43, 0.9, 0.78);
+      gl_FragColor = vec4(col, 1.0); }` });
+
+// chão e eixo
+const grid = new THREE.GridHelper(20, 20, 0x555555, 0x2e2e2e); scene.add(grid);
+
+let seq = 1; const itens = [];   // { id, tipo: 'plano'|'caixa'|'proj', nome, obj, ... }
+function addSuperficie(tipo, nome, o) {
+  const g = tipo === 'plano' ? new THREE.PlaneGeometry(1, 1) : new THREE.BoxGeometry(1, 1, 1), m = new THREE.Mesh(g, surfMat(o.rect || [0, 0, 1, 1]));
+  m.position.set(o.x, o.y, o.z); m.rotation.y = (o.ry || 0) * Math.PI / 180; m.scale.set(o.w, o.h, tipo === 'plano' ? 1 : o.d);
+  const it = { id: seq++, tipo, nome, obj: m, on: true }; m.userData.it = it; scene.add(m); itens.push(it); return it;
+}
+function addProjetor(nome, o) {
+  const cam = new THREE.PerspectiveCamera(30, 16 / 9, 0.3, 30), corpo = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.14, 0.3), new THREE.MeshBasicMaterial({ color: 0xffb02e }));
+  const grp = new THREE.Group(); grp.add(corpo); grp.position.set(o.x, o.y, o.z); scene.add(grp);
+  const linhas = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffb02e, transparent: true, opacity: 0.8 })); scene.add(linhas);
+  const it = { id: seq++, tipo: 'proj', nome, obj: grp, corpo, cam, linhas, on: o.on !== false, alvo: new THREE.Vector3(o.ax, o.ay, o.az), throw: o.throw || 1.4, dist: 8 }; corpo.userData.it = it; itens.push(it); return it;
+}
+// o cone do projetor: quatro raios até a distância de alcance e o retângulo lá na ponta
+function atualizaProjetor(p) {
+  p.cam.position.copy(p.obj.position); p.cam.fov = 2 * Math.atan((9 / 16) / (2 * p.throw)) * 180 / Math.PI; p.cam.aspect = 16 / 9; p.cam.far = 40; p.cam.lookAt(p.alvo); p.cam.updateProjectionMatrix(); p.cam.updateMatrixWorld(true);
+  p.obj.lookAt(p.alvo);
+  const d = p.obj.position.distanceTo(p.alvo) * 1.02, hw = d / p.throw / 2, hh = hw * 9 / 16, c = [[-hw, hh], [hw, hh], [hw, -hh], [-hw, -hh]].map(([x, y]) => new THREE.Vector3(x, y, -d).applyMatrix4(p.cam.matrixWorld));
+  const o = p.obj.position, pts = []; for (let i = 0; i < 4; i++) { pts.push(o, c[i], c[i], c[(i + 1) % 4]); }
+  p.linhas.geometry.setFromPoints(pts); p.linhas.visible = p.on; p.corpo.material.color.set(p.on ? 0xffb02e : 0x555555);
+}
+
+// cena de exemplo: uma empena, um cubo na frente e dois projetores (o segundo desligado)
+addSuperficie('plano', 'Empena', { x: 0, y: 1.9, z: 0, w: 6.4, h: 3.6, rect: [0, 0, 1, 1] });
+addSuperficie('caixa', 'Cubo', { x: -1.7, y: 0.6, z: 1.6, w: 1.2, h: 1.2, d: 1.2, ry: 28, rect: [0.05, 0.1, 0.35, 0.6] });
+addSuperficie('caixa', 'Coluna', { x: 2.4, y: 1.5, z: 0.9, w: 0.6, h: 3.0, d: 0.6, rect: [0.7, 0, 0.2, 1] });
+addProjetor('Projetor 1', { x: 0.6, y: 1.5, z: 7.2, ax: 0, ay: 1.8, az: 0, throw: 1.25 });
+addProjetor('Projetor 2', { x: -4.6, y: 2.2, z: 4.6, ax: -1.5, ay: 0.8, az: 1.4, throw: 1.6, on: false });
+let sel = itens[3];
+
+// vista: órbita feita à mão (girar, deslizar, zoom)
+const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 100), orb = { az: 0.62, el: 0.33, r: 14.5, alvo: new THREE.Vector3(0, 1.5, 1.5) };
+const poeCam = () => { cam.position.set(orb.alvo.x + orb.r * Math.sin(orb.az) * Math.cos(orb.el), orb.alvo.y + orb.r * Math.sin(orb.el), orb.alvo.z + orb.r * Math.cos(orb.az) * Math.cos(orb.el)); cam.lookAt(orb.alvo); };
+const ray = new THREE.Raycaster(), chao = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const mouseNdc = (e) => { const r = cv.getBoundingClientRect(); return new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); };
+const alvoEm = (e) => { ray.setFromCamera(mouseNdc(e), cam); const h = ray.intersectObjects(itens.map(i => i.tipo === 'proj' ? i.corpo : i.obj), false)[0]; return h ? h.object.userData.it : null; };
+let arr = null;
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
+cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); const it = alvoEm(e);
+  if (it && e.button === 0) { sel = it; refresh(); }
+  if (it && e.shiftKey && e.button === 0) { ray.setFromCamera(mouseNdc(e), cam); const p = new THREE.Vector3(); ray.ray.intersectPlane(chao, p); arr = { k: 'mover', it, p0: p, o0: it.obj.position.clone() }; }
+  else arr = { k: e.button === 2 ? 'deslizar' : 'girar', x: e.clientX, y: e.clientY, az: orb.az, el: orb.el, alvo: orb.alvo.clone() }; });
+cv.addEventListener('pointermove', (e) => { if (!arr) return;
+  if (arr.k === 'mover') { ray.setFromCamera(mouseNdc(e), cam); const p = new THREE.Vector3(); if (ray.ray.intersectPlane(chao, p)) { arr.it.obj.position.x = Math.round((arr.o0.x + p.x - arr.p0.x) * 20) / 20; arr.it.obj.position.z = Math.round((arr.o0.z + p.z - arr.p0.z) * 20) / 20; props(); } }
+  else if (arr.k === 'girar') { orb.az = arr.az - (e.clientX - arr.x) * 0.006; orb.el = Math.max(0.03, Math.min(1.5, arr.el + (e.clientY - arr.y) * 0.005)); }
+  else { const d = new THREE.Vector3(-(e.clientX - arr.x), e.clientY - arr.y, 0).multiplyScalar(orb.r * 0.0011).applyQuaternion(cam.quaternion); orb.alvo.copy(arr.alvo).add(d); } });
+addEventListener('pointerup', () => { arr = null; });
+cv.addEventListener('wheel', (e) => { e.preventDefault(); orb.r = Math.max(3, Math.min(40, orb.r * (e.deltaY < 0 ? 0.92 : 1.08))); }, { passive: false });
+
+// lista
+function lista() {
+  const L = $('lista'); L.textContent = '';
+  for (const [tit, f] of [['Superfícies', (i) => i.tipo !== 'proj'], ['Projetores', (i) => i.tipo === 'proj']]) {
+    L.appendChild(el('div', 'grp', tit));
+    for (const it of itens.filter(f)) { const r = el('div', 'row' + (it === sel ? ' sel' : '') + (it.tipo === 'proj' ? ' proj' : '') + (it.on ? '' : ' off')); r.append(el('span', 'dot'), el('span', '', it.nome), el('small', '', it.tipo === 'proj' ? (it.on ? 'ligado' : 'desligado') : it.tipo)); r.onclick = () => { sel = it; refresh(); }; L.appendChild(r); }
+  }
+}
+// painel
+const num = (rot, v, passo, set, dec = 2, uni = ' m', faixa) => { const r = el('div', 'prow'), pv = el('div', 'pv'), val = el('span', 'val', v.toFixed(dec) + uni);
+  const muda = (n) => { if (faixa) n = Math.max(faixa[0], Math.min(faixa[1], n)); set(Math.round(n * 1000) / 1000); props(); };
+  const a = el('button', 'pm', '−'), b = el('button', 'pm', '+'); a.onclick = () => muda(v - passo); b.onclick = () => muda(v + passo);
+  val.onclick = () => { const s = prompt(rot, String(v)); if (s != null && !isNaN(parseFloat(s.replace(',', '.')))) muda(parseFloat(s.replace(',', '.'))); };
+  pv.append(val, a, b); if (faixa) { const bar = el('div', 'bar'), i = el('i'); i.style.width = ((v - faixa[0]) / (faixa[1] - faixa[0]) * 100) + '%'; bar.appendChild(i); pv.appendChild(bar); bar.onclick = (e) => { const q = bar.getBoundingClientRect(); muda(faixa[0] + (e.clientX - q.left) / q.width * (faixa[1] - faixa[0])); }; }
+  r.append(el('span', 'pl', rot), pv); return r; };
+const chk = (rot, v, set) => { const r = el('div', 'prow'), pv = el('div', 'pv'), b = el('button', v ? 'on' : '', v ? 'ligado' : 'desligado'); b.style.height = '20px'; b.onclick = () => { set(!v); refresh(); }; pv.appendChild(b); r.append(el('span', 'pl', rot), pv); return r; };
+function props() {
+  const P = $('props'); P.textContent = ''; $('propT').textContent = sel ? sel.nome : '—'; if (!sel) return;
+  const o = sel.obj, head = (t) => P.appendChild(el('div', 'phead', t));
+  if (sel.tipo === 'proj') {
+    P.appendChild(chk('Projetor', sel.on, v => { sel.on = v; }));
+    const s = el('div', 'prow'), pv = el('div', 'pv'), q = el('select'); ['Automático', 'Janela', 'SAMSUNG 1920×1080', '23MP55 1080×1920'].forEach(t => q.appendChild(el('option', '', t))); pv.appendChild(q); s.append(el('span', 'pl', 'Dispositivo'), pv); P.appendChild(s);
+    head('Onde ele está');
+    P.appendChild(num('X (lado)', o.position.x, 0.1, v => { o.position.x = v; })); P.appendChild(num('Altura', o.position.y, 0.1, v => { o.position.y = v; })); P.appendChild(num('Z (distância)', o.position.z, 0.1, v => { o.position.z = v; }));
+    head('Para onde aponta');
+    P.appendChild(num('Mira X', sel.alvo.x, 0.1, v => { sel.alvo.x = v; })); P.appendChild(num('Mira altura', sel.alvo.y, 0.1, v => { sel.alvo.y = v; })); P.appendChild(num('Mira Z', sel.alvo.z, 0.1, v => { sel.alvo.z = v; }));
+    head('Lente');
+    P.appendChild(num('Abertura', sel.throw, 0.05, v => { sel.throw = v; }, 2, ' : 1', [0.4, 3]));
+    P.appendChild(el('div', 'nota', 'Abertura é a razão de projeção (throw ratio) que vem no manual do projetor: distância dividida pela largura da imagem. A ' + o.position.distanceTo(sel.alvo).toFixed(1) + ' m, a imagem tem ' + (o.position.distanceTo(sel.alvo) / sel.throw).toFixed(2) + ' m de largura.'));
+  } else {
+    head('Onde ela está');
+    P.appendChild(num('X (lado)', o.position.x, 0.1, v => { o.position.x = v; })); P.appendChild(num('Altura', o.position.y, 0.1, v => { o.position.y = v; })); P.appendChild(num('Z (frente)', o.position.z, 0.1, v => { o.position.z = v; }));
+    P.appendChild(num('Giro', o.rotation.y * 180 / Math.PI, 1, v => { o.rotation.y = v * Math.PI / 180; }, 0, '°', [-180, 180]));
+    head('Tamanho');
+    P.appendChild(num('Largura', o.scale.x, 0.1, v => { o.scale.x = Math.max(0.1, v); })); P.appendChild(num('Altura', o.scale.y, 0.1, v => { o.scale.y = Math.max(0.1, v); })); if (sel.tipo === 'caixa') P.appendChild(num('Fundo', o.scale.z, 0.1, v => { o.scale.z = Math.max(0.1, v); }));
+    head('O que ela mostra');
+    const R = o.material.uniforms.uRect.value, pc = (rot, k) => num(rot, R[k] * 100, 5, v => { R[k] = v / 100; }, 0, ' %', [0, 100]);
+    P.appendChild(pc('Começo X', 'x')); P.appendChild(pc('Começo Y', 'y')); P.appendChild(pc('Largura', 'z')); P.appendChild(pc('Altura', 'w'));
+    P.appendChild(el('div', 'nota', 'O pedaço da composição que aparece nesta superfície. É o mesmo recorte da aba Seleção de entrada; no programa, mexer lá mexe aqui.'));
+  }
+}
+function refresh() { lista(); props(); const p = projSel(); $('visaoT').textContent = 'Visão do ' + p.nome + ' — o que vai para a saída' + (p.on ? '' : ' (desligado)'); }
+const projSel = () => sel && sel.tipo === 'proj' ? sel : itens.find(i => i.tipo === 'proj' && i.on) || itens.find(i => i.tipo === 'proj');
+
+// menu "+", duplicar, apagar
+$('mais').onclick = (e) => { e.stopPropagation(); $('menuMais').hidden = !$('menuMais').hidden; }; addEventListener('click', () => { $('menuMais').hidden = true; });
+$('menuMais').onclick = (e) => { const k = e.target.dataset.add; if (!k) return;
+  if (k === 'plano') sel = addSuperficie('plano', 'Plano ' + seq, { x: 0, y: 1, z: 2.5, w: 2, h: 2 });
+  else if (k === 'caixa') sel = addSuperficie('caixa', 'Caixa ' + seq, { x: 1, y: 0.5, z: 2.8, w: 1, h: 1, d: 1 });
+  else if (k === 'proj') sel = addProjetor('Projetor ' + (itens.filter(i => i.tipo === 'proj').length + 1), { x: 3.5, y: 1.6, z: 6.5, ax: 1, ay: 1.5, az: 0 });
+  else return aviso('No programa: abre um arquivo GLB ou OBJ da superfície (uma fachada escaneada, um cenário modelado) e ela entra na cena como as outras. O leitor de modelos 3D que já existe nos clipes serve para isso.');
+  refresh(); };
+$('del').onclick = () => { if (!sel) return; scene.remove(sel.obj); if (sel.linhas) scene.remove(sel.linhas); itens.splice(itens.indexOf(sel), 1); sel = itens[0] || null; refresh(); };
+$('dup').onclick = () => { if (!sel) return; const o = sel.obj;
+  if (sel.tipo === 'proj') sel = addProjetor(sel.nome + ' cópia', { x: o.position.x + 1, y: o.position.y, z: o.position.z, ax: sel.alvo.x, ay: sel.alvo.y, az: sel.alvo.z, throw: sel.throw });
+  else { const R = o.material.uniforms.uRect.value; sel = addSuperficie(sel.tipo, sel.nome + ' cópia', { x: o.position.x + 0.6, y: o.position.y, z: o.position.z + 0.6, w: o.scale.x, h: o.scale.y, d: o.scale.z, ry: o.rotation.y * 180 / Math.PI, rect: [R.x, R.y, R.z, R.w] }); }
+  refresh(); };
+let tT = 0; function aviso(t) { const e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(tT); tT = setTimeout(() => { e.style.display = 'none'; }, 9000); }
+$('toast').onclick = () => { $('toast').style.display = 'none'; };
+
+// "Gerar slices": para cada projetor ligado, cada face voltada para ele e dentro do quadro vira um slice (quatro cantos na saída)
+function facesVisiveis(p) {
+  const out = [];
+  for (const it of itens.filter(i => i.tipo !== 'proj')) {
+    const faces = it.tipo === 'plano' ? [['frente', [0, 0, 1], [[-.5, .5, 0], [.5, .5, 0], [.5, -.5, 0], [-.5, -.5, 0]]]]
+      : [['frente', [0, 0, 1], [[-.5, .5, .5], [.5, .5, .5], [.5, -.5, .5], [-.5, -.5, .5]]], ['direita', [1, 0, 0], [[.5, .5, .5], [.5, .5, -.5], [.5, -.5, -.5], [.5, -.5, .5]]], ['esquerda', [-1, 0, 0], [[-.5, .5, -.5], [-.5, .5, .5], [-.5, -.5, .5], [-.5, -.5, -.5]]], ['cima', [0, 1, 0], [[-.5, .5, -.5], [.5, .5, -.5], [.5, .5, .5], [-.5, .5, .5]]], ['trás', [0, 0, -1], [[.5, .5, -.5], [-.5, .5, -.5], [-.5, -.5, -.5], [.5, -.5, -.5]]]];
+    it.obj.updateMatrixWorld(true);
+    for (const [nome, n, cantos] of faces) {
+      const nw = new THREE.Vector3(...n).transformDirection(it.obj.matrixWorld), centro = new THREE.Vector3(...cantos.reduce((a, c) => [a[0] + c[0] / 4, a[1] + c[1] / 4, a[2] + c[2] / 4], [0, 0, 0])).applyMatrix4(it.obj.matrixWorld);
+      if (nw.dot(p.obj.position.clone().sub(centro).normalize()) < 0.05) continue;
+      const px = cantos.map(c => { const v = new THREE.Vector3(...c).applyMatrix4(it.obj.matrixWorld).project(p.cam); return [Math.round((v.x * .5 + .5) * 1920), Math.round((1 - (v.y * .5 + .5)) * 1080), v.z]; });
+      // fica de fora só a face que cai inteira fora do quadro do projetor (a caixa dela não toca o quadro) ou que está atrás da lente
+      const xs = px.map(q => q[0]), ys = px.map(q => q[1]);
+      if (Math.max(...xs) < 0 || Math.min(...xs) > 1920 || Math.max(...ys) < 0 || Math.min(...ys) > 1080 || px.some(q => q[2] > 1)) continue;
+      out.push({ nome: it.nome + (it.tipo === 'caixa' ? ' · ' + nome : ''), px });
+    }
+  }
+  return out;
+}
+$('gerar').onclick = () => { const linhas = []; let n = 0;
+  for (const p of itens.filter(i => i.tipo === 'proj' && i.on)) { atualizaProjetor(p); const f = facesVisiveis(p); n += f.length; linhas.push(p.nome + ': ' + f.length + ' slices'); for (const s of f) linhas.push('   ' + s.nome + '  →  cantos ' + s.px.map(q => q[0] + ',' + q[1]).join('  ')); }
+  aviso(n ? 'Criaria ' + n + ' slices na Transformação de saída, cada um já com os quatro cantos no lugar:\n' + linhas.join('\n') + '\n\nDepois é ajuste fino com os pontos, como hoje.' : 'Nenhum projetor ligado alcança uma superfície.'); };
+$('calib').onclick = () => aviso('No programa: você tira a foto do Automape da posição da lente e marca na foto quatro cantos de uma superfície da cena. Com isso o programa calcula sozinho onde o projetor está e para onde aponta, e os números do painel se acertam.');
+
+// quadro
+function resize() { const r = cv.getBoundingClientRect(), w = Math.max(2, Math.floor(r.width)), h = Math.max(2, Math.floor(r.height)); if (cv.width !== Math.floor(w * renderer.getPixelRatio()) || cv.height !== Math.floor(h * renderer.getPixelRatio())) renderer.setSize(w, h, false); return [w, h]; }
+function frame(t) {
+  drawComp(t / 1000);
+  const ps = itens.filter(i => i.tipo === 'proj'); ps.forEach(atualizaProjetor);
+  for (let i = 0; i < 2; i++) { const p = ps[i]; projU.uOn.value[i] = p && p.on ? 1 : 0; if (p) { projU.uVP.value[i].multiplyMatrices(p.cam.projectionMatrix, p.cam.matrixWorldInverse); projU.uPos.value[i].copy(p.obj.position); } }
+  for (const it of itens) if (it.tipo !== 'proj') it.obj.material.uniforms.uSel.value = it === sel ? 1 : 0;
+  const [w, h] = resize(); cam.aspect = w / h; cam.updateProjectionMatrix(); poeCam();
+  renderer.setViewport(0, 0, w, h); renderer.setScissorTest(false); renderer.setClearColor(0x333333, 1); renderer.clear();
+  projU.uModo.value = 0; grid.visible = true; ps.forEach(p => { p.linhas.visible = p.on; p.obj.visible = true; }); renderer.render(scene, cam);
+  // visão do projetor: a mesma cena vista da lente, sem chão, sem cones: é a imagem que vai para a saída
+  const q = $('visao').getBoundingClientRect(), c = cv.getBoundingClientRect(), vx = q.left - c.left, vy = c.bottom - q.bottom, p = projSel();
+  if (p) { renderer.setViewport(vx, vy, q.width, q.height); renderer.setScissor(vx, vy, q.width, q.height); renderer.setScissorTest(true); renderer.setClearColor(0x000000, 1); renderer.clear();
+    projU.uModo.value = 1; grid.visible = false; ps.forEach(o => { o.linhas.visible = false; o.obj.visible = false; }); if (p.on) renderer.render(scene, p.cam); renderer.setScissorTest(false); }
+  $('st').textContent = itens.filter(i => i.tipo !== 'proj').length + ' superfícies · ' + ps.filter(p => p.on).length + ' de ' + ps.length + ' projetores ligados';
+  requestAnimationFrame(frame);
+}
+refresh(); requestAnimationFrame(frame);
+window.__maquete = { itens, facesVisiveis, orb };
+</script>
+</body>
+</html>

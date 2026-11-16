@@ -62,6 +62,7 @@ Prévia separada do ar, os 30 quadros, bateria única) junto com o resto da list
 | 11 | Câmera que segue o rosto | 1/1 | ✅ Complete | 2026-11-09 |
 | 12 | Revisão geral | 2/7 | In progress (12-01 fechado; consertos em seis lotes) | - |
 | 13 | Porta de entrada | 0/1 | In progress (13-01 em aplicação) | - |
+| 14 | Saída 3D | 0/1 | In progress (14-01 no checkpoint: maquete e desenho) | - |
 
 ## Phase Details
 
@@ -279,6 +280,15 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 **Plans:**
 - [ ] 13-01: primeira vez medida, PRIMEIROS-PASSOS.md (PT/EN), README em dia e caminhos de assinatura do instalador — aplicado em 2026-11-14 (d46e16c), só local; no checkpoint: publicar ou não
 - [x] 13-02: convite na grade vazia e aviso de "clique na miniatura para pôr no ar" — fechado em 2026-11-14 (1acc7ae, só local)
+
+### Phase 14: Saída 3D
+
+**Goal:** uma terceira aba na Saída avançada em que a cena é montada em 3D (superfícies em metros, projetores com posição, mira e abertura) e o programa gera os slices já deformados para cada face. Pedido de 2026-11-14 ("vou querer 3d no advanced! Pq tudo é 3d!"). Recurso só do OpenLuz. Maquete antes de construir.
+**Depends on:** Fase 7 (a Saída avançada 2D continua sendo o ajuste fino)
+
+**Plans:**
+- [ ] 14-01: desenho e maquete `saida-3d-mockup.html` — feito em 2026-11-16, só local; no checkpoint (aprovação e cinco perguntas)
+- [ ] 14-02 em diante: a aba no programa, gerar slices, achar o projetor por foto — só depois do aprovado
 
 ## Ideias para um marco futuro
 
