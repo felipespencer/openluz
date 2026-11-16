@@ -452,6 +452,32 @@ app.whenReady().then(async () => {
     const f = r.filePaths[0]; if (fs.statSync(f).size > 4e6) throw new Error('arquivo grande demais para ser um preset');
     return { name: path.basename(f, '.json'), json: fs.readFileSync(f, 'utf8') };
   });
+  // Exportar SVG…, como o Export to SVG… do Resolume (07-15): escolhe uma PASTA, grava um arquivo por desenho e abre a pasta.
+  // `prova` só vale em desenvolvimento e teste (pasta de dados própria): a bateria passa a pasta, ou 'cancelar', no lugar da janela.
+  ipcMain.handle('presets:exportSvg', async (_e, arquivos, prova) => {
+    if (!Array.isArray(arquivos) || !arquivos.length || arquivos.length > 65) throw new Error('nada para exportar');
+    const emProva = !!prova && !!(process.env.PROJ_TEST || process.env.PROJ_USERDATA); let dir;
+    if (emProva) { if (prova === 'cancelar') return null; dir = String(prova); }   // a bateria: sem a janela; se os arquivos já existem, devolve quais e não grava
+    else {
+      const r = await dialog.showOpenDialog(mainWin, { title: 'Exportar as telas em SVG: escolha a pasta', buttonLabel: 'Selecionar pasta', properties: ['openDirectory', 'createDirectory'] });
+      if (r.canceled || !r.filePaths[0]) return null; dir = r.filePaths[0];
+    }
+    const feitos = [];
+    for (const a of arquivos) {
+      if (!a || typeof a.text !== 'string' || a.text.length > 4e6) throw new Error('desenho inválido');
+      feitos.push((String(a.name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/, '').slice(0, 120) || 'saida') + '.svg');
+    }
+    // a pasta escolhida pode já ter um Input.svg de outra coisa: gravar por cima só com o sim de quem pediu
+    const ja = feitos.filter(n => fs.existsSync(path.join(dir, n)));
+    if (ja.length) {
+      if (emProva) return { dir, existem: ja };
+      const r = await dialog.showMessageBox(mainWin, { type: 'question', title: 'Exportar SVG', message: 'Esta pasta já tem ' + (ja.length === 1 ? 'o arquivo ' : 'os arquivos ') + ja.join(', ') + '. Gravar por cima?', buttons: ['Gravar por cima', 'Cancelar'], defaultId: 1, cancelId: 1 });
+      if (r.response !== 0) return null;
+    }
+    arquivos.forEach((a, k) => writeAtomic(path.join(dir, feitos[k]), a.text));
+    if (!emProva) shell.showItemInFolder(path.join(dir, feitos[0]));
+    return { dir, files: feitos };
+  });
   // disco: pastas, preferências, composições e gravações
   ipcMain.handle('fs:roots', () => roots());
   ipcMain.handle('fs:list', (_e, dir) => listDir(String(dir)));

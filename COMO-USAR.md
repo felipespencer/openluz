@@ -268,6 +268,10 @@ fechar embaixo). Ctrl+Z desfaz, Ctrl+Y refaz; a barra de espaço arrasta a vista
   a guia de saída vão também para o projetor enquanto você edita.
 - **Presets** ficam gravados em disco. O menu tem Salvar, Salvar como…, Apagar, Renomear…, Novo, Mostrar na pasta e
   Abrir… (um arquivo de preset de qualquer pasta), e a lista embaixo.
+- **Exportar SVG…** (no menu Presets): escolha uma pasta e o programa grava o desenho do mapeamento para abrir no
+  Illustrator ou no Inkscape, como o Export to SVG do Resolume: `Input.svg` (os recortes na composição) e um
+  `Output1_<nome da tela>.svg` por tela (as formas na saída), cada item com o nome dele, em pixels. Se a pasta já tiver
+  arquivos com esses nomes, o programa pergunta antes de gravar por cima.
 - "Salvar e fechar" aplica; "Cancelar" (ou Esc) devolve tudo como estava.
 - Com uma saída aberta, o programa não deixa o Windows apagar a tela por inatividade.
 

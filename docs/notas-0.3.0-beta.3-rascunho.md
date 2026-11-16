@@ -12,6 +12,8 @@
 - No modo Editar pontos, Ctrl+clique escolhe vários pontos e as setas movem todos.
 - Painel da máscara com posição, tamanho e giro; lista de zoom completa (10% a 300%).
 - Menu de presets com Salvar, Salvar como…, Apagar, Renomear…, Novo, Mostrar na pasta e Abrir….
+- **Exportar SVG…** no menu de presets: grava numa pasta o desenho do mapeamento (`Input.svg` e um `Output` por tela),
+  para fazer conteúdo no formato exato das superfícies no Illustrator ou no Inkscape.
 - Slice com "É chave" e "Fundo preto" (Is Key e Black BG).
 - Novas fontes para o slice: camada selecionada, grupo selecionado, Bus A e Bus B; e as opções de seguir ou não a
   opacidade e o bypass/solo da camada.
@@ -60,6 +62,8 @@
 - In Edit Points mode, Ctrl+click selects several points and the arrow keys move them together.
 - Mask panel with position, size and rotation; full zoom list (10% to 300%).
 - Presets menu with Save, Save as…, Remove, Rename…, New, Show in folder and Load….
+- **Export to SVG…** in the presets menu: writes the mapping drawing to a folder (`Input.svg` and one `Output` per
+  screen), so content can be made to the exact shape of the surfaces in Illustrator or Inkscape.
 - Slice options "É chave" (Is Key) and "Fundo preto" (Black BG).
 - New slice sources: selected layer, selected group, Bus A and Bus B; and whether to follow the layer's opacity and
   bypass/solo.

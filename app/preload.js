@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('projDesktop', {
     rename: (de, para) => ipcRenderer.invoke('presets:rename', de, para),
     show: (name) => ipcRenderer.invoke('presets:show', name),
     pick: () => ipcRenderer.invoke('presets:pick'),
+    exportSvg: (arquivos, prova) => ipcRenderer.invoke('presets:exportSvg', arquivos, prova),
   },
   comps: {
     list: () => ipcRenderer.invoke('comps:list'),

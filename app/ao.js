@@ -934,7 +934,7 @@ export class AdvancedOutput {
   }
 
   // ---------- presets ----------
-  // Menu Presets, como o do Resolume: Salvar, Salvar como…, Apagar, Renomear…, Novo, Mostrar na pasta, Abrir… e a lista.
+  // Menu Presets, como o do Resolume: Salvar, Salvar como…, Apagar, Renomear…, Novo, Mostrar na pasta, Abrir…, Exportar SVG… e a lista.
   // O que age sobre o preset carregado fica apagado enquanto não há um.
   async refreshPresets() {
     const m = $('aoPresetMenu'); m.textContent = '';
@@ -948,6 +948,7 @@ export class AdvancedOutput {
     item('Novo', true, () => this.newPreset(), 'new');
     item('Mostrar na pasta', tem && !!P && !!P.show, () => { P.show(this.presetName).catch(() => this.c.toast('Não achei o arquivo do preset')); }, 'show');
     item('Abrir…', !!P && !!P.pick, () => this.pickPreset(), 'pick');
+    item('Exportar SVG…', !!P && !!P.exportSvg, () => this.exportSvg(), 'svg');
     m.appendChild(el('div', 'sep')); m.appendChild(el('div', 'hdr', 'Presets'));
     for (const n of names) { const b = el('button', 'pr' + (n === this.presetName ? ' on' : ''), n); b.type = 'button'; b.onclick = () => this.loadPreset(n); m.appendChild(b); }
     if (!names.length) m.appendChild(el('div', 'vazio', 'nenhum preset salvo'));
@@ -967,6 +968,12 @@ export class AdvancedOutput {
     if (para.toLowerCase() !== de.toLowerCase() && nomes.some(n => String(n).toLowerCase() === para.toLowerCase()) && !(await confirmBox('Renomear preset', 'Já existe um preset chamado "' + para + '". Gravar por cima dele?'))) return;
     try { await P.rename(de, para); this.presetName = para; await this.refreshPresets(); this.c.toast('Preset renomeado para "' + para + '"'); }
     catch (e) { this.c.toast('Não consegui renomear: ' + e.message); }
+  }
+  async exportSvg() {   // Exportar SVG…: pede uma pasta e grava Input.svg e um Output por tela (formato medido no Resolume, 07-15-MEDIDAS.md)
+    try {
+      const r = await this.c.presets.exportSvg(svgFiles(this.screens(), this.c.compW, this.c.compH), this._svgProva);
+      if (r && r.files) this.c.toast(r.files.length + ' arquivos SVG gravados em "' + r.dir + '"');
+    } catch (e) { this.c.toast('Não consegui exportar o SVG: ' + String(e.message).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')); }
   }
   async pickPreset() {   // Abrir…: um arquivo de preset de qualquer pasta
     try { const r = await this.c.presets.pick(); if (!r) return; this.applyPresetJson(r.json, ''); this.c.toast('Preset "' + r.name + '" aberto de fora da pasta; use Salvar como… para guardá-lo aqui'); }
@@ -1004,6 +1011,27 @@ function localToIn(s, p) {
 function inToLocal(s, q) {
   const r = s.in, a = -r.rot * Math.PI / 180, c = Math.cos(a), si = Math.sin(a), dx = q[0] - r.x - r.w / 2, dy = q[1] - r.y - r.h / 2;
   return [(dx * c - dy * si) / r.w + 0.5, (dx * si + dy * c) / r.h + 0.5];
+}
+// ---------- Exportar SVG (07-15) ----------
+// O desenho das telas como o Resolume exporta: Input.svg (aba de entrada, tamanho da composição) e Output<N>_<tela>.svg
+// (aba de saída, tamanho da tela). Um <g> por tela; slice = <polygon> dos quatro cantos; polígono e máscara = <path>.
+// Não medido lá e decidido aqui: slice de malha sai como <path> do contorno; máscara de entrada fica de fora.
+const svgN = (v) => String(Number((+v || 0).toPrecision(6)));
+const svgX = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const svgPoly = (id, pts) => `    <polygon id="${svgX(id)}" points="${pts.map(p => svgN(p[0]) + ',' + svgN(p[1])).join(',')}"/>`;
+const svgPath = (id, pts) => `    <path id="${svgX(id)}" d="M ${[...pts, pts[0]].map(p => svgN(p[0]) + ' ' + svgN(p[1])).join(' L ')} z"/>`;
+function svgDoc(w, h, grupos) {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n` +
+    `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="${svgN(w)}" height="${svgN(h)}" viewBox="0 0 ${svgN(w)} ${svgN(h)}" stroke-width="1.0" stroke="#000000" fill="none">\n` +
+    grupos.map(g => `  <g id="${svgX(g.name)}">\n${g.linhas.join('\n')}${g.linhas.length ? '\n' : ''}  </g>\n`).join('') + '</svg>\n';
+}
+export function svgFiles(screens, compW, compH) {
+  const entrada = screens.map(sc => ({ name: sc.name, linhas: sc.items.filter(i => i.type === 'slice' || i.type === 'poly').map(i =>
+    i.type === 'poly' ? svgPath(i.name, i.inPts) : svgPoly(i.name, [[0, 0], [1, 0], [1, 1], [0, 1]].map(p => localToIn(i, p)))) }));
+  const saida = (sc) => [{ name: sc.name, linhas: sc.items.map(i =>
+    i.type === 'poly' ? svgPath(i.name, i.outPts) : i.type === 'mask' ? svgPath(i.name, i.pts) :
+    i.warp.mode === 'corners' ? svgPoly(i.name, i.warp.pts) : svgPath(i.name, outlinePoints(i).filter((p, k, a) => !k || p[0] !== a[k - 1][0] || p[1] !== a[k - 1][1]))) }];
+  return [{ name: 'Input', text: svgDoc(compW, compH, entrada) }, ...screens.map((sc, k) => ({ name: `Output${k + 1}_${sc.name}`, text: svgDoc(sc.w, sc.h, saida(sc)) }))];
 }
 function outlinePoints(s) {
   const d = outlinePath(s, 8);
