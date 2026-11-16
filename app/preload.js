@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('projDesktop', {
   displays: () => ipcRenderer.invoke('displays'),
   onDisplays: (fn) => ipcRenderer.on('displays:changed', (_e, d) => fn(d)),
+  acordado: () => ipcRenderer.invoke('power:awake'),   // a tela está impedida de apagar? (ligado enquanto há saída aberta)
   isTest: () => ipcRenderer.invoke('env:test'),
   log: { write: (kind, msg) => ipcRenderer.send('log', kind, msg), show: () => ipcRenderer.invoke('log:show'), lastCrash: () => ipcRenderer.invoke('log:lastCrash'), path: () => ipcRenderer.invoke('log:path'), relaunch: () => ipcRenderer.invoke('app:relaunch') },
   windows: () => ipcRenderer.invoke('windows'),

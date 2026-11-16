@@ -1,7 +1,7 @@
 // OpenLuz — processo principal (Electron).
 // Serve a pasta app/ por um esquema próprio (app://projecionista/), abre a janela de controle
 // e põe cada janela de saída no monitor que a tela pede.
-const { app, crashReporter, dialog, BrowserWindow, Menu, protocol, net, session, screen, ipcMain, shell, desktopCapturer, utilityProcess, MessageChannelMain } = require('electron');
+const { app, crashReporter, dialog, BrowserWindow, Menu, protocol, net, session, screen, ipcMain, shell, desktopCapturer, utilityProcess, MessageChannelMain, powerSaveBlocker } = require('electron');
 let fechando = false;   // a página já confirmou o fechamento (ou o app está saindo): o X fecha de verdade
 const { Readable } = require('node:stream');
 const { spawn } = require('node:child_process');
@@ -161,6 +161,16 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 const PREFS = { contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false };
 
+// ---------- tela acordada ----------
+// Com uma saída aberta, o sistema não pode apagar a tela nem dormir por inatividade: quem toca só pela APC40 ou pelo MIDI não
+// mexe no mouse nem no teclado, e o Windows apagaria o projetor no meio do show. Fechada a última saída, o bloqueio sai.
+let acordadoId = null;
+function acordado(liga) {
+  const ja = acordadoId != null && powerSaveBlocker.isStarted(acordadoId);
+  if (liga && !ja) { acordadoId = powerSaveBlocker.start('prevent-display-sleep'); logLine('energia', 'saída aberta: a tela não apaga por inatividade'); }
+  else if (!liga && ja) { powerSaveBlocker.stop(acordadoId); acordadoId = null; logLine('energia', 'sem saída aberta: economia de energia de volta ao normal'); }
+}
+
 // ---------- monitores ----------
 function displayList() {
   const prim = screen.getPrimaryDisplay();
@@ -214,7 +224,8 @@ function createMain() {
     return { action: 'allow', overrideBrowserWindowOptions: opts };
   });
   win.webContents.on('did-create-window', (child, { options }) => {
-    outWins.add(child); child.on('closed', () => outWins.delete(child));
+    outWins.add(child); child.on('closed', () => { outWins.delete(child); acordado(outWins.size > 0); });
+    acordado(true);
     if (!options.fullscreen) return;
     const d = screen.getDisplayMatching({ x: options.x, y: options.y, width: options.width, height: options.height });
     taken.set(d.id, child); child.on('closed', () => { if (taken.get(d.id) === child) taken.delete(d.id); });
@@ -344,6 +355,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('phone:fechar', () => { phoneChave = ''; return true; });   // a pessoa fechou o diálogo: o endereço deixa de valer
   ipcMain.handle('phone:answer', (_e, id, sdp, erro) => { const res = phoneOffers.get(id); if (!res) return false; phoneOffers.delete(id); if (sdp) phoneChave = ''; /* o celular entrou: a chave não serve para outro */ res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(sdp ? { sdp } : { erro: erro || 'recusado' })); return true; });
   ipcMain.handle('displays', () => displayList());
+  ipcMain.handle('power:awake', () => acordadoId != null && powerSaveBlocker.isStarted(acordadoId));
   // ---------- fonte "Captura": telas, janelas e páginas web ----------
   // a imagem chega à janela de controle por getUserMedia com chromeMediaSourceId (captura do Chromium)
   const webPages = new Map();   // chave -> janela escondida que renderiza uma página; o conteúdo é capturado como "aba", sem a janela aparecer

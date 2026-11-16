@@ -268,7 +268,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [x] 12-11: lote B2 (39, 40, 44, 42, N2) — fechado em 2026-11-14 (72b3bf9) com a 0.3.0-beta.2 pública ("Continua")
 - [ ] 12-12: lote B1 (36, 37, 38, 41, 43) com os projetores ligados ("liguei outro projetor talvez agora seja melhor pra vc testar", 2026-11-15) — aplicado em 2026-11-15, só local; no checkpoint (43, 37, 38 consertados; 36 sem prova de cabo; 41 não reproduzível com escala 100%)
 - [x] 12-13: clique na grade não se perde quando ela é refeita entre apertar e soltar (Autopilot; item 74) — fechado em 2026-11-16, só local
-- [ ] 12-14: com a saída aberta, o programa não deixa o Windows apagar a tela nem dormir por inatividade — em aplicação desde 2026-11-16
+- [x] 12-14: com a saída aberta, o programa não deixa o Windows apagar a tela nem dormir por inatividade — fechado em 2026-11-16, só local
 - [ ] parado no "risco 1" (decisão do Felipe, 2026-11-14): C2, D, E, F só se ele pedir
 
 ### Phase 13: Porta de entrada
