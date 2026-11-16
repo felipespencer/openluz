@@ -19,7 +19,8 @@ export class AdvancedOutput {
   constructor(ctx) {
     this.c = ctx;
     this.open = false; this.tab = 'in'; this.mode = 'move'; this.snap = false; this.showOut = true; this.grid = true; this.led = false; this.pan = false; this.zoom = 'fit';
-    this.sel = null; this.selPt = -1; this.selPtK = null; this.selG = -1; this.nudgeT = 0; this.drawing = null; this.cursor = null; this.drag = null; this.scale = 1;
+    this.sel = null; this.selPt = -1; this.selPtK = null; this.selPts = new Set();   // selPts: vários pontos do slice escolhidos com Ctrl+clique (as setas movem todos)
+    this.selG = -1; this.nudgeT = 0; this.drawing = null; this.cursor = null; this.drag = null; this.scale = 1;
     this.snapshot = ''; this.presetName = ''; this.clip = null;   // slice ou máscara copiado pelo botão direito (Copiar/Recortar)
     this.hist = []; this.redoHist = []; this.space = false;
     Object.assign(this, propsKit(this));
@@ -188,7 +189,7 @@ export class AdvancedOutput {
       g.b = [g.b[0] + dx, g.b[1] + dy]; if (alt) g.a = [g.a[0] + dx, g.a[1] + dy]; M.touch(it);
       this.draw(); this.renderProps(); this.c.onChange(); return;
     }
-    if (k === 'anchor' && it.warp && it.warp.pts[this.selPt]) M.moveAnchor(it, this.selPt, dx, dy);
+    if (k === 'anchor' && it.warp && it.warp.pts[this.selPt]) { for (const i of (this.selPts.size > 1 ? [...this.selPts] : [this.selPt])) if (it.warp.pts[i]) M.moveAnchor(it, i, dx, dy); }   // vários pontos escolhidos com Ctrl+clique andam juntos
     else if (k === 'maskpt' && it.pts && it.pts[this.selPt]) { const q = it.pts[this.selPt]; q[0] += dx; q[1] += dy; M.touch(it); }
     else if (k === 'inmaskpt' && it.inMask && it.inMask.pts[this.selPt]) { const q = it.inMask.pts[this.selPt]; q[0] += dx / it.in.w; q[1] += dy / it.in.h; it.inMask.rev++; M.touch(it); }
     else if (this.tab === 'in') { it.in.x += dx; it.in.y += dy; M.touch(it); }
@@ -299,6 +300,7 @@ export class AdvancedOutput {
     if (g) P.appendChild(this.pnum('Opacidade', 'Opacidade da guia|Quanto a guia aparece por cima da imagem.', Math.round(g.op * 100), { min: 0, max: 100, step: 1, unit: ' %', bar: true, reset: 25 }, v => { g.op = v / 100; }));
   }
   draw() {
+    if (this.selPt < 0 || this.selPtK !== 'anchor' || this.mode !== 'pts') this.selPts.clear();   // a seleção de vários pontos só vale enquanto um ponto do slice está escolhido
     this.syncGuide();
     const svg = this.svg; svg.textContent = '';
     const [W, H] = this.stageSize(), it = this.sel && this.sel.item, k = 1 / this.scale;
@@ -404,7 +406,7 @@ export class AdvancedOutput {
       if (!M.isAnchor(item, i)) return;
       const g = svgEl('g', { class: 'hdg', 'data-k': 'anchor', 'data-i': i, 'data-id': item.id });
       g.appendChild(svgEl('rect', { x: p[0] - 11 * k, y: p[1] - 11 * k, width: 22 * k, height: 22 * k, class: 'hdc' }));
-      g.appendChild(svgEl('rect', { x: p[0] - 5 * k, y: p[1] - 5 * k, width: 10 * k, height: 10 * k, class: 'hd anc' + (i === this.selPt && this.selPtK === 'anchor' ? ' cur' : '') }));
+      g.appendChild(svgEl('rect', { x: p[0] - 5 * k, y: p[1] - 5 * k, width: 10 * k, height: 10 * k, class: 'hd anc' + ((i === this.selPt && this.selPtK === 'anchor') || this.selPts.has(i) ? ' cur' : '') }));
       svg.appendChild(g);
     });
   }
@@ -442,7 +444,17 @@ export class AdvancedOutput {
       this.draw(); this.renderProps(); return;
     }
     this.selG = -1;
-    if (k === 'anchor' || k === 'maskpt' || k === 'inmaskpt') { this.selPt = d.i; this.selPtK = k; this.draw(); this.renderProps(); }
+    if (k === 'anchor' || k === 'maskpt' || k === 'inmaskpt') {
+      if (k === 'anchor' && (e.ctrlKey || e.metaKey)) {   // Ctrl+clique num ponto do slice: entra ou sai da seleção, sem mover (como no Resolume)
+        if (!this.selPts.size && this.selPt >= 0 && this.selPtK === 'anchor') this.selPts.add(this.selPt);
+        if (this.selPts.has(d.i)) this.selPts.delete(d.i); else this.selPts.add(d.i);
+        this.selPt = this.selPts.has(d.i) ? d.i : this.selPts.size ? [...this.selPts][0] : -1; this.selPtK = 'anchor'; d.k = 'sel';
+      } else {
+        if (!(k === 'anchor' && this.selPts.has(d.i))) this.selPts.clear();   // clique num ponto da seleção a mantém; em outro, fica só ele
+        this.selPt = d.i; this.selPtK = k;
+      }
+      this.draw(); this.renderProps();
+    }
     if (k === 'resize' || k === 'body' || k === 'rot') d.rect = this.tab === 'in' ? { ...it.in } : it.type === 'slice' ? M.outRect(it) : bbox(it.pts);
     if (k === 'rot') {
       d.c = [d.rect.x + d.rect.w / 2, d.rect.y + d.rect.h / 2]; d.a0 = Math.atan2(p[1] - d.c[1], p[0] - d.c[0]);
@@ -851,7 +863,7 @@ export class AdvancedOutput {
         P.appendChild(this.pselect('Modo de ponto', 'Modo de ponto|Reta: os pontos da malha se ligam por linhas retas (padrão). Bezier: cada ponto ganha alças para curvar as linhas.', [['line', 'Reta'], ['curve', 'Bezier']], s.warp.curve ? 'curve' : 'line', v => M.setCurve(s, v === 'curve')));
         P.appendChild(this.pnum('Divisões X', 'Divisões X|Quantos pontos de deformação na horizontal.', dx, { min: 0, max: 10, step: 1 }, v => setDiv(v, dy)));
         P.appendChild(this.pnum('Divisões Y', 'Divisões Y|Quantos pontos de deformação na vertical.', dy, { min: 0, max: 10, step: 1 }, v => setDiv(dx, v)));
-        if (this.selPt >= 0 && s.warp.pts[this.selPt]) {
+        if (this.selPt >= 0 && s.warp.pts[this.selPt] && this.selPts.size <= 1) {   // com vários pontos escolhidos o painel não mostra X e Y, como no Resolume
           const p = s.warp.pts[this.selPt];
           P.appendChild(this.phead('Ponto', 'Ponto|Posição do ponto selecionado.'));
           P.appendChild(this.pnum('X', 'Ponto X|Posição do ponto na horizontal, em pixels.', p[0], { min: -99999, max: 99999, step: 1 }, v => M.moveAnchor(s, this.selPt, v - p[0], 0)));
