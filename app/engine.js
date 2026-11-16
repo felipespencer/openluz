@@ -140,6 +140,7 @@ export class Engine {
     this.comp = this.fbo(width, height);
     this.layerFbo = new Map();     // layer.id → fbo (fonte direta para slices)
     this.screenFbo = new Map();    // screen.id → fbo
+    this.screenOut = new Map();    // screen.uid → fbo com a saída pronta da tela, para quem a usa como fonte (07-16)
     this.geom = new Map();         // slice.id → { rev, vao, n, ... }
     this.maskTex = new Map();      // 'o'+screen.id / 'i'+slice.id → { t, rev, canvas }
     this.fxProg = new Map();       // effect id → programa
@@ -164,6 +165,7 @@ export class Engine {
     for (const f of this.srcFbo.values()) del(f); this.srcFbo.clear();
     for (const f of this.layerFbo.values()) del(f); this.layerFbo.clear();
     for (const f of this.screenFbo.values()) del(f); this.screenFbo.clear();
+    for (const f of this.screenOut.values()) del(f); this.screenOut.clear();
   }
 
   program(vs, fs, uniforms) {
@@ -786,6 +788,8 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
   sourceTex(slice, layers) {
     const src = slice.source;
     if (src === 'comp') return this.comp.t;
+    if (src === 'preview') return this.prevValid && this.prevFbo ? this.prevFbo.t : null;   // a Prévia, se foi desenhada neste quadro
+    if (typeof src === 'string' && src.startsWith('screen:')) { const o = this.screenOut.get(src.slice(7)); return o && o.vivo ? o.t : null; }   // a saída pronta de outra tela
     let key;
     if (src === 'busA' || src === 'busB') key = 'bus' + src[3];
     else if (src === 'selgroup') key = 'selgroup';
@@ -929,6 +933,12 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
     gl.uniform3f(S.u.uRGB, screen.color.r, screen.color.g, screen.color.b);
     gl.uniform1f(S.u.uOp, screen.opacity);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // tela pedida como fonte por um slice de outra tela: a mesma saída pronta vai também para uma textura
+    if (this.need && this.need.screens && this.need.screens.has(screen.uid)) {
+      let o = this.screenOut.get(screen.uid);
+      if (!o || o.w !== w || o.h !== h) { if (o) { gl.deleteFramebuffer(o.fb); gl.deleteTexture(o.t); } o = this.fbo(w, h); this.screenOut.set(screen.uid, o); }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, o.fb); gl.viewport(0, 0, w, h); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.bindFramebuffer(gl.FRAMEBUFFER, null); o.vivo = true;
+    }
     gl.enable(gl.BLEND);
   }
 
@@ -944,15 +954,18 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
   probeScreen(screen, layers, screens, pts) { this.render(layers, this.neededLayers(screens)); this.renderScreen(screen, layers, screens); return this.readPts(pts, screen.w, screen.h); }
   // o que os slices pedem como fonte: devolve as camadas simples (uma textura por camada) e guarda em this.need as outras
   neededLayers(screens) {
-    const s = new Set(); this.need = { variants: new Map(), bus: new Set(), group: false };
+    const s = new Set(); this.need = { variants: new Map(), bus: new Set(), group: false, preview: false, screens: new Set() };
     for (const sl of screens.flatMap(sc => sc.enabled ? sc.items.filter(i => i.type === 'slice' || i.type === 'poly') : [])) {
       const src = sl.source; if (src === 'comp') continue;
+      if (src === 'preview') { this.need.preview = true; continue; }
+      if (typeof src === 'string' && src.startsWith('screen:')) { this.need.screens.add(src.slice(7)); continue; }
       if (src === 'busA' || src === 'busB') { this.need.bus.add(src[3]); continue; }
       if (src === 'selgroup') { this.need.group = true; continue; }
       const id = src === 'sel' ? this.selLayerId : src; if (id == null) continue;
       const ro = sl.inOpacity === false, rb = sl.inBypass === false;
       if (!ro && !rb) s.add(id); else this.need.variants.set(id + '|' + (ro ? 'o' : '') + (rb ? 'b' : ''), { id, ro, rb });
     }
+    for (const [uid, o] of this.screenOut) if (!this.need.screens.has(uid) || !screens.some(sc => sc.uid === uid && sc.enabled)) o.vivo = false;   // tela apagada, desligada ou que ninguém mais pede
     return s;
   }
 }

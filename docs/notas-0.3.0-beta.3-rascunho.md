@@ -16,7 +16,7 @@
   para fazer conteúdo no formato exato das superfícies no Illustrator ou no Inkscape.
 - Slice com "É chave" e "Fundo preto" (Is Key e Black BG).
 - Novas fontes para o slice: camada selecionada, grupo selecionado, Bus A e Bus B; e as opções de seguir ou não a
-  opacidade e o bypass/solo da camada.
+  opacidade e o bypass/solo da camada. Também a Prévia e qualquer outra tela (a saída pronta dela).
 - Imagem de guia por tela (uma foto ou planta por cima do palco) e "Mostrar na saída" no menu da grade.
 - **Slice polígono**: triângulo ou desenhado com o lápis, com pontos de entrada e de saída independentes; a imagem é
   esticada de um para o outro.
@@ -66,7 +66,7 @@
   screen), so content can be made to the exact shape of the surfaces in Illustrator or Inkscape.
 - Slice options "É chave" (Is Key) and "Fundo preto" (Black BG).
 - New slice sources: selected layer, selected group, Bus A and Bus B; and whether to follow the layer's opacity and
-  bypass/solo.
+  bypass/solo. Also the Preview and any other screen (its finished output).
 - A guide image per screen and "Show in output" in the grid menu.
 - **Polygon slice**: a triangle or drawn with the pen, with independent input and output points; the image is stretched
   from one to the other.

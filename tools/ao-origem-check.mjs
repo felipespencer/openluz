@@ -8,6 +8,8 @@
 // com a camada, desligado mostra a camada inteira; com Input Bypass/Solo ligado o slice some quando a camada está em
 // bypass, desligado continua mostrando. Bus A e Bus B NÃO foram medidos lá (a API recusou o crossfader): aqui, cada bus
 // é só o que está nele, sem depender da posição do crossfader.
+// Prévia e outra tela como fonte (plano 07-16) também NÃO foram medidas no Resolume (o Arena não abriu os menus): a Prévia é o
+// clipe do quadro Prévia; a tela é a saída pronta dela (com máscara), esticada no quadro da composição.
 const base = 'http://127.0.0.1:' + (process.env.PROJ_CDP || 9333), wait = (ms) => new Promise(r => setTimeout(r, ms));
 const pg = (await (await fetch(base + '/json')).json()).find(p => p.type === 'page' && p.title === 'OpenLuz');
 const ws = new WebSocket(pg.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r); let id = 0; const w = new Map();
@@ -42,7 +44,8 @@ try {
   await cl(`document.querySelector('#btnAO')`); await wait(700); await cl(`document.querySelector('#aoTabOut')`); await wait(300);
   await cl(`document.querySelector('#aoAdd')`); await cl(`document.querySelector('#aoAddMenu [data-add="slice"]')`); await wait(500);
   const opcoes = await ev(`return [...document.querySelector('#aoProps select').options].map(o => o.textContent.trim()).join(' | ');`);
-  confere('a Fonte tem Composição, Bus A, Bus B, Grupo selecionado, Camada selecionada e as camadas', opcoes.startsWith('Composição | Bus A | Bus B | Grupo selecionado | Camada selecionada | Camada 5'), opcoes);
+  confere('a Fonte tem Composição, Prévia, Bus A, Bus B, Grupo selecionado, Camada selecionada e as camadas', opcoes.startsWith('Composição | Prévia | Bus A | Bus B | Grupo selecionado | Camada selecionada | Camada 5'), opcoes);
+  confere('com uma tela só, a Fonte não oferece tela nenhuma (a própria não entra)', !opcoes.includes(await ev(`return S.screens[0].name;`)), opcoes);
   confere('lendo a composição, as caixas da camada não aparecem', await ev(`return !(${caixa('Opacidade da camada')}) && !(${caixa('Bypass/Solo da camada')});`));
   await cl(caixa('Fundo preto'));   // com fundo preto, o que o slice não desenha fica preto em vez de mostrar o slice de baixo
   const ref = await pix(); confere('preparo: o slice mostra o xadrez (dois pontos brancos, dois pretos)', brancos(ref, 255), j(ref));
@@ -93,6 +96,52 @@ try {
   await ev(`S.groups[0].opacity = 0.5; return 1;`); p = await pix();
   confere('grupo a 50%: o slice lendo o grupo escurece junto', brancos(p, 128, 4), j(p));
   await ev(`S.groups[0].opacity = 1; return 1;`);
+
+  // ---- Prévia (07-16)
+  await abre(); await fonte('Prévia'); await salva();
+  await ev(`P.engine._on0 = S.layers[0].on; S.layers[0].on = -1; S.pv = null; return 1;`); p = await pix();
+  confere('clipe fora do ar e Prévia vazia: tudo preto', (await sl2()).fonte === 'preview' && preto(p) && perto(p[4], 0), j(p));
+  await cl(`document.querySelector('.cell[data-layer="0"][data-col="0"] .nm')`); await wait(300); p = await pix();
+  confere('clipe mandado para a Prévia (clique no nome), ainda fora do ar: a composição segue apagada e o slice mostra a Prévia', await ev(`return !!S.pv && S.pv.l === 0 && S.pv.c === 0 && S.layers[0].on === -1;`) && perto(p[4], 0) && brancos(p, 255), j(p));
+  await ev(`S.pv = null; return 1;`); p = await pix();
+  confere('Prévia esvaziada: o slice deixa de desenhar', await ev(`return P.engine.sourceTex(S.screens[0].items.find(i => i.name === 'Slice 2'), S.layers) === null;`) && preto(p), j(p));
+  await ev(`S.layers[0].on = P.engine._on0; delete P.engine._on0; return 1;`); await wait(200);
+
+  // ---- outra tela (07-16)
+  await abre(); await cl(`document.querySelector('#aoAdd')`); await cl(`document.querySelector('#aoAddMenu [data-add="screen"]')`); await wait(400);
+  await cl(`document.querySelector('#aoAdd')`); await cl(`document.querySelector('#aoAddMenu [data-add="maskRect"]')`); await wait(400);
+  // a máscara da Tela 2 vira uma janela no canto de cima à esquerda: assim dá para ver se a imagem chega de pé e sem espelhar
+  const t2 = await ev(`const sc = P.ao.screens()[1], m = sc && sc.items.find(i => i.type === 'mask'); if (!m) return null;
+    m.pts = [[0.05, 0.05], [0.5, 0.05], [0.5, 0.5], [0.05, 0.5]].map(([x, y]) => [x * sc.w, y * sc.h]); m.invert = true; m.rev++; P.ao.c.onChange(); P.ao.refresh(); return { nome: sc.name, uid: sc.uid, w: sc.w, h: sc.h };`);
+  confere('preparo: Tela 2 criada com um slice e uma máscara em janela', !!t2, j(t2));
+  await cl(`[...document.querySelectorAll('#aoList .row.item')].find(r => /Slice 2/.test(r.textContent))`); await wait(300);
+  const op2 = await ev(`return [...document.querySelector('#aoProps select').options].map(o => o.textContent.trim());`);
+  confere('com duas telas, a Fonte do slice da Tela 1 oferece a Tela 2 e não a própria', op2.includes(t2.nome) && !op2.includes(await ev(`return P.ao.screens()[0].name;`)), op2.join(' | '));
+  await fonte(t2.nome); await salva(); await wait(400);
+  const G = [0.1, 0.2, 0.3, 0.4, 0.6, 0.8], uv = G.flatMap(v => G.map(u => [u, v]));
+  const cmp = await ev(`const a = S.screens, s0 = a[0], it = s0.items.find(i => i.name === 'Slice 2'), xs = it.warp.pts.map(q => q[0]), ys = it.warp.pts.map(q => q[1]);
+    const bx = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) }, uv = ${j(uv)}, E = P.engine;
+    const meu = E.probeScreen(s0, S.layers, a, uv.map(([u, v]) => [(bx.x + u * bx.w) / s0.w, (bx.y + v * bx.h) / s0.h])).map(c => c[0]);
+    const dela = E.probeScreen(a[1], S.layers, a, uv.map(([u, v]) => [(it.in.x + u * it.in.w) / E.W, (it.in.y + v * it.in.h) / E.H])).map(c => c[0]);
+    return { fonte: it.source, meu, dela, aberta: !!(a[1].win && !a[1].win.closed) };`);
+  const dentro = (k) => uv[k][0] < 0.5 && uv[k][1] < 0.5;
+  confere('preparo: a saída da Tela 2 só tem imagem na janela da máscara (canto de cima à esquerda)', cmp.dela.some((c, k) => dentro(k) && c > 200) && cmp.dela.every((c, k) => dentro(k) || c === 0), j(cmp.dela));
+  confere('Fonte = Tela 2: o slice mostra a saída pronta dela, com a máscara, de pé e sem espelhar, com a janela dela fechada',
+    cmp.fonte === 'screen:' + t2.uid && !cmp.aberta && cmp.meu.every((c, k) => perto(c, cmp.dela[k], 6)), j(cmp.meu));
+  const ida = await ev(`const M = await import(new URL('./screens.js', location.href).href), it = M.deserialize(M.serialize(S.screens))[0].items.find(i => i.name === 'Slice 2'); return it ? it.source : null;`);
+  confere('salvar e abrir (preset) guarda a tela como fonte', ida === 'screen:' + t2.uid, j(ida));
+  // polígono: as mesmas fontes
+  await abre(); await cl(`document.querySelector('#aoAdd')`); await cl(`document.querySelector('#aoAddMenu [data-add="polyTri"]')`); await wait(400);
+  const opP = await ev(`return [...document.querySelector('#aoProps select').options].map(o => o.textContent.trim());`);
+  await ev(`const s = document.querySelector('#aoProps select'), o = [...s.options].find(x => x.textContent.trim() === 'Prévia'); s.value = o.value; s.dispatchEvent(new Event('change', { bubbles: true })); return 1;`); await wait(300);
+  const pol = await ev(`const it = P.ao.sel.item; return { tipo: it.type, fonte: it.source };`);
+  confere('o polígono tem as mesmas fontes novas', opP.includes('Prévia') && opP.includes(t2.nome) && pol.tipo === 'poly' && pol.fonte === 'preview', j(pol));
+  await ev(`P.ao.removeItem(P.ao.sel.item); return 1;`); await wait(300);
+  // apagada a Tela 2, o slice não desenha nada e nada quebra
+  await cl(`[...document.querySelectorAll('#aoList .row.screen')][1]`); await wait(300); await cl(texto('Apagar esta tela')); await wait(400);
+  for (let i = 0; i < 2 && await ev(`return document.querySelectorAll('.dlgOver').length;`) > 0; i++) { await cl(`[...document.querySelectorAll('.dlgOver button')].pop()`); await wait(300); }
+  await salva(); await wait(400); p = await pix();
+  confere('apagada a Tela 2: o slice deixa de desenhar e o programa segue', await ev(`return S.screens.length === 1 && P.engine.sourceTex(S.screens[0].items.find(i => i.name === 'Slice 2'), S.layers) === null;`) && p.length === 5, j(p));
 
   // ---- a cópia passa por salvar e abrir
   await abre(); await fonte('Camada selecionada'); await wait(200);   // "Opacidade da camada" segue desligada desde o teste dela, lá em cima

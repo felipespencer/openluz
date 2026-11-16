@@ -10,6 +10,7 @@ import { confirmBox, askText } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
+const srcDe = (v) => ['comp', 'preview', 'busA', 'busB', 'selgroup', 'sel'].includes(v) || String(v).startsWith('screen:') ? v : +v;   // valor do seletor Fonte → o que o slice guarda (camada fixa = número)
 const forma = (it) => !!it && (it.type === 'mask' || it.type === 'poly');   // itens feitos de uma lista de pontos (it.pts); o polígono troca de lista conforme a aba (M.setPolyTab)
 const svgEl = (tag, attrs = {}) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
 const TEAL = '#6fe6c6', MASKC = '#f5d742';
@@ -832,8 +833,8 @@ export class AdvancedOutput {
       this.guideRows(P, sc);
       if (this.screens().length > 1) { const rm = el('button', 'wide', 'Apagar esta tela'); rm.type = 'button'; rm.onclick = () => this.removeScreen(sc); P.appendChild(rm); }
     } else if (it.type === 'poly') {
-      const srcs = [['comp', 'Composição', 'Composição'], ['busA', 'Bus A', 'Crossfader'], ['busB', 'Bus B', 'Crossfader'], ['selgroup', 'Grupo selecionado', 'Grupos'], ['sel', 'Camada selecionada', 'Camadas'], ...this.c.layers().map(L => [String(L.id), L.name, 'Camadas'])];
-      P.appendChild(this.pselect('Fonte', 'Fonte|De onde o polígono tira a imagem.', srcs, String(it.source), v => { it.source = ['comp', 'busA', 'busB', 'selgroup', 'sel'].includes(v) ? v : +v; M.touch(it); }));
+      const srcs = this.fontes();
+      P.appendChild(this.pselect('Fonte', 'Fonte|De onde o polígono tira a imagem.', srcs, String(it.source), v => { it.source = srcDe(v); M.touch(it); }));
       if (it.source === 'sel' || typeof it.source === 'number') {
         P.appendChild(this.pcheck('Opacidade da camada', 'Opacidade da camada|Ligado, o polígono acompanha a opacidade da camada.', it.inOpacity !== false, v => { it.inOpacity = v; M.touch(it); }));
         P.appendChild(this.pcheck('Bypass/Solo da camada', 'Bypass/Solo da camada|Ligado, o polígono some quando a camada está em bypass ou outra está em solo.', it.inBypass !== false, v => { it.inBypass = v; M.touch(it); }));
@@ -864,8 +865,8 @@ export class AdvancedOutput {
     } else {
       const s = it;
       // fontes agrupadas como no Resolume: composição, crossfader (Bus A e B), grupos e camadas
-      const srcs = [['comp', 'Composição', 'Composição'], ['busA', 'Bus A', 'Crossfader'], ['busB', 'Bus B', 'Crossfader'], ['selgroup', 'Grupo selecionado', 'Grupos'], ['sel', 'Camada selecionada', 'Camadas'], ...this.c.layers().map(L => [String(L.id), L.name, 'Camadas'])];
-      P.appendChild(this.pselect('Fonte', 'Fonte|De onde o slice tira a imagem: a composição inteira, um lado do crossfader, o grupo ou a camada selecionados na grade, ou uma camada fixa.', srcs, String(s.source), v => { s.source = ['comp', 'busA', 'busB', 'selgroup', 'sel'].includes(v) ? v : +v; M.touch(s); }));
+      const srcs = this.fontes();
+      P.appendChild(this.pselect('Fonte', 'Fonte|De onde o slice tira a imagem: a composição inteira, um lado do crossfader, o grupo ou a camada selecionados na grade, ou uma camada fixa.', srcs, String(s.source), v => { s.source = srcDe(v); M.touch(s); }));
       if (s.source === 'sel' || typeof s.source === 'number') {   // lendo uma camada: seguir ou não a opacidade e o bypass/solo dela (Input Opacity e Input Bypass/Solo do Resolume)
         P.appendChild(this.pcheck('Opacidade da camada', 'Opacidade da camada|Ligado, o slice acompanha a opacidade da camada. Desligado, mostra a camada inteira mesmo que ela esteja apagada na composição.', s.inOpacity !== false, v => { s.inOpacity = v; M.touch(s); }));
         P.appendChild(this.pcheck('Bypass/Solo da camada', 'Bypass/Solo da camada|Ligado, o slice some quando a camada está em bypass ou outra está em solo. Desligado, continua mostrando a camada.', s.inBypass !== false, v => { s.inBypass = v; M.touch(s); }));
@@ -931,6 +932,13 @@ export class AdvancedOutput {
       }
       const rm = el('button', 'wide', 'Apagar este slice'); rm.type = 'button'; rm.onclick = () => this.removeItem(it); P.appendChild(rm);
     }
+  }
+
+  // fontes do slice e do polígono, agrupadas como no Resolume: composição e prévia, crossfader (Bus A e B), grupos, camadas e as outras telas
+  fontes() {
+    const eu = this.sel && this.sel.screen;
+    return [['comp', 'Composição', 'Composição'], ['preview', 'Prévia', 'Composição'], ['busA', 'Bus A', 'Crossfader'], ['busB', 'Bus B', 'Crossfader'], ['selgroup', 'Grupo selecionado', 'Grupos'], ['sel', 'Camada selecionada', 'Camadas'],
+      ...this.c.layers().map(L => [String(L.id), L.name, 'Camadas']), ...this.screens().filter(sc => sc !== eu).map(sc => ['screen:' + sc.uid, sc.name, 'Telas'])];
   }
 
   // ---------- presets ----------

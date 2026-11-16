@@ -245,7 +245,9 @@ fechar embaixo). Ctrl+Z desfaz, Ctrl+Y refaz; a barra de espaço arrasta a vista
 - **Fonte do slice**: a composição inteira, o Bus A ou o Bus B do crossfader (só o que está naquele lado, onde quer que
   o crossfader esteja), o grupo selecionado, a camada selecionada na grade, ou uma camada fixa. Lendo uma camada,
   aparecem **Opacidade da camada** e **Bypass/Solo da camada**: desligadas, o slice mostra a camada inteira mesmo que
-  ela esteja apagada ou em bypass na composição.
+  ela esteja apagada ou em bypass na composição. A fonte também pode ser a **Prévia** (o clipe que está no quadro
+  Prévia, mesmo fora do ar: serve de monitor de retorno) ou **outra tela** (a saída pronta dela, com slices e máscaras,
+  esticada no quadro da composição; funciona com a janela dela fechada).
 - **É chave** troca a imagem do slice por branco na medida da transparência dela (o sinal de recorte para mesa de
   corte). **Fundo preto** põe preto por baixo do slice, para não aparecer o slice de trás onde a imagem é transparente.
 - **Gestos no modo Transformar**, como no Resolume: arrastar e redimensionar andam em pixels inteiros; **Shift** prende

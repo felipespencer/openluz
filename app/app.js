@@ -1749,15 +1749,20 @@ function frame() {
   if (!nOut || gravando || loop.frames % 2 === 0) { if (state.testCard) engine.cardToCanvas(); engine.blit(monCtx); }   // Test Card ligado: o quadro Composição mostra o test card, como as saídas (pedido de 2026-11-16)
   thumbSources();
   const pc = previewCell();
-  if (pc && pc.clip.kind !== 'laser' && prevCanvas.isConnected && (!nOut || loop.frames % 3 === 0)) {
-    const marca = marcaNaPrevia(pc.clip); if (marca) engine.noCropId = pc.clip.id;   // Prévia com marcação: a imagem inteira, com o rosto e o recorte por cima
-    try { engine.previewLayer(pc.L, pc.idx); } finally { engine.noCropId = null; }
-    engine.blit(prevCtx); if (marca) desenharMarca(prevCtx, pc.clip, engine, prevCanvas.width, prevCanvas.height);
+  // a Prévia é desenhada para o quadro dela (a cada 3 quadros com saída aberta) e, todo quadro, quando um slice a usa como fonte
+  const pvQuadro = prevCanvas.isConnected && (!nOut || loop.frames % 3 === 0), pvFonte = engine.need && engine.need.preview;
+  engine.prevValid = false;
+  if (pc && pc.clip.kind !== 'laser' && (pvQuadro || pvFonte)) {
+    const marca = pvQuadro && marcaNaPrevia(pc.clip); if (marca) engine.noCropId = pc.clip.id;   // Prévia com marcação: a imagem inteira, com o rosto e o recorte por cima
+    try { engine.previewLayer(pc.L, pc.idx); engine.prevValid = true; } finally { engine.noCropId = null; }
+    if (pvQuadro) { engine.blit(prevCtx); if (marca) desenharMarca(prevCtx, pc.clip, engine, prevCanvas.width, prevCanvas.height); }
   }
-  for (const sc of state.screens) {
-    const open = sc.win && !sc.win.closed;
-    if (!open && !(ao.open && ao.curScreen() === sc) && recorder.tela !== sc) continue;   // a tela que está sendo gravada é desenhada mesmo com a saída fechada
-    try { screenCanvas(sc); engine.renderScreen(sc, state.layers, state.screens); engine.blit(sc.ctx, sc.w, sc.h); }
+  // telas que outro slice usa como fonte vão primeiro e são desenhadas mesmo fechadas (sem copiar para janela nenhuma)
+  const pedidas = engine.need ? engine.need.screens : new Set(), ordem = pedidas.size ? [...state.screens].sort((a, b) => pedidas.has(b.uid) - pedidas.has(a.uid)) : state.screens;
+  for (const sc of ordem) {
+    const open = sc.win && !sc.win.closed, vista = open || (ao.open && ao.curScreen() === sc) || recorder.tela === sc;   // a tela que está sendo gravada é desenhada mesmo com a saída fechada
+    if (!vista && !(pedidas.has(sc.uid) && sc.enabled)) continue;
+    try { if (vista) screenCanvas(sc); engine.renderScreen(sc, state.layers, state.screens); if (vista) engine.blit(sc.ctx, sc.w, sc.h); }
     catch (e) { loopErro(e, 'tela ' + (sc.name || sc.id)); }   // o erro de uma tela não tira as outras do ar
   }
   try { ao.frame(); } catch (e) { loopErro(e, 'Saída avançada'); }
