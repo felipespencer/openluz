@@ -208,7 +208,8 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 - [x] 07-11: gestos do modo Editar pontos medidos no Resolume; seleção de vários pontos com Ctrl+clique — fechado em 2026-11-16, só local
 - [x] 07-12: slice polígono do Resolume medido e proposta (07-12-POLIGONO.md) — fechado em 2026-11-16; construído no 07-13
 - [x] 07-13: slice polígono: modelo, motor, triângulo pelo menu, Transformar e Editar pontos nas duas abas — fechado em 2026-11-16, só local
-- [ ] 07-14 em diante: lápis e acrescentar/apagar pontos do polígono; exportar SVG; Prévia e outra tela como entrada
+- [ ] 07-14: polígono com lápis e acrescentar/apagar pontos — em aplicação desde 2026-11-16
+- [ ] 07-15 em diante: exportar SVG; Prévia e outra tela como entrada
 
 ### Phase 8: Webcam virtual
 
