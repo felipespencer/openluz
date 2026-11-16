@@ -939,7 +939,7 @@ function projArrange(sel, how) {
   let x = 0, y = 0;
   for (const s of sel) { if (!s.use) continue; const d = projDim(s); if (how === 'row') { s.x = x; s.y = 0; x += d.w; } else if (how === 'col') { s.x = 0; s.y = y; y += d.h; } else { s.x = 0; s.y = 0; } }
 }
-function projectorWizard(auto) {
+function projectorWizard(auto, depois) {   // depois: o que abrir quando este fechar (composição nova)
   const main = displays.find(d => d.primary) || displays[0];
   const others = displays.filter(d => d !== main);
   if (auto && !others.length) return;
@@ -952,7 +952,7 @@ function projectorWizard(auto) {
   const o = { open: true, ask: false, drag: null };
   const colors = ['#39ff14', '#6ec1ff', '#ffb02e', '#ff2d90', '#bf5af2', '#ff9500'];
   openDialog({
-    title: 'Projetores', width: 820,
+    title: 'Projetores', width: 820, onClose: depois || null,
     build: (body, K, redo) => {
       body.appendChild(el('p', 'dtext', 'Arraste cada projetor para o lugar dele. ↻ vira em pé ou deitado. Encoste as bordas para emendar; sobreponha um pouco para a emenda suave (soft edge). A composição é o retângulo que envolve todos.'));
       const cv = el('canvas', 'projCv'); cv.width = 720; cv.height = 400; body.appendChild(cv);
@@ -1005,7 +1005,7 @@ function projectorWizard(auto) {
       body.appendChild(K.pcheck('Abrir saídas', 'Abrir saídas|Já abre a saída em cada projetor ao confirmar.', o.open, v => { o.open = v; }, o.open ? 'abre ao confirmar' : 'só monta'));
       body.appendChild(K.pcheck('Ao abrir o programa', 'Perguntar|Desmarcado, o assistente fica só no menu OUTPUT → Projetores….', o.ask, v => { o.ask = v; }, o.ask ? 'perguntar sempre' : 'não perguntar mais'));
     },
-    buttons: [{ label: auto ? 'Pular' : 'Cancelar' }, { label: 'Montar', primary: true, fn: () => { applyProjectors(sel.filter(s => s.use), o); if (D) D.prefs.get().then(p => D.prefs.set({ ...p, noWizard: !o.ask })).catch(() => { }); } }],
+    buttons: [{ label: auto || depois ? 'Pular' : 'Cancelar' }, { label: 'Montar', primary: true, fn: () => { applyProjectors(sel.filter(s => s.use), o); if (D) D.prefs.get().then(p => D.prefs.set({ ...p, noWizard: !o.ask })).catch(() => { }); } }],
   });
 }
 // monta a composição e as telas a partir do desenho: list = [{ d, vertical, x, y }]
@@ -1190,6 +1190,9 @@ const comps = {
   async newComp(perguntar) {
     if (perguntar && sujo() && !(await confirmBox('Composição nova', 'A composição atual tem mudanças que não foram salvas. Começar uma nova mesmo assim?'))) return;
     resetComposition(); zeraHist(); marcaLimpo(); toast('Composição nova'); browser.render();
+    // pedida pela pessoa (menu, Ctrl+N, botão Nova): os diálogos de uma composição nova, começando pelos projetores (pedido de 2026-11-16).
+    // Com um monitor só não há o que arrumar: vai direto ao diálogo da composição.
+    if (perguntar) { const comp = () => settingsDialog(true); if (displays.length > 1) projectorWizard(false, comp); else comp(); }
   },
 };
 // O desfazer não atravessa a troca de composição: senão o Ctrl+Z trazia a composição anterior com o nome da nova, e salvar gravava uma por cima da outra.
@@ -1335,10 +1338,10 @@ function applySettings(s) {
   const c = parseInt(s.bg.slice(1), 16); engine.bg = [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
   renderScreens();
 }
-function settingsDialog() {
+function settingsDialog(nova) {
   const s = { ...state.settings, name: state.name };
   openDialog({
-    title: 'Configurações da composição', width: 520,
+    title: nova === true ? 'Nova composição' : 'Configurações da composição', width: 520,
     build: (body, K) => {
       body.appendChild(K.phead('Geral'));
       body.appendChild(K.ptext('Nome', 'Nome|Aparece na barra de cima e no arquivo salvo.', s.name, v => { s.name = v; }));

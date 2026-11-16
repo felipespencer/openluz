@@ -122,11 +122,14 @@ await ev(`${P}.comps.save('salvar-check-B')`); await wait(300);
   let d = await dialogo();
   check('Ctrl+N com mudança não salva: pergunta antes de limpar', /não foram salvas/.test(d) && (await grade()).includes('quadB.png'), d || 'sem pergunta; grade: ' + await grade());
   if (d) { await botao('Cancelar'); check('Cancelar: a grade fica como estava', (await grade()) === 'barras.png,quadB.png', await grade()); }
-  await key('n', 2); await wait(600); if (await dialogo()) await botao('OK'); await wait(600);
-  check('OK: a composição nova vem', (await grade()) === '' && !(await ev(`${P}.state.name`)), JSON.stringify(await grade()));
+  // desde o 12-17 a composição nova abre Projetores (com mais de um monitor) e depois "Nova composição": dispensar os dois
+  const dispensa = async () => { for (let i = 0; i < 3 && await dialogo(); i++) { await botao(/^Projetores/.test(await dialogo()) ? 'Pular' : 'Cancelar'); } };
+  await key('n', 2); await wait(600); if (/não foram salvas/.test(await dialogo())) await botao('OK'); await wait(600);
+  check('OK: a composição nova vem e abre os diálogos dela', (await grade()) === '' && !(await ev(`${P}.state.name`)) && /^(Projetores|Nova composição)/.test(await dialogo()), JSON.stringify(await grade()) + ' ' + await dialogo());
+  await dispensa();
   await key('n', 2); await wait(700);
-  check('Ctrl+N sem nenhuma mudança: vem direto, sem pergunta', !(await dialogo()), await dialogo());
-  if (await dialogo()) await botao('OK');
+  check('Ctrl+N sem nenhuma mudança: sem pergunta de salvar, direto aos diálogos da composição nova', /^(Projetores|Nova composição)/.test(await dialogo()), await dialogo());
+  await dispensa();
 }
 
 // ---------- AC-4b: nome começando com _ ----------

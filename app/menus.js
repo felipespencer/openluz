@@ -69,10 +69,11 @@ export class Menubar {
 // ---------- diálogos ----------
 let teclaDoDialogo = -1;   // a tecla que fechou um diálogo não vale também como atalho do programa
 // build(body, K, redo) monta o conteúdo com o kit de propriedades; buttons: [{ label, fn, primary }]
-export function openDialog({ title, build, buttons, width = 460, cls = '' }) {
+export function openDialog({ title, build, buttons, width = 460, cls = '', onClose = null }) {
   const ov = el('div', 'dlgOver'), dlg = el('div', 'dlg ' + cls); dlg.style.width = width + 'px';
   const head = el('div', 'dhead', title), body = el('div', 'dbody rprops'), foot = el('div', 'dfoot');
-  const close = () => { ov.remove(); removeEventListener('keydown', onKey, true); };
+  let fechou = false;
+  const close = () => { ov.remove(); removeEventListener('keydown', onKey, true); if (!fechou) { fechou = true; if (onClose) onClose(); } };   // onClose: uma vez, por qualquer saída (botão, Esc, clique fora)
   const host = { pushUndo() { }, c: { onChange() { } }, draw() { }, renderProps: () => redo(), refresh: () => redo() };
   const K = propsKit(host);
   const redo = () => { body.textContent = ''; build(body, K, redo); };
