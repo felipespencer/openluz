@@ -237,6 +237,11 @@ fechar embaixo). Ctrl+Z desfaz, Ctrl+Y refaz; a barra de espaço arrasta a vista
   saída dela; religar abre de novo.
 - **Slice** recorta um pedaço da composição (aba Entrada: posição, tamanho, giro, fonte) e o
   encaixa na superfície (aba Saída: posição, tamanho, giro, espelhar).
+- **Polígono** ("+" › Polígono): um slice em forma de polígono, como o Polygon do Resolume. O triângulo cria um de três
+  pontos; o lápis deixa clicar ponto a ponto na composição (duplo clique fecha, Esc cancela). Os pontos da aba de entrada
+  escolhem o pedaço da composição e os da aba de saída dizem onde cada um cai no projetor: a imagem é esticada entre os
+  dois. Transformar e Editar pontos valem nas duas abas; no modo Editar pontos, duplo clique na linha acrescenta um
+  ponto e duplo clique num ponto apaga. Não tem espelhar, soft edge nem malha.
 - **Fonte do slice**: a composição inteira, o Bus A ou o Bus B do crossfader (só o que está naquele lado, onde quer que
   o crossfader esteja), o grupo selecionado, a camada selecionada na grade, ou uma camada fixa. Lendo uma camada,
   aparecem **Opacidade da camada** e **Bypass/Solo da camada**: desligadas, o slice mostra a camada inteira mesmo que

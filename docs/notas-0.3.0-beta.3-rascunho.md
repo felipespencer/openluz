@@ -16,6 +16,8 @@
 - Novas fontes para o slice: camada selecionada, grupo selecionado, Bus A e Bus B; e as opções de seguir ou não a
   opacidade e o bypass/solo da camada.
 - Imagem de guia por tela (uma foto ou planta por cima do palco) e "Mostrar na saída" no menu da grade.
+- **Slice polígono**: triângulo ou desenhado com o lápis, com pontos de entrada e de saída independentes; a imagem é
+  esticada de um para o outro.
 
 **Para quem abre pela primeira vez**
 
@@ -30,6 +32,7 @@
 - Desligar uma tela na Saída avançada fecha a saída dela (antes ela continuava projetando).
 - Com a saída aberta, o Windows não apaga mais a tela por inatividade.
 - O programa percebe quando um projetor é ligado ou tirado com ele aberto.
+- A máscara desenhada à mão fecha com duplo clique (antes só fechava com Enter).
 
 ## Muda para quem já usa
 
@@ -61,6 +64,8 @@
 - New slice sources: selected layer, selected group, Bus A and Bus B; and whether to follow the layer's opacity and
   bypass/solo.
 - A guide image per screen and "Show in output" in the grid menu.
+- **Polygon slice**: a triangle or drawn with the pen, with independent input and output points; the image is stretched
+  from one to the other.
 
 **First run**
 
@@ -74,6 +79,7 @@
 - Disabling a screen in the Advanced Output closes its output window.
 - With an output open, Windows no longer turns the display off for inactivity.
 - The app notices when a projector is plugged in or removed while it is open.
+- A hand-drawn mask now closes on double-click (it used to close only with Enter).
 
 ## Changes for existing users
 
