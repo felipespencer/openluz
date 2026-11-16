@@ -203,7 +203,8 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 - [x] 07-07: Is Key e Black BG medidos na saída do Resolume e feitos iguais ("É chave" e "Fundo preto") — fechado em 2026-11-15, só local
 - [x] 07-08: imagem de guia e "Mostrar na saída" medidos no Resolume e feitos iguais — fechado em 2026-11-16, só local (selftest 74/75 por ambiente)
 - [x] 07-09: origens da entrada do slice (camada e grupo selecionados, Bus A/B, opacidade e bypass/solo da camada) — fechado em 2026-11-16, só local
-- [ ] 07-10 em diante: Prévia e outra tela como entrada; Inverter padrão (medir a saída antes); slice polígono e exportar SVG por último
+- [ ] 07-10: Inverter da máscara de saída medido na saída do Resolume e alinhado — em aplicação desde 2026-11-16
+- [ ] 07-11 em diante: arrasto de pontos e bezier (medir), Prévia e outra tela como entrada; slice polígono e exportar SVG por último
 
 ### Phase 8: Webcam virtual
 
