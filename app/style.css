@@ -267,6 +267,7 @@ button.gh:hover{ color:var(--txt); background:var(--bg3); }
 #aoProps .grow:hover{ background:var(--bg3); } #aoProps .grow.cur{ background:var(--rh); box-shadow:inset 2px 0 0 var(--teal); } #aoProps .grow .nm{ flex:1; } #aoProps .grow .tag{ font-size:10px; color:var(--teal); } #aoProps .grow .tag.man{ color:var(--warn); } #aoProps .grow .x{ color:var(--dim); } #aoProps .grow .x:hover{ color:#fff; }
 #aoView svg .mask, #aoView svg .inmask{ fill:#f5d742; fill-opacity:.12; stroke:#f5d742; stroke-width:1; stroke-dasharray:5 4; vector-effect:non-scaling-stroke; cursor:move; }
 #aoView svg .mname{ fill:#f5d742; }
+#aoView svg .poly{ fill:rgba(255,255,255,.02); stroke:var(--teal); stroke-opacity:.55; stroke-width:1; vector-effect:non-scaling-stroke; cursor:move; }
 #aoView svg .drawing{ fill:none; stroke:#f5d742; stroke-width:1.5; stroke-dasharray:5 4; vector-effect:non-scaling-stroke; pointer-events:none; }
 #aoView svg .cursor{ stroke:#ff3b3b; stroke-width:1; opacity:.8; vector-effect:non-scaling-stroke; pointer-events:none; }
 #aoFoot{ display:flex; justify-content:flex-end; gap:6px; padding:8px 0 2px; }

@@ -10,7 +10,7 @@
 //
 // A cor sai do shader já multiplicada pela opacidade (premultiplicada), o que deixa os
 // modos de mistura corretos só com blendFunc.
-import { tessellate } from './warp.js';
+import { tessellate, tessellatePoly } from './warp.js';
 import { softWidths, softGradsOn, gradRadius, allSlices } from './screens.js';
 import { effectById, EFFECT_HELPERS } from './effects.js';
 import { sourceById } from './sources.js';
@@ -804,7 +804,7 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
       gl.bindVertexArray(null);
       this.geom.set(slice.id, g);
     }
-    const t = tessellate(slice);
+    const t = slice.type === 'poly' ? tessellatePoly(slice, this.W, this.H) : tessellate(slice);   // polígono: leva a composição inteira como recorte e os pontos de entrada nos vértices
     // o buffer de índices pertence ao VAO que estiver ligado: liga o deste slice antes de
     // enviar, senão o índice novo vai parar no VAO do slice desenhado por último
     gl.bindVertexArray(g.vao);
@@ -851,30 +851,35 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
     const P = this.progSlice; gl.useProgram(P.p);
     const all = allSlices(screens);
     for (const s of screen.items) {
-      if (s.type !== 'slice' || !s.enabled) continue;
+      const poly = s.type === 'poly';   // slice polígono: mesmo desenho, com a rede de triângulos dele; sem recorte girado, espelho, emenda nem máscara de entrada
+      if ((s.type !== 'slice' && !poly) || !s.enabled) continue;
       const tex = card || this.sourceTex(s, layers);
       if (!tex) continue;
       const g = this.geomFor(s);
       gl.bindVertexArray(g.vao);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(P.u.uTex, 0);
       gl.uniform2f(P.u.uScreen, w, h);
-      gl.uniform4f(P.u.uIn, s.in.x, s.in.y, s.in.w, s.in.h);
-      gl.uniform1f(P.u.uRot, s.in.rot * Math.PI / 180);
-      gl.uniform2f(P.u.uFlip, s.flip.x ? 1 : 0, s.flip.y ? 1 : 0);
+      if (poly) { gl.uniform4f(P.u.uIn, 0, 0, this.W, this.H); gl.uniform1f(P.u.uRot, 0); gl.uniform2f(P.u.uFlip, 0, 0); }
+      else {
+        gl.uniform4f(P.u.uIn, s.in.x, s.in.y, s.in.w, s.in.h);
+        gl.uniform1f(P.u.uRot, s.in.rot * Math.PI / 180);
+        gl.uniform2f(P.u.uFlip, s.flip.x ? 1 : 0, s.flip.y ? 1 : 0);
+      }
       gl.uniform2f(P.u.uSrc, this.W, this.H);
       gl.uniform2f(P.u.uBC, s.color.bright, s.color.contrast);
       gl.uniform3f(P.u.uRGB, s.color.r, s.color.g, s.color.b);
       // degradês de emenda (até 8): A→B em pixels do recorte; o uv local cresce para baixo, como a composição
-      const gs = s.soft.on ? softGradsOn(s, all) : [];
-      gl.uniform1i(P.u.uUseSoft, s.soft.on ? 1 : 0); gl.uniform1i(P.u.uNG, gs.length); gl.uniform2f(P.u.uInSize, s.in.w, s.in.h);
+      const soft = poly ? { on: false, power: 2, lum: 0.5, black: 0, gamma: [2.2, 2.2, 2.2] } : s.soft;
+      const gs = soft.on ? softGradsOn(s, all) : [];
+      gl.uniform1i(P.u.uUseSoft, soft.on ? 1 : 0); gl.uniform1i(P.u.uNG, gs.length); gl.uniform2f(P.u.uInSize, poly ? this.W : s.in.w, poly ? this.H : s.in.h);
       if (gs.length) {
         const GA = new Float32Array(32), GB = new Float32Array(32);
         gs.forEach((g, i) => { GA.set([g.a[0], g.a[1], g.b[0], g.b[1]], i * 4); GB.set([g.n1, g.n2, gradRadius(g), 0], i * 4); });
         gl.uniform4fv(P.u.uGA, GA); gl.uniform4fv(P.u.uGB, GB);
       }
-      gl.uniform3f(P.u.uSoftP, s.soft.power, s.soft.lum, s.soft.black / 255);
-      gl.uniform3f(P.u.uGamma, s.soft.gamma[0], s.soft.gamma[1], s.soft.gamma[2]);
-      if (s.inMask) {
+      gl.uniform3f(P.u.uSoftP, soft.power, soft.lum, soft.black / 255);
+      gl.uniform3f(P.u.uGamma, soft.gamma[0], soft.gamma[1], soft.gamma[2]);
+      if (!poly && s.inMask) {
         const m = s.inMask;
         gl.activeTexture(gl.TEXTURE1);       // a máscara vive na unidade 1; o envio acontece nela
         const mt = this.maskTexFor('i' + s.id, m.rev, 512, 512, (ctx) => {
@@ -935,7 +940,7 @@ void main(){ vec2 f = floor(gl_FragCoord.xy); float x = f.x * 4.0;
   // o que os slices pedem como fonte: devolve as camadas simples (uma textura por camada) e guarda em this.need as outras
   neededLayers(screens) {
     const s = new Set(); this.need = { variants: new Map(), bus: new Set(), group: false };
-    for (const sl of allSlices(screens)) {
+    for (const sl of screens.flatMap(sc => sc.enabled ? sc.items.filter(i => i.type === 'slice' || i.type === 'poly') : [])) {
       const src = sl.source; if (src === 'comp') continue;
       if (src === 'busA' || src === 'busB') { this.need.bus.add(src[3]); continue; }
       if (src === 'selgroup') { this.need.group = true; continue; }

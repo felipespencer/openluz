@@ -206,8 +206,8 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 - [x] 07-09: origens da entrada do slice (camada e grupo selecionados, Bus A/B, opacidade e bypass/solo da camada) — fechado em 2026-11-16, só local
 - [x] 07-10: Inverter da máscara de saída medido na saída do Resolume e alinhado (máscara nova nasce invertida) — fechado em 2026-11-16, só local
 - [x] 07-11: gestos do modo Editar pontos medidos no Resolume; seleção de vários pontos com Ctrl+clique — fechado em 2026-11-16, só local
-- [ ] 07-12: slice polígono do Resolume medido e proposta para o OpenLuz (07-12-POLIGONO.md) — feito em 2026-11-16, só local; no checkpoint (fazer, depois, ou mudar)
-- [ ] 07-13: slice polígono: modelo, motor, triângulo pelo menu, Transformar e Editar pontos nas duas abas — em aplicação desde 2026-11-16
+- [x] 07-12: slice polígono do Resolume medido e proposta (07-12-POLIGONO.md) — fechado em 2026-11-16; construído no 07-13
+- [x] 07-13: slice polígono: modelo, motor, triângulo pelo menu, Transformar e Editar pontos nas duas abas — fechado em 2026-11-16, só local
 - [ ] 07-14 em diante: lápis e acrescentar/apagar pontos do polígono; exportar SVG; Prévia e outra tela como entrada
 
 ### Phase 8: Webcam virtual

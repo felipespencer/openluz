@@ -10,6 +10,7 @@ import { confirmBox, askText } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
+const forma = (it) => !!it && (it.type === 'mask' || it.type === 'poly');   // itens feitos de uma lista de pontos (it.pts); o polígono troca de lista conforme a aba (M.setPolyTab)
 const svgEl = (tag, attrs = {}) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
 const TEAL = '#6fe6c6', MASKC = '#f5d742';
 const ibtn = (id, icon, help, txt) => `<button type="button" id="${id}" class="ib${txt ? ' txt' : ''}" data-help="${help}">${ICON[icon]}${txt ? '<span>' + txt + '</span>' : ''}</button>`;
@@ -41,6 +42,7 @@ export class AdvancedOutput {
           <div class="tb"><button type="button" id="aoAdd" class="ib" data-help="Adicionar itens|Acrescenta telas, slices e máscaras à sua configuração de saída.">${ICON.plus}${ICON.caret}</button>
             <div id="aoAddMenu" class="menu" hidden>
               <button type="button" data-add="screen">Tela</button><button type="button" data-add="slice">Slice</button>
+              <div class="mrow"><span>Polígono</span><i data-add="polyTri" title="Slice em triângulo; os pontos da entrada e da saída são independentes">${ICON.tri}</i></div>
               <div class="mrow"><span>Máscara de saída</span><i data-add="maskRect">${ICON.rect}</i><i data-add="maskCircle">${ICON.circle}</i><i data-add="maskTri">${ICON.tri}</i><i data-add="maskHex">${ICON.hex}</i><i data-add="maskDraw">${ICON.pen}</i></div>
             </div></div>
           <div id="aoList"></div>
@@ -129,12 +131,12 @@ export class AdvancedOutput {
   redo() { if (!this.redoHist.length) return; this.hist.push(this.snapState()); this.restore(this.redoHist.pop()); }
 
   // ---------- ferramentas ----------
-  setTab(t) { this.tab = t; this.selPt = -1; this.selG = -1; this.drawing = null; this.syncTools(); this.layout(); this.refresh(); }
+  setTab(t) { this.tab = t; M.setPolyTab(t); this.selPt = -1; this.selG = -1; this.drawing = null; this.syncTools(); this.layout(); this.refresh(); }
   setMode(m) { this.mode = m; this.selPt = -1; this.selG = -1; this.syncTools(); this.draw(); this.renderProps(); }
   syncTools() {
     $('aoTabIn').classList.toggle('on', this.tab === 'in'); $('aoTabOut').classList.toggle('on', this.tab === 'out');
     $('aoMove').classList.toggle('on', this.mode === 'move'); $('aoPts').classList.toggle('on', this.mode === 'pts');
-    $('aoMove').hidden = $('aoPts').hidden = this.tab !== 'out';
+    $('aoMove').hidden = $('aoPts').hidden = this.tab !== 'out' && !(this.sel && this.sel.item && this.sel.item.type === 'poly');
     $('aoSnap').classList.toggle('on', this.snap); $('aoPan').classList.toggle('on', this.pan); $('aoGridBtn').classList.toggle('on', this.grid || this.led);
     $('aoUndo').disabled = !this.hist.length; $('aoRedo').disabled = !this.redoHist.length;
     { const z = $('aoZoom'); let o = z.querySelector('#aoZoomCur');   // zoom da roda do mouse: entra na lista como a porcentagem atual
@@ -181,7 +183,7 @@ export class AdvancedOutput {
     const it = this.sel.item, dx = key === 'ArrowLeft' ? -step : key === 'ArrowRight' ? step : 0, dy = key === 'ArrowUp' ? -step : key === 'ArrowDown' ? step : 0;
     if (!dx && !dy) return;
     const k = this.selPt >= 0 ? this.selPtK : null;
-    if (this.tab === 'in' && it.type !== 'slice') return;
+    if (this.tab === 'in' && it.type !== 'slice' && it.type !== 'poly') return;
     const now = Date.now(); if (now - this.nudgeT > 800) this.pushUndo(); this.nudgeT = now;
     if (this.selG >= 0 && it.soft.on) {   // degradê selecionado: as setas movem o fim (quadrado); com Alt, o degradê inteiro
       const g0 = this.grads(it)[this.selG]; if (!g0) return;
@@ -190,10 +192,10 @@ export class AdvancedOutput {
       this.draw(); this.renderProps(); this.c.onChange(); return;
     }
     if (k === 'anchor' && it.warp && it.warp.pts[this.selPt]) { for (const i of (this.selPts.size > 1 ? [...this.selPts] : [this.selPt])) if (it.warp.pts[i]) M.moveAnchor(it, i, dx, dy); }   // vários pontos escolhidos com Ctrl+clique andam juntos
-    else if (k === 'maskpt' && it.pts && it.pts[this.selPt]) { const q = it.pts[this.selPt]; q[0] += dx; q[1] += dy; M.touch(it); }
+    else if ((k === 'maskpt' || k === 'polypt') && it.pts && it.pts[this.selPt]) { const q = it.pts[this.selPt]; q[0] += dx; q[1] += dy; M.touch(it); }
     else if (k === 'inmaskpt' && it.inMask && it.inMask.pts[this.selPt]) { const q = it.inMask.pts[this.selPt]; q[0] += dx / it.in.w; q[1] += dy / it.in.h; it.inMask.rev++; M.touch(it); }
     else if (this.tab === 'in') { it.in.x += dx; it.in.y += dy; M.touch(it); }
-    else if (it.type === 'mask') { it.pts.forEach(q => { q[0] += dx; q[1] += dy; }); M.touch(it); }
+    else if (forma(it)) { it.pts.forEach(q => { q[0] += dx; q[1] += dy; }); M.touch(it); }
     else { const r = M.outRect(it); M.fitOutRect(it, { x: r.x + dx, y: r.y + dy, w: r.w, h: r.h }); }
     this.draw(); this.renderProps(); this.c.onChange();
   }
@@ -248,12 +250,12 @@ export class AdvancedOutput {
   // ---------- coordenadas e alvos ----------
   pt(e) { const r = this.svg.getBoundingClientRect(); const [W, H] = this.stageSize(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; }
   itemsOnStage() {
-    if (this.tab === 'in') return this.screens().flatMap(sc => sc.enabled ? sc.items.filter(i => i.type === 'slice' && i.enabled).map(i => ({ screen: sc, item: i })) : []);
+    if (this.tab === 'in') return this.screens().flatMap(sc => sc.enabled ? sc.items.filter(i => (i.type === 'slice' || i.type === 'poly') && i.enabled).map(i => ({ screen: sc, item: i })) : []);
     const sc = this.curScreen(); return sc ? sc.items.filter(i => i.enabled).map(i => ({ screen: sc, item: i })) : [];
   }
   // itens debaixo de um ponto do palco (na ordem do palco): retângulo de entrada com giro, contorno da saída ou polígono da máscara
   hit(it, p) {
-    if (this.tab === 'in') { const l = inToLocal(it, p); return l[0] >= 0 && l[0] <= 1 && l[1] >= 0 && l[1] <= 1; }
+    if (this.tab === 'in' && it.type !== 'poly') { const l = inToLocal(it, p); return l[0] >= 0 && l[0] <= 1 && l[1] >= 0 && l[1] <= 1; }
     const pts = it.type === 'slice' ? outlinePoints(it) : it.pts; let ins = false;
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) ins = !ins; }
     return ins;
@@ -300,7 +302,9 @@ export class AdvancedOutput {
     if (g) P.appendChild(this.pnum('Opacidade', 'Opacidade da guia|Quanto a guia aparece por cima da imagem.', Math.round(g.op * 100), { min: 0, max: 100, step: 1, unit: ' %', bar: true, reset: 25 }, v => { g.op = v / 100; }));
   }
   draw() {
-    if (this.selPt < 0 || this.selPtK !== 'anchor' || this.mode !== 'pts') this.selPts.clear();   // a seleção de vários pontos só vale enquanto um ponto do slice está escolhido
+    M.setPolyTab(this.tab);
+    if (this.selPt < 0 || this.selPtK !== 'anchor' || this.mode !== 'pts') this.selPts.clear();
+    if (this.tab === 'in' && this.mode === 'pts' && !(this.sel && this.sel.item && this.sel.item.type === 'poly')) this.mode = 'move';   // na entrada só o polígono tem Editar pontos   // a seleção de vários pontos só vale enquanto um ponto do slice está escolhido
     this.syncGuide();
     const svg = this.svg; svg.textContent = '';
     const [W, H] = this.stageSize(), it = this.sel && this.sel.item, k = 1 / this.scale;
@@ -320,6 +324,12 @@ export class AdvancedOutput {
     }
     for (const { item } of on) {
       const sel = item === it;
+      if (item.type === 'poly') {   // slice polígono: a mesma forma de pontos nas duas abas (a lista muda com a aba)
+        this.drawPoly(item.pts, 'poly', sel && this.mode === 'pts', item);
+        const b = bbox(item.pts), t = svgEl('text', { x: b.x + b.w / 2, y: b.y + b.h / 2, class: 'sname', 'text-anchor': 'middle' }); t.textContent = item.name; svg.appendChild(t);
+        if (sel && this.mode === 'move') this.drawHandles(b, item);
+        continue;
+      }
       if (this.tab === 'in') {
         const r = item.in, g = svgEl('g', { transform: `rotate(${r.rot} ${r.x + r.w / 2} ${r.y + r.h / 2})` });
         g.appendChild(svgEl('rect', { x: r.x, y: r.y, width: r.w, height: r.h, class: 'slice' + (sel ? ' sel' : ''), 'data-k': 'body', 'data-id': item.id }));
@@ -444,7 +454,7 @@ export class AdvancedOutput {
       this.draw(); this.renderProps(); return;
     }
     this.selG = -1;
-    if (k === 'anchor' || k === 'maskpt' || k === 'inmaskpt') {
+    if (k === 'anchor' || k === 'maskpt' || k === 'polypt' || k === 'inmaskpt') {
       if (k === 'anchor' && (e.ctrlKey || e.metaKey)) {   // Ctrl+clique num ponto do slice: entra ou sai da seleção, sem mover (como no Resolume)
         if (!this.selPts.size && this.selPt >= 0 && this.selPtK === 'anchor') this.selPts.add(this.selPt);
         if (this.selPts.has(d.i)) this.selPts.delete(d.i); else this.selPts.add(d.i);
@@ -455,10 +465,10 @@ export class AdvancedOutput {
       }
       this.draw(); this.renderProps();
     }
-    if (k === 'resize' || k === 'body' || k === 'rot') d.rect = this.tab === 'in' ? { ...it.in } : it.type === 'slice' ? M.outRect(it) : bbox(it.pts);
+    if (k === 'resize' || k === 'body' || k === 'rot') d.rect = forma(it) ? bbox(it.pts) : this.tab === 'in' ? { ...it.in } : M.outRect(it);
     if (k === 'rot') {
       d.c = [d.rect.x + d.rect.w / 2, d.rect.y + d.rect.h / 2]; d.a0 = Math.atan2(p[1] - d.c[1], p[0] - d.c[0]);
-      d.rot0 = it.type === 'mask' ? (it.rot || 0) : this.tab === 'in' ? (it.in.rot || 0) : (it.warp.rot || 0); if (it.type === 'mask') d.pts0 = it.pts.map(q => [...q]);
+      d.rot0 = forma(it) ? (it.rot || 0) : this.tab === 'in' ? (it.in.rot || 0) : (it.warp.rot || 0); if (forma(it)) d.pts0 = it.pts.map(q => [...q]);
     }
   }
   move(e) {
@@ -486,8 +496,8 @@ export class AdvancedOutput {
     }
     if (d.k === 'rot') {   // anel: gira em volta do centro; com Shift, de 15 em 15 graus
       let deg = d.rot0 + (Math.atan2(p[1] - d.c[1], p[0] - d.c[0]) - d.a0) * 180 / Math.PI;
-      deg = e.shiftKey ? Math.round(deg / 15) * 15 : Math.round(deg * 10) / 10; deg = ((deg + 180) % 360 + 360) % 360 - 180;
-      if (it.type === 'mask') { const a = (deg - d.rot0) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a); it.pts = d.pts0.map(([x, y]) => [d.c[0] + (x - d.c[0]) * c - (y - d.c[1]) * sn, d.c[1] + (x - d.c[0]) * sn + (y - d.c[1]) * c]); it.rot = deg; M.touch(it); }
+      deg = e.shiftKey ? Math.round(deg / 15) * 15 : Math.round(deg * 10) / 10; deg = ((deg + 180) % 360 + 360) % 360 - 180; deg = Math.round(deg * 10) / 10;   // sem o resto de conta que sobrava da volta completa (-7,2000000000000455)
+      if (forma(it)) { const a = (deg - d.rot0) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a); it.pts = d.pts0.map(([x, y]) => [d.c[0] + (x - d.c[0]) * c - (y - d.c[1]) * sn, d.c[1] + (x - d.c[0]) * sn + (y - d.c[1]) * c]); it.rot = deg; M.touch(it); }
       else if (this.tab === 'in') { it.in.rot = deg; M.touch(it); }
       else M.rotateOut(it, deg);
     } else if (d.k === 'body') {
@@ -495,7 +505,7 @@ export class AdvancedOutput {
       if (e.shiftKey) { if (Math.abs(tx) >= Math.abs(ty)) ty = 0; else tx = 0; }   // Shift: só anda no eixo em que o mouse andou mais
       let r = { x: d.rect.x + tx, y: d.rect.y + ty, w: d.rect.w, h: d.rect.h };
       r = this.gridRect(r, it, false, e.ctrlKey || e.metaKey);
-      if (it.type === 'mask') { const b = bbox(it.pts); M.touch(it); it.pts.forEach(q => { q[0] += r.x - b.x; q[1] += r.y - b.y; }); }
+      if (forma(it)) { const b = bbox(it.pts); M.touch(it); it.pts.forEach(q => { q[0] += r.x - b.x; q[1] += r.y - b.y; }); }
       else if (this.tab === 'in') { it.in.x = r.x; it.in.y = r.y; M.touch(it); }
       else M.fitOutRect(it, r);
     } else if (d.k === 'resize') {
@@ -508,11 +518,12 @@ export class AdvancedOutput {
       const lado = (f, a0, len0, n, d2) => f === 0.5 ? a0 : alt ? a0 + len0 / 2 - n / 2 : f === 0 ? (len0 + d2 >= 0 ? a0 + len0 - n : a0 + len0) : (len0 + d2 >= 0 ? a0 : a0 - n);
       let r = { x: lado(H[0], r0.x, r0.w, nw, dw), y: lado(H[1], r0.y, r0.h, nh, dh), w: H[0] === 0.5 ? r0.w : nw, h: H[1] === 0.5 ? r0.h : nh };
       r = this.gridRect(r, it, true, e.ctrlKey || e.metaKey, e.shiftKey || alt);
-      if (it.type === 'mask') { const b = bbox(it.pts); M.touch(it); it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * (r.w / (b.w || 1)); q[1] = r.y + (q[1] - b.y) * (r.h / (b.h || 1)); }); }
+      if (forma(it)) { const b = bbox(it.pts); M.touch(it); it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * (r.w / (b.w || 1)); q[1] = r.y + (q[1] - b.y) * (r.h / (b.h || 1)); }); }
       else if (this.tab === 'in') { Object.assign(it.in, r); M.touch(it); } else M.fitOutRect(it, r);
     } else if (d.k === 'anchor') { const q = this.ledSnap(p); const a = it.warp.pts[d.i]; M.moveAnchor(it, d.i, q[0] - a[0], q[1] - a[1]); }
     else if (d.k === 'handle') M.moveHandle(it, d.i, dx, dy);
     else if (d.k === 'maskpt') { const q = this.ledSnap(p); it.pts[d.i] = q; M.touch(it); }
+    else if (d.k === 'polypt') { it.pts[d.i] = [p[0], p[1]]; M.touch(it); }   // ponto do polígono: livre e com fração, como os pontos do slice
     else if (d.k === 'inmaskpt') { it.inMask.pts[d.i] = inToLocal(it, p); it.inMask.rev++; M.touch(it); }
     d.last = p;
     this.draw(); this.renderProps(); this.c.onChange();
@@ -573,7 +584,7 @@ export class AdvancedOutput {
     const [W, H] = this.stageSize(), tol = 8 / this.scale, xs = [0, W], ys = [0, H];
     for (const { item } of this.itemsOnStage()) {
       if (item === it) continue;
-      const b = this.tab === 'in' ? item.in : item.type === 'slice' ? M.outRect(item) : bbox(item.pts);
+      const b = forma(item) ? bbox(item.pts) : this.tab === 'in' ? item.in : M.outRect(item);
       xs.push(b.x, b.x + b.w); ys.push(b.y, b.y + b.h);
     }
     const near = (v, arr) => { let best = null; for (const a of arr) if (Math.abs(a - v) < tol && (best === null || Math.abs(a - v) < Math.abs(best - v))) best = a; return best; };
@@ -609,6 +620,10 @@ export class AdvancedOutput {
       const k = sc.items.filter(i => i.type === 'slice').length + 1;
       const s = M.mkSlice('Slice ' + k, { x: W / 4, y: H / 4, w: W / 2, h: H / 2 }, { x: sc.w / 4, y: sc.h / 4, w: sc.w / 2, h: sc.h / 2 });
       sc.items.push(s); this.sel = { screen: sc, item: s };
+    } else if (kind === 'polyTri') {   // nasce como no Resolume: triângulo da altura inteira, igual na entrada e na saída
+      const pl = M.mkPoly(M.uniqueName(sc, 'Polígono'), M.polyTriangle(W, H), M.polyTriangle(sc.w, sc.h));
+      if (!sc.items.some(i => i.name === 'Polígono')) pl.name = 'Polígono';
+      sc.items.push(pl); this.sel = { screen: sc, item: pl };
     } else if (kind === 'maskDraw') { this.setTab('out'); this.drawing = { kind: 'mask', pts: [] }; }
     else {
       const shape = { maskRect: 'rect', maskCircle: 'circle', maskTri: 'triangle', maskHex: 'hexagon', maskHeart: 'heart' }[kind] || 'rect';
@@ -638,7 +653,7 @@ export class AdvancedOutput {
     const sel = this.sel; if (!sel || !this.c.menu) return;
     const sc = sel.screen, it = sel.item;
     if (!it) { this.c.menu(this.screenMenu(sc), x, y); return; }
-    const out = this.tab === 'out' || it.type === 'mask', slice = it.type === 'slice';
+    const out = this.tab === 'out' || it.type === 'mask', slice = it.type === 'slice';   // o polígono segue a aba: os itens do menu agem na forma que está à vista
     const act = (fn) => () => { this.pushUndo(); fn(); M.touch(it); this.c.onChange(); this.refresh(); };
     const R = () => this.menuRect(it, out), set = (r) => this.setMenuRect(it, out, r), B = this.menuBounds(sc, out);
     const items = [
@@ -680,10 +695,10 @@ export class AdvancedOutput {
       { label: 'Colar', disabled: !this.clip, fn: () => this.paste(sc, null) }];
   }
   // retângulo em que o item do menu age: entrada do slice (pixels da composição), caixa da saída, ou caixa da máscara
-  menuRect(it, out) { return it.type === 'mask' ? bbox(it.pts) : out ? M.outRect(it) : { x: it.in.x, y: it.in.y, w: it.in.w, h: it.in.h }; }
+  menuRect(it, out) { return forma(it) ? bbox(it.pts) : out ? M.outRect(it) : { x: it.in.x, y: it.in.y, w: it.in.w, h: it.in.h }; }
   menuBounds(sc, out) { return out ? { w: sc.w, h: sc.h } : { w: this.c.compW, h: this.c.compH }; }
   setMenuRect(it, out, r) {
-    if (it.type === 'mask') { const b = bbox(it.pts), sx = b.w ? r.w / b.w : 1, sy = b.h ? r.h / b.h : 1; it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * sx; q[1] = r.y + (q[1] - b.y) * sy; }); }
+    if (forma(it)) { const b = bbox(it.pts), sx = b.w ? r.w / b.w : 1, sy = b.h ? r.h / b.h : 1; it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * sx; q[1] = r.y + (q[1] - b.y) * sy; }); }
     else if (out) M.fitOutRect(it, r);
     else Object.assign(it.in, { x: r.x, y: r.y, w: r.w, h: r.h });
   }
@@ -718,7 +733,7 @@ export class AdvancedOutput {
       box.append(row, sub);
       for (const it of [...sc.items].reverse()) {   // o da frente em cima, como no Resolume (no modelo ele é o último desenhado)
         const r = el('div', 'row item' + (this.sel && this.sel.item === it ? ' sel' : '') + (it.enabled ? '' : ' off'));
-        r.dataset.help = it.type === 'slice' ? 'Slice|Selecione o slice para editar. Clique duas vezes no nome para renomear.' : 'Máscara|Selecione a máscara para editar. Clique duas vezes no nome para renomear.';
+        r.dataset.help = it.type === 'slice' ? 'Slice|Selecione o slice para editar. Clique duas vezes no nome para renomear.' : it.type === 'poly' ? 'Polígono|Slice em forma de polígono: os pontos da entrada e os da saída são independentes. Clique duas vezes no nome para renomear.' : 'Máscara|Selecione a máscara para editar. Clique duas vezes no nome para renomear.';
         const c = el('i', 'ck' + (it.type === 'mask' ? ' mask' : '')); c.innerHTML = it.enabled ? ICON.item : ICON.itemOff; c.onclick = (e) => { e.stopPropagation(); this.pushUndo(); it.enabled = !it.enabled; M.touch(it); this.c.onChange(); this.refresh(); };
         const nm = el('span', 'nm', it.name); nm.ondblclick = (e) => { e.stopPropagation(); this.rename(nm, it); };
         const xx = el('span', 'x', '✕'); xx.title = 'Apagar'; xx.onclick = (e) => { e.stopPropagation(); this.sel = { screen: sc, item: it }; this.removeItem(it); };
@@ -797,6 +812,29 @@ export class AdvancedOutput {
       this.colorRows(P, sc.color);
       this.guideRows(P, sc);
       if (this.screens().length > 1) { const rm = el('button', 'wide', 'Apagar esta tela'); rm.type = 'button'; rm.onclick = () => this.removeScreen(sc); P.appendChild(rm); }
+    } else if (it.type === 'poly') {
+      const srcs = [['comp', 'Composição', 'Composição'], ['busA', 'Bus A', 'Crossfader'], ['busB', 'Bus B', 'Crossfader'], ['selgroup', 'Grupo selecionado', 'Grupos'], ['sel', 'Camada selecionada', 'Camadas'], ...this.c.layers().map(L => [String(L.id), L.name, 'Camadas'])];
+      P.appendChild(this.pselect('Fonte', 'Fonte|De onde o polígono tira a imagem.', srcs, String(it.source), v => { it.source = ['comp', 'busA', 'busB', 'selgroup', 'sel'].includes(v) ? v : +v; M.touch(it); }));
+      if (it.source === 'sel' || typeof it.source === 'number') {
+        P.appendChild(this.pcheck('Opacidade da camada', 'Opacidade da camada|Ligado, o polígono acompanha a opacidade da camada.', it.inOpacity !== false, v => { it.inOpacity = v; M.touch(it); }));
+        P.appendChild(this.pcheck('Bypass/Solo da camada', 'Bypass/Solo da camada|Ligado, o polígono some quando a camada está em bypass ou outra está em solo.', it.inBypass !== false, v => { it.inBypass = v; M.touch(it); }));
+      }
+      if (this.mode === 'move') {   // a caixa e o giro da forma desta aba: na entrada, o pedaço da composição; na saída, onde ele cai no projetor
+        this.rectRows(P, bbox(it.pts), (r) => { const b = bbox(it.pts); it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * (r.w / (b.w || 1)); q[1] = r.y + (q[1] - b.y) * (r.h / (b.h || 1)); }); M.touch(it); }, this.tab === 'in' ? 'Entrada' : 'Saída');
+        P.appendChild(this.pnum('Giro', 'Giro|Gira a forma desta aba em volta do centro.', it.rot || 0, { min: -180, max: 180, step: 1, unit: '°', bar: true, reset: 0 }, v => M.rotateMask(it, v)));
+      }
+      if (this.tab === 'out') {
+        P.appendChild(this.pcheck('É chave', 'É chave|O polígono sai em branco na medida da transparência da imagem.', !!it.key, v => { it.key = v; M.touch(it); }));
+        P.appendChild(this.pcheck('Fundo preto', 'Fundo preto|Põe preto por baixo do polígono.', !!it.blackBg, v => { it.blackBg = v; M.touch(it); }));
+        this.colorRows(P, it.color);
+      }
+      P.appendChild(this.prow('Pontos', 'Pontos|Quantos pontos tem o polígono. Arraste-os no modo Editar pontos, em cada aba: os da entrada escolhem o pedaço da composição, os da saída onde ele cai.', el('span', 'pinfo', String(it.pts.length))));
+      if (this.mode === 'pts' && this.selPtK === 'polypt' && it.pts[this.selPt]) {
+        const q = it.pts[this.selPt]; P.appendChild(this.phead('Ponto', 'Ponto|O ponto escolhido, em pixels.'));
+        P.appendChild(this.pnum('X', 'Ponto X|Posição do ponto na horizontal, em pixels.', q[0], { min: -99999, max: 99999, step: 1 }, v => { q[0] = v; M.touch(it); }));
+        P.appendChild(this.pnum('Y', 'Ponto Y|Posição do ponto na vertical, em pixels.', q[1], { min: -99999, max: 99999, step: 1 }, v => { q[1] = v; M.touch(it); }));
+      }
+      const rm = el('button', 'wide', 'Apagar este polígono'); rm.type = 'button'; rm.onclick = () => this.removeItem(it); P.appendChild(rm);
     } else if (it.type === 'mask') {
       // X, Y, Esquerda, Topo, Largura e Altura são a caixa da forma; mexer num deles move ou estica os pontos
       this.rectRows(P, bbox(it.pts), (r) => { const b = bbox(it.pts); it.pts.forEach(q => { q[0] = r.x + (q[0] - b.x) * (r.w / (b.w || 1)); q[1] = r.y + (q[1] - b.y) * (r.h / (b.h || 1)); }); M.touch(it); }, 'Máscara');

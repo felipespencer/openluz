@@ -26,6 +26,21 @@ export function mkSlice(name, inRect, outRect) {
     inMask: null, rev: 1 };
   return s;
 }
+// Slice polígono (07-13), como o Polygon do Resolume: pontos de entrada (pixels da composição) e de saída (pixels da tela)
+// independentes, com o mesmo número de pontos; a imagem de dentro do polígono de entrada é esticada, triângulo a triângulo,
+// para o de saída. `pts` e `rot` respondem pela aba que o editor informa em setPolyTab: assim o editor trata o polígono
+// como trata a máscara (uma lista de pontos), sem saber qual das duas formas está na mão. O motor usa inPts e outPts.
+let polyTab = 'out';
+export function setPolyTab(t) { polyTab = t === 'in' ? 'in' : 'out'; }
+export function mkPoly(name, inPts, outPts) {
+  const p = { id: seq++, type: 'poly', name, enabled: true, source: 'comp', inPts, outPts, rotIn: 0, rotOut: 0,
+    color: { bright: 1, contrast: 1, r: 0, g: 0, b: 0 }, key: false, blackBg: false, inOpacity: true, inBypass: true, rev: 1 };
+  Object.defineProperty(p, 'pts', { enumerable: false, get() { return polyTab === 'in' ? this.inPts : this.outPts; }, set(v) { if (polyTab === 'in') this.inPts = v; else this.outPts = v; } });
+  Object.defineProperty(p, 'rot', { enumerable: false, get() { return polyTab === 'in' ? this.rotIn : this.rotOut; }, set(v) { if (polyTab === 'in') this.rotIn = v; else this.rotOut = v; } });
+  return p;
+}
+// o triângulo com que o polígono nasce: equilátero, da altura inteira, com a ponta no meio do topo (medido no Resolume)
+export function polyTriangle(w, h) { const s = h * 2 / Math.sqrt(3); return [[w / 2, 0], [w / 2 - s / 2, h], [w / 2 + s / 2, h]]; }
 export function mkMask(name, pts) { return { id: seq++, type: 'mask', name, enabled: true, invert: false, rot: 0, pts, rev: 1 }; }
 // gira a máscara em volta do centro da caixa dela, até o ângulo pedido (o giro fica guardado em rot)
 export function rotateMask(m, deg) {
@@ -43,6 +58,7 @@ export function resizeScreen(sc, w, h) {
   const kx = w / sc.w, ky = h / sc.h;
   for (const it of sc.items) {
     if (it.type === 'slice') { transformPts(it.warp.pts, (x, y) => [x * kx, y * ky]); touch(it); }
+    else if (it.type === 'poly') { transformPts(it.outPts, (x, y) => [x * kx, y * ky]); touch(it); }
     else { transformPts(it.pts, (x, y) => [x * kx, y * ky]); touch(it); }
   }
   sc.w = w; sc.h = h; touch(sc);
@@ -267,6 +283,9 @@ export function serialize(screens) {
       ? { type: 'slice', name: it.name, enabled: it.enabled, source: it.source, sourceLayer: it.sourceLayer, in: it.in, flip: it.flip,
           warp: { mode: it.warp.mode, curve: it.warp.curve, divX: it.warp.divX, divY: it.warp.divY, rot: it.warp.rot, pts: it.warp.pts },
           soft: it.soft, color: it.color, key: !!it.key, blackBg: !!it.blackBg, inOpacity: it.inOpacity !== false, inBypass: it.inBypass !== false, inMask: it.inMask && { pts: it.inMask.pts, invert: it.inMask.invert } }
+      : it.type === 'poly'
+      ? { type: 'poly', name: it.name, enabled: it.enabled, source: it.source, sourceLayer: it.sourceLayer, inPts: it.inPts, outPts: it.outPts, rotIn: it.rotIn || 0, rotOut: it.rotOut || 0,
+          color: it.color, key: !!it.key, blackBg: !!it.blackBg, inOpacity: it.inOpacity !== false, inBypass: it.inBypass !== false }
       : { type: 'mask', name: it.name, enabled: it.enabled, invert: it.invert, rot: it.rot || 0, pts: it.pts }),
   })) });
 }
@@ -278,6 +297,13 @@ export function deserialize(json) {
     sc.enabled = s.enabled !== false; sc.opacity = s.opacity ?? 1; Object.assign(sc.color, s.color || {});
     sc.guideIn = guia(s.guideIn); sc.guideOut = guia(s.guideOut);
     for (const it of s.items || []) {
+      if (it.type === 'poly') {
+        const lim = (L) => (L || []).map(q => [+q[0], +q[1]]), a = lim(it.inPts), b = lim(it.outPts), n = Math.min(a.length, b.length); if (n < 3) continue;
+        const pl = mkPoly(it.name || 'Polígono', a.slice(0, n), b.slice(0, n));
+        pl.enabled = it.enabled !== false; pl.source = it.source || 'comp'; if (typeof it.sourceLayer === 'number') pl.sourceLayer = it.sourceLayer;
+        pl.rotIn = +it.rotIn || 0; pl.rotOut = +it.rotOut || 0; Object.assign(pl.color, it.color || {}); pl.key = !!it.key; pl.blackBg = !!it.blackBg; pl.inOpacity = it.inOpacity !== false; pl.inBypass = it.inBypass !== false;
+        sc.items.push(pl); continue;
+      }
       if (it.type === 'mask') { const m = mkMask(it.name || 'Máscara', (it.pts || []).map(p => [+p[0], +p[1]])); m.enabled = it.enabled !== false; m.invert = !!it.invert; m.rot = +it.rot || 0; sc.items.push(m); continue; }
       const sl = mkSlice(it.name || 'Slice', it.in || { x: 0, y: 0, w: sc.w, h: sc.h }, { x: 0, y: 0, w: sc.w, h: sc.h });
       sl.enabled = it.enabled !== false; sl.source = it.source || 'comp'; if (typeof it.sourceLayer === 'number') sl.sourceLayer = it.sourceLayer;   // posição da camada-fonte (quem abre troca pelo id desta abertura)

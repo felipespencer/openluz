@@ -171,6 +171,34 @@ export function surfaceBBox(slice) {
 // Vértices da forma de saída: posições (px da tela) e coordenadas locais (u,v) do slice.
 // O retalho é fatiado em K×K; nos quatro cantos a homografia também é avaliada numa grade,
 // porque a interpolação linear do triângulo não faz perspectiva sozinha.
+// Polígono em triângulos pelo corte de orelhas (aceita reentrância; polígono que se cruza sai como der).
+// Devolve os índices dos vértices, três a três.
+export function triangulate(pts) {
+  const n = pts.length, idx = []; if (n < 3) return idx;
+  let area = 0; for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; area += a[0] * b[1] - b[0] * a[1]; }
+  const V = [...Array(n).keys()]; if (area < 0) V.reverse();   // sentido anti-horário nas contas (y para baixo não muda a regra, só o sinal)
+  const cruz = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const dentro = (p, a, b, c) => cruz(a, b, p) >= 0 && cruz(b, c, p) >= 0 && cruz(c, a, p) >= 0;
+  let guarda = 0;
+  while (V.length > 3 && guarda++ < n * n) {
+    let cortou = false;
+    for (let i = 0; i < V.length; i++) {
+      const ia = V[(i + V.length - 1) % V.length], ib = V[i], ic = V[(i + 1) % V.length], a = pts[ia], b = pts[ib], c = pts[ic];
+      if (cruz(a, b, c) <= 0) continue;   // canto reentrante: não é orelha
+      if (V.some(k => k !== ia && k !== ib && k !== ic && dentro(pts[k], a, b, c))) continue;
+      idx.push(ia, ib, ic); V.splice(i, 1); cortou = true; break;
+    }
+    if (!cortou) break;   // forma degenerada: o que sobrou vira leque
+  }
+  for (let i = 1; i + 1 < V.length; i++) idx.push(V[0], V[i], V[i + 1]);
+  return idx;
+}
+// Rede de triângulos do slice polígono: cada vértice fica na posição de saída e carrega a de entrada (0..1 da composição)
+export function tessellatePoly(poly, W, H) {
+  const n = Math.min(poly.inPts.length, poly.outPts.length), pos = [], luv = [];
+  for (let i = 0; i < n; i++) { pos.push(poly.outPts[i][0], poly.outPts[i][1]); luv.push(poly.inPts[i][0] / W, poly.inPts[i][1] / H); }
+  return { pos: new Float32Array(pos), luv: new Float32Array(luv), idx: new Uint32Array(triangulate(poly.inPts.slice(0, n))) };
+}
 export function tessellate(slice, K = 12) {
   const w = slice.warp, pos = [], luv = [], idx = [];
   const nx = w.mode === 'mesh' ? w.divX * K : K, ny = w.mode === 'mesh' ? w.divY * K : K;
