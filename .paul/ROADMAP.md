@@ -280,6 +280,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 **Plans:**
 - [ ] 13-01: primeira vez medida, PRIMEIROS-PASSOS.md (PT/EN), README em dia e caminhos de assinatura do instalador — aplicado em 2026-11-14 (d46e16c), só local; no checkpoint: publicar ou não
 - [x] 13-02: convite na grade vazia e aviso de "clique na miniatura para pôr no ar" — fechado em 2026-11-14 (1acc7ae, só local)
+- [x] 13-03: COMO-USAR em dia com a Saída avançada e rascunho das notas da 0.3.0-beta.3 — fechado em 2026-11-16, só local
 
 ### Phase 14: Saída 3D
 

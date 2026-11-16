@@ -233,21 +233,38 @@ Advanced Output do Resolume (Presets e telas à esquerda com a caixa de ajuda em
 Seleção de entrada e Transformação de saída, propriedades à direita, Cancelar e Salvar e
 fechar embaixo). Ctrl+Z desfaz, Ctrl+Y refaz; a barra de espaço arrasta a vista.
 
-- **Tela** é um projetor (ou uma janela). Cada tela tem destino, tamanho, opacidade e cor.
+- **Tela** é um projetor (ou uma janela). Cada tela tem destino, tamanho, opacidade e cor. Desligar uma tela fecha a
+  saída dela; religar abre de novo.
 - **Slice** recorta um pedaço da composição (aba Entrada: posição, tamanho, giro, fonte) e o
   encaixa na superfície (aba Saída: posição, tamanho, giro, espelhar).
-- **Deformação**: quatro cantos (perspectiva) ou malha de curvas. Na malha, "Pontos" deixa
-  arrastar cada âncora; com "Bezier" aparecem as alças da âncora escolhida. Duplo clique numa
-  âncora zera a malha. T alterna Transformar e Pontos.
-- **Soft edge**: liga a emenda entre dois projetores. A largura vem da sobreposição dos
-  recortes na composição; potência, luminância, gama (geral e por cor) e nível de preto
-  ajustam a rampa.
-- **Máscaras**: de saída (retângulo, círculo ou desenhada clicando na tela; invertida preserva
-  só o que está dentro) e de entrada, por slice.
-- **Ímã** gruda nas bordas dos outros slices; **Grade** mostra a borda do slice e o cursor no
-  projetor; **Identificar** escreve o nome de cada tela e slice nos projetores.
-- **Presets** ficam gravados em disco: escolha um na lista, ou dê um nome e Salvar.
+- **Fonte do slice**: a composição inteira, o Bus A ou o Bus B do crossfader (só o que está naquele lado, onde quer que
+  o crossfader esteja), o grupo selecionado, a camada selecionada na grade, ou uma camada fixa. Lendo uma camada,
+  aparecem **Opacidade da camada** e **Bypass/Solo da camada**: desligadas, o slice mostra a camada inteira mesmo que
+  ela esteja apagada ou em bypass na composição.
+- **É chave** troca a imagem do slice por branco na medida da transparência dela (o sinal de recorte para mesa de
+  corte). **Fundo preto** põe preto por baixo do slice, para não aparecer o slice de trás onde a imagem é transparente.
+- **Gestos no modo Transformar**, como no Resolume: arrastar e redimensionar andam em pixels inteiros; **Shift** prende
+  o eixo ao arrastar e mantém a proporção ao puxar o canto; **Alt** duplica ao arrastar o corpo e cresce a partir do
+  centro ao puxar o canto; **Ctrl** deixa livre (com fração e sem ímã); o **anel** em volta do canto gira (com Shift, de
+  15 em 15 graus); setas movem 1 px, com Shift 10 px; a **roda do mouse** dá zoom.
+- **Deformação**: quatro cantos (perspectiva) ou malha de curvas. No modo Editar pontos, arrastar move a âncora;
+  **Ctrl+clique** soma ou tira âncoras da seleção e as setas movem todas juntas; com "Bezier" aparecem as alças da
+  âncora escolhida. "Zerar os pontos" desfaz a deformação. T alterna Transformar e Editar pontos.
+- **Soft edge**: liga a emenda entre dois projetores, por degradês com alça puxados na própria imagem (até oito por
+  slice); potência, luminância, gama (geral e por cor) e nível de preto ajustam a rampa.
+- **Máscaras** de saída: retângulo, círculo, triângulo, hexágono, coração ou desenhada clicando na tela. A máscara nova
+  nasce quadrada e com **Inverter** ligado, como no Resolume: a imagem aparece só dentro da forma. Desligue Inverter para
+  ela tapar a forma e deixar o resto. O painel tem posição, tamanho e giro em números. Há também a máscara de entrada,
+  por slice.
+- **Guia**: com a tela selecionada, cada aba aceita uma imagem de referência (uma foto da parede, uma planta) por cima
+  do palco, com opacidade ajustável; fica salva com a saída.
+- **Ímã** gruda nas bordas dos outros slices; **Grade** mostra a borda do slice e a cruz do cursor;
+  **Identificar** escreve o nome de cada tela e slice nos projetores. **Mostrar na saída** decide se a grade, a cruz e
+  a guia de saída vão também para o projetor enquanto você edita.
+- **Presets** ficam gravados em disco. O menu tem Salvar, Salvar como…, Apagar, Renomear…, Novo, Mostrar na pasta e
+  Abrir… (um arquivo de preset de qualquer pasta), e a lista embaixo.
 - "Salvar e fechar" aplica; "Cancelar" (ou Esc) devolve tudo como estava.
+- Com uma saída aberta, o programa não deixa o Windows apagar a tela por inatividade.
 
 ### Laser (LaserCube por Wi-Fi)
 
