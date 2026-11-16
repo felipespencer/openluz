@@ -22,8 +22,8 @@ plans_completed = 6
 
 [loop]
 position = "APPLY"
-plan = "12-15"
-plan_path = "phases/12-revisao-geral/12-15-PLAN.md"
+plan = "12-16"
+plan_path = "phases/12-revisao-geral/12-16-PLAN.md"
 
 [satellite]
 groom = true

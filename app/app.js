@@ -608,7 +608,7 @@ async function snapshot(what) {
   try { const r = await D.rec.save(name, bytes, recorder.c.dir); toast('Instantâneo salvo: ' + r.path); recorder.refresh && recorder.refresh(); } catch (e) { toast('Não consegui salvar: ' + e.message); }
 }
 // Test Card: como no Resolume, não é um clipe. Substitui a composição na saída (passa pelos slices, warps e máscaras
-// da Saída avançada) e escreve o nome e o tamanho de cada tela por cima; o menu Saída liga e desliga
+// da Saída avançada) e escreve o nome e o tamanho de cada tela por cima; o menu OUTPUT liga e desliga
 function toggleTestCard() {
   const i = state.layers.findIndex(L => L.testCard); if (i >= 0) removeLayer(i);   // versões antigas punham uma camada "Test Card"
   state.testCard = !state.testCard; engine.testCard = state.testCard;
@@ -928,7 +928,7 @@ if (D && D.onDisplays) D.onDisplays((d) => { displays = d; renderScreens(); if (
 if (D) D.displays().then(async (d) => { displays = d; renderScreens(); try { const p = await D.prefs.get(); const test = await D.isTest(); if (!p.noWizard && !test) { projectorWizard(true); D.prefs.set({ ...p, noWizard: true }).catch(() => { }); } } catch { } }).catch(() => { });   // visto uma vez, não volta sozinho ("perguntar sempre" no próprio assistente religa)
 
 // ---------- assistente de projetores ----------
-// Ao abrir (e no menu Saída → Projetores…): um desenho com os projetores como retângulos que se
+// Ao abrir (e no menu OUTPUT → Projetores…): um desenho com os projetores como retângulos que se
 // arrastam e giram (em pé ou deitado). As bordas encaixam umas nas outras; onde dois se sobrepõem,
 // a emenda ganha soft edge. A composição é o retângulo que envolve todos; cada projetor vira uma
 // tela com o seu recorte (girado 90° se o projetor está em pé mas o Windows o vê deitado).
@@ -1003,7 +1003,7 @@ function projectorWizard(auto) {
       body.appendChild(K.phead('Monitores (fora o do controle: ' + main.label + ')'));
       for (const s of sel) body.appendChild(K.pcheck(s.d.label, 'Monitor|Marcado = é um projetor da apresentação e aparece no desenho.', s.use, v => { s.use = v; projNormalize(sel); }, s.d.w + '×' + s.d.h + (s.use ? (s.vertical ? ' · em pé' : ' · deitado') : ' · fora')));
       body.appendChild(K.pcheck('Abrir saídas', 'Abrir saídas|Já abre a saída em cada projetor ao confirmar.', o.open, v => { o.open = v; }, o.open ? 'abre ao confirmar' : 'só monta'));
-      body.appendChild(K.pcheck('Ao abrir o programa', 'Perguntar|Desmarcado, o assistente fica só no menu Saída → Projetores….', o.ask, v => { o.ask = v; }, o.ask ? 'perguntar sempre' : 'não perguntar mais'));
+      body.appendChild(K.pcheck('Ao abrir o programa', 'Perguntar|Desmarcado, o assistente fica só no menu OUTPUT → Projetores….', o.ask, v => { o.ask = v; }, o.ask ? 'perguntar sempre' : 'não perguntar mais'));
     },
     buttons: [{ label: auto ? 'Pular' : 'Cancelar' }, { label: 'Montar', primary: true, fn: () => { applyProjectors(sel.filter(s => s.use), o); if (D) D.prefs.get().then(p => D.prefs.set({ ...p, noWizard: !o.ask })).catch(() => { }); } }],
   });
@@ -1117,7 +1117,7 @@ function openOutputs(quais) {
   if (jaAbertas && D && D.showOutputs) D.showOutputs().catch(() => { });   // "Mostrar saídas": traz as janelas para a frente (o focus() da página não consegue)
   renderScreens();
 }
-// fecha todas as janelas de saída (o botão da barra e o item "Desligada" do menu Saída)
+// fecha todas as janelas de saída (o botão da barra e o item "Desligada" do menu OUTPUT)
 function closeOutputs() {
   try { localStorage.setItem('projSaidaAberta', '0'); } catch { }
   for (const sc of state.screens) { sc.voltaSaida = false; if (sc.win && !sc.win.closed) { sc.win.close(); sc.win = null; delete window.__projStreams[sc.id]; delete window.__projCanvas[sc.id]; } }
@@ -1632,7 +1632,7 @@ const menuDefs = () => [
     { label: 'Remover todas antes', disabled: c === 0, fn: () => { for (let i = 0; i < c; i++) removeColumn(0); } },
     { label: 'Remover todas depois', disabled: c >= COLS - 1, fn: () => { while (COLS > c + 1) removeColumn(COLS - 1); } }]; } },
   { label: 'Clipe', items: clipMenuItems },
-  { label: 'Saída', items: () => { const sc = state.screens[0], open = state.screens.some(s => s.win && !s.win.closed); return [
+  { label: 'OUTPUT', items: () => { const sc = state.screens[0], open = state.screens.some(s => s.win && !s.win.closed); return [
     { label: 'Desligada', check: !open, fn: closeOutputs },
     { label: 'Tela cheia', sub: () => displays.length ? displays.map(d => ({ label: d.label, check: open && sc.device === d.id, fn: () => { sc.device = d.id; sc.enabled = true; if (sc.win && !sc.win.closed) sc.win.close(); openOutputs(); } })) : [{ label: 'nenhum monitor listado', disabled: true }] },
     { label: 'Janela', check: open && sc.device === 'window', fn: () => { sc.device = 'window'; sc.enabled = true; if (sc.win && !sc.win.closed) sc.win.close(); openOutputs(); } },
@@ -1765,7 +1765,7 @@ const webcam = new WebcamOut(engine, D);
 if (D && D.onNativoSaiu) D.onNativoSaiu((qual) => {
   if (qual === 'seg') seg.nativoSaiu();
   else if (qual === 'face') rostoSaiu();
-  else if (qual === 'webcam' && webcam.nativoSaiu()) toast('A webcam virtual parou. Ligue de novo em Saída › Webcam virtual.');
+  else if (qual === 'webcam' && webcam.nativoSaiu()) toast('A webcam virtual parou. Ligue de novo em OUTPUT › Webcam virtual.');
 });
 buildBpmBar();
 loop();
@@ -1773,7 +1773,7 @@ marcaLimpo();
 
 render();
 
-// Webcam virtual pela câmera do OBS: liga e desliga pelo menu Saída; o que impede de ligar vira um aviso, sem mexer no resto do programa
+// Webcam virtual pela câmera do OBS: liga e desliga pelo menu OUTPUT; o que impede de ligar vira um aviso, sem mexer no resto do programa
 async function alternarWebcam() {
   if (webcam.on) { await webcam.desligar(); toast('Webcam virtual desligada'); return; }
   const r = await webcam.ligar();

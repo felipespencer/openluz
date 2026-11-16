@@ -14,7 +14,7 @@ const texto = (t) => `[...document.querySelectorAll('button, .mi, .tab, .lb, lab
 let ok = 0, ruim = 0; const confere = (nome, passou, obs = '') => { passou ? ok++ : ruim++; console.log((passou ? 'OK    ' : 'FALHA ') + nome + (obs !== '' ? '  [' + obs + ']' : '')); };
 // o que o quadro Composição mostra: média e quantas cores diferentes numa grade de pontos do canvas dele
 const quadro = async () => { await wait(500); return ev(`const c = document.querySelector('#outScr canvas'), g = document.createElement('canvas'); g.width = 96; g.height = 54; const x = g.getContext('2d'); x.drawImage(c, 0, 0, 96, 54); const d = x.getImageData(0, 0, 96, 54).data; let s = 0; const cores = new Set(); for (let i = 0; i < d.length; i += 4) { s += d[i] + d[i + 1] + d[i + 2]; cores.add((d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4)); } return { media: Math.round(s / (96 * 54 * 3)), cores: cores.size };`); };
-const menuTestCard = async () => { await cl(texto('Saída')); await wait(250); await cl(`[...document.querySelectorAll('body *')].filter(e => e.textContent.trim().startsWith('Mostrar Test Card') && e.getBoundingClientRect().width > 0).sort((a, b) => a.textContent.length - b.textContent.length)[0]`); await wait(400); };
+const menuTestCard = async () => { await cl(texto('OUTPUT')); await wait(250); await cl(`[...document.querySelectorAll('body *')].filter(e => e.textContent.trim().startsWith('Mostrar Test Card') && e.getBoundingClientRect().width > 0).sort((a, b) => a.textContent.length - b.textContent.length)[0]`); await wait(400); };
 const j = (v) => JSON.stringify(v);
 try {
   // numa pasta de dados nova, com projetor ligado, o assistente Projetores abre sozinho: dispensar
@@ -22,7 +22,7 @@ try {
   await ev(`await P.reset(); return 1;`);
   const a = await quadro(); confere('preparo: grade vazia, quadro Composição preto e Test Card desligado', a.media < 3 && !(await ev(`return !!S.testCard;`)), j(a));
   await menuTestCard(); const b = await quadro();
-  confere('Saída › Mostrar Test Card: o quadro Composição mostra o test card', await ev(`return S.testCard === true;`) && b.media > 20 && b.cores > 8, j(b));
+  confere('OUTPUT › Mostrar Test Card: o quadro Composição mostra o test card', await ev(`return S.testCard === true;`) && b.media > 20 && b.cores > 8, j(b));
   const t = await ev(`const a = S.screens; return P.engine.probeScreen(a[0], S.layers, a, [[0.5, 0.5], [0.2, 0.3], [0.8, 0.7]]);`);
   confere('a tela de saída continua recebendo o test card', t.some(c => c[0] + c[1] + c[2] > 60), j(t));
   await menuTestCard(); const c = await quadro();

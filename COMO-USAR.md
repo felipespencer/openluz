@@ -93,7 +93,7 @@ estendido (`app/apc40.js`); Atalhos → MIDI: APC40 mkII… mostra o estado e a 
 
 ### Projetores (assistente)
 
-Ao abrir o programa com mais de um monitor (e no menu Saída → Projetores…), um desenho mostra os
+Ao abrir o programa com mais de um monitor (e no menu OUTPUT → Projetores…), um desenho mostra os
 projetores como retângulos: arraste cada um para o lugar dele, ↻ (ou duplo clique) vira em pé ou
 deitado, as bordas encaixam umas nas outras e, onde dois se sobrepõem, a emenda aparece com a
 largura e ganha soft edge sozinha. A composição é o retângulo que envolve todos; cada projetor vira
@@ -340,5 +340,5 @@ foi copiado nem descompilado.
 
 ## Webcam virtual
 
-Saída › **Webcam virtual** manda a composição para a câmera "OBS Virtual Camera", que aparece no Google Meet, no Zoom e em outros programas de vídeo.
+OUTPUT › **Webcam virtual** manda a composição para a câmera "OBS Virtual Camera", que aparece no Google Meet, no Zoom e em outros programas de vídeo.
 Precisa do [OBS Studio](https://obsproject.com/download) instalado no computador; ele não precisa ficar aberto. A imagem vai sempre em 1920×1080 a 30 quadros por segundo, sem som; composição fora de 16:9 ganha barras pretas. Se o próprio OBS estiver com "Iniciar câmera virtual" ligado, desligue lá primeiro.

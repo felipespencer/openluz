@@ -14,7 +14,7 @@ Do download até uma imagem no projetor, em uns cinco minutos. Vale para a vers�
 
 O programa abre com uma grade vazia: cinco camadas (as linhas) e oito colunas. Cada casa da grade guarda um clipe.
 
-Se houver um segundo monitor ou um projetor ligado, na primeira vez aparece o assistente **Projetores**. Para começar, clique em **Pular**; ele continua disponível em **Saída › Projetores…**.
+Se houver um segundo monitor ou um projetor ligado, na primeira vez aparece o assistente **Projetores**. Para começar, clique em **Pular**; ele continua disponível em **OUTPUT › Projetores…**.
 
 ## 3. Pôr alguma coisa na grade
 
@@ -77,7 +77,7 @@ From download to an image on the projector in about five minutes. For version **
 
 The app opens with an empty grid: five layers (rows) and eight columns. Each cell holds one clip.
 
-If a second monitor or a projector is connected, the **Projetores** (Projectors) wizard appears the first time. To get started, click **Pular** (Skip); it stays available under **Saída › Projetores…**.
+If a second monitor or a projector is connected, the **Projetores** (Projectors) wizard appears the first time. To get started, click **Pular** (Skip); it stays available under **OUTPUT › Projetores…**.
 
 ## 3. Put something in the grid
 

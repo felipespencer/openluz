@@ -22,7 +22,7 @@ const rectTexto = (t, sel) => ev(`(() => { const e = [...document.querySelectorA
 { const t = await ev(`(() => { const r = document.querySelector('#menubar').getBoundingClientRect(); return { x: r.x + 40, y: r.y + r.height / 2 }; })()`); await click(t.x, t.y); await ev(`${P}.menubar.close(); 1`); await S(150); }
 const menu = async () => {
   await ev(`${P}.menubar.close(); 1`); await S(100);
-  const m = await rectTexto('Saída', '#menubar *'); if (!m) throw new Error('menu Saída não achado'); await click(m.x, m.y);
+  const m = await rectTexto('OUTPUT', '#menubar *'); if (!m) throw new Error('menu OUTPUT não achado'); await click(m.x, m.y);
   const it = await rectTexto('Webcam virtual', '.menuLayer .menu .mi .lb'); if (!it) throw new Error('item Webcam virtual não achado');
   const marcado = await ev(`(() => { const e = [...document.querySelectorAll('.menuLayer .menu .mi .lb')].find(x => x.textContent.startsWith('Webcam virtual')).closest('.mi'); return e.className + '|' + e.textContent; })()`);
   return { it, marcado };

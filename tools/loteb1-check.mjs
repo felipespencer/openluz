@@ -35,13 +35,13 @@ try {
   await key('Escape', 27); await cl(`document.querySelector('#compName')`);
   await wait(1300); confere('43: fechado o seletor, a lista volta a se atualizar', await ev(`return !window.__sel43.isConnected || document.activeElement !== window.__sel43;`));
 
-  // ---- 37: Saída › Automático com a saída já aberta reabre no mesmo projetor, em tela cheia
+  // ---- 37: OUTPUT › Automático com a saída já aberta reabre no mesmo projetor, em tela cheia
   await cl(`document.querySelector('#btnOut')`); await wait(2500);
   const s1 = await saidas(); console.log('   saída aberta: ' + JSON.stringify(s1));
   confere('37: a saída abre num projetor, em tela cheia', s1.length === 1 && s1[0].w === s1[0].sw && s1[0].h === s1[0].sh && !(s1[0].x === 0 && s1[0].y === 0), JSON.stringify(s1[0] || {}));
-  await cl(texto('Saída')); await wait(250); await cl(`[...document.querySelectorAll('.mi, .menu *')].filter(e => e.children.length === 0 && e.textContent.trim().startsWith('Automático') && e.getBoundingClientRect().width > 0)[0]`); await wait(2800);
-  const s2 = await saidas(); console.log('   depois de Saída › Automático: ' + JSON.stringify(s2));
-  confere('37: Saída › Automático com a saída aberta reabre no mesmo projetor, em tela cheia', s2.length === 1 && s1.length === 1 && s2[0].x === s1[0].x && s2[0].y === s1[0].y && s2[0].w === s1[0].w && s2[0].h === s1[0].h, JSON.stringify(s2[0] || {}));
+  await cl(texto('OUTPUT')); await wait(250); await cl(`[...document.querySelectorAll('.mi, .menu *')].filter(e => e.children.length === 0 && e.textContent.trim().startsWith('Automático') && e.getBoundingClientRect().width > 0)[0]`); await wait(2800);
+  const s2 = await saidas(); console.log('   depois de OUTPUT › Automático: ' + JSON.stringify(s2));
+  confere('37: OUTPUT › Automático com a saída aberta reabre no mesmo projetor, em tela cheia', s2.length === 1 && s1.length === 1 && s2[0].x === s1[0].x && s2[0].y === s1[0].y && s2[0].w === s1[0].w && s2[0].h === s1[0].h, JSON.stringify(s2[0] || {}));
 
   // ---- 41: a tela tem o tamanho do projetor em pixels de verdade, não em pixels lógicos
   const alvo = mon.find(d => s2[0] && d.x === s2[0].x && d.y === s2[0].y), tela = await ev(`const s = S.screens.find(x => x.win && !x.win.closed); return s ? { w: s.w, h: s.h } : null;`);
