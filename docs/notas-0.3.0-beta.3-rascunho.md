@@ -1,7 +1,7 @@
 # OpenLuz 0.3.0-beta.3 — rascunho das notas
 
-> Rascunho. A versão ainda não foi gerada nem publicada; o número pode mudar. Escrito em 2026-11-16 a partir do que está
-> no branch `efeitos-resolume` depois da 0.3.0-beta.2.
+> Rascunho. A versão foi gerada e instalada no computador do Felipe em 2026-11-16; ainda não foi publicada. Escrito a
+> partir do que está no branch `efeitos-resolume` depois da 0.3.0-beta.2.
 
 ## Novidades
 
@@ -21,6 +21,11 @@
 - **Slice polígono**: triângulo ou desenhado com o lápis, com pontos de entrada e de saída independentes; a imagem é
   esticada de um para o outro.
 
+**No resto do programa**
+
+- O Test Card aparece também no quadro Composição, não só nas saídas.
+- Composição › Nova abre o assistente de projetores (com mais de um monitor) e o diálogo Nova composição.
+
 **Para quem abre pela primeira vez**
 
 - A grade vazia diz o que fazer, e o programa avisa que falta clicar na miniatura para pôr o clipe no ar.
@@ -38,6 +43,7 @@
 
 ## Muda para quem já usa
 
+- **O menu Saída da barra passa a se chamar OUTPUT.**
 - **A máscara de saída nova nasce com Inverter ligado**, como no Resolume: tudo fica preto menos a forma. Para tapar só
   a forma, desligue Inverter. As máscaras já salvas não mudam.
 
@@ -51,7 +57,7 @@
 
 # OpenLuz 0.3.0-beta.3 — release notes (draft)
 
-> Draft. Not built or published yet.
+> Draft. Built and installed locally on 2026-11-16; not published yet.
 
 ## New
 
@@ -71,6 +77,11 @@
 - **Polygon slice**: a triangle or drawn with the pen, with independent input and output points; the image is stretched
   from one to the other.
 
+**Elsewhere**
+
+- The Test Card also shows in the Composition monitor, not only on the outputs.
+- Composition › New opens the projector assistant (with more than one monitor) and the New composition dialog.
+
 **First run**
 
 - The empty grid tells you what to do, and the app points out that a clip only goes live when you click its thumbnail.
@@ -87,5 +98,6 @@
 
 ## Changes for existing users
 
+- **The Saída menu in the menu bar is now called OUTPUT.**
 - **A new output mask starts with Invert on**, like Resolume: everything is black except the shape. Turn Invert off to
   cover only the shape. Saved masks are unchanged.
