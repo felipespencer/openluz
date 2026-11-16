@@ -201,7 +201,8 @@ durante o checkpoint do 02-01; registrada como fase própria em 2026-10-30 — "
 - [x] 07-05: painel da máscara com números e giro, máscara nova quadrada, lista de zoom — fechado em 2026-11-15 (3fcec7d, só local)
 - [x] 07-06: menu de presets como no Resolume (Salvar, Salvar como, Apagar, Renomear, Novo, Mostrar na pasta, Abrir) — fechado em 2026-11-15, só local
 - [x] 07-07: Is Key e Black BG medidos na saída do Resolume e feitos iguais ("É chave" e "Fundo preto") — fechado em 2026-11-15, só local
-- [ ] 07-08 em diante: imagem de guia, origens da entrada, "Mostrar na saída", Inverter padrão (medir a saída antes); slice polígono e exportar SVG por último
+- [ ] 07-08: imagem de guia e "Mostrar na saída" medidos no Resolume e feitos iguais — em aplicação desde 2026-11-15
+- [ ] 07-09 em diante: origens da entrada (com Input Opacity e Bypass/Solo), Inverter padrão (medir a saída antes); slice polígono e exportar SVG por último
 
 ### Phase 8: Webcam virtual
 
