@@ -841,6 +841,30 @@ function render() {
   syncLaser();
 }
 
+// Clique que sobrevive ao refazer da grade (12-13). O render() troca todos os elementos do #grid; se isso acontece entre o
+// apertar e o soltar do botão (Autopilot, Beat Snap), o navegador não gera o clique, porque o elemento apertado sumiu.
+// Aqui: se o elemento apertado foi trocado e o que está debaixo do mouse ao soltar tem a mesma identidade (mesma casa, ou
+// o mesmo botão na mesma posição), o tratador de clique do elemento novo é chamado. Se não foi trocado, o clique nativo vale.
+(function () {
+  const g = $('grid'); let down = null, esperando = null;
+  const alvo = (t) => {
+    if (!t || !t.closest) return null;
+    const c = t.closest('.cell'); if (c && g.contains(c)) return { el: c, id: 'c:' + c.dataset.layer + ':' + c.dataset.col + ':' + (t.classList.contains('nm') ? 'nm' : ''), target: t };
+    const b = t.closest('button'); if (b && g.contains(b)) return { el: b, id: 'b:' + [...g.querySelectorAll('button')].indexOf(b) + ':' + b.textContent, target: b };
+    return null;
+  };
+  g.addEventListener('pointerdown', (e) => { down = null; if (e.button !== 0) return; const a = alvo(e.target); if (a) down = { ...a, x: e.clientX, y: e.clientY }; }, true);
+  g.addEventListener('dragstart', () => { down = null; }, true);
+  g.addEventListener('click', (e) => { if (esperando && esperando.el.contains(e.target)) esperando = null; }, true);   // o clique nativo chegou: nada a repor
+  addEventListener('pointerup', (e) => {
+    const d = down; down = null; if (!d || e.button !== 0) return;
+    if (d.el.isConnected) return;
+    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return;
+    const a = alvo(document.elementFromPoint(e.clientX, e.clientY)); if (!a || a.id !== d.id || typeof a.el.onclick !== 'function') return;
+    esperando = a;
+    setTimeout(() => { if (esperando !== a) return; esperando = null; if (!a.el.isConnected) return; a.el.onclick({ target: a.target, currentTarget: a.el, clientX: e.clientX, clientY: e.clientY, button: 0, stopPropagation() { }, preventDefault() { } }); }, 0);
+  }, true);
+})();
 // soltar na grade: arquivos do Windows, item do navegador (arquivo, fonte, efeito, laser) ou clipe de outra casa
 (function () {
   const g = $('grid'); let over = null;
