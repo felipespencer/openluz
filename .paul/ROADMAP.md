@@ -277,6 +277,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [x] 12-15: Test Card também no quadro Composição — fechado em 2026-11-16, só local
 - [x] 12-16: Menu Saída vira OUTPUT — fechado em 2026-11-16, só local
 - [x] 12-17: Composição nova abre Projetores e Nova composição — fechado em 2026-11-16, só local
+- [x] 12-18: testes com os monitores ligados — fechado em 2026-11-17, só teste: as três baterias que oscilavam passam firmes (era o ambiente, 60 qps contra 30), regressão aprovada, 0.3.0-beta.3 instalada projeta nos dois projetores
 - [ ] parado no "risco 1" (decisão do Felipe, 2026-11-14): C2, D, E, F só se ele pedir
 
 ### Phase 13: Porta de entrada
