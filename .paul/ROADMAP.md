@@ -291,7 +291,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [x] 13-02: convite na grade vazia e aviso de "clique na miniatura para pôr no ar" — fechado em 2026-11-14 (1acc7ae, só local)
 - [x] 13-03: COMO-USAR em dia com a Saída avançada e rascunho das notas da 0.3.0-beta.3 — fechado em 2026-11-16, só local
 - [x] 13-04: polígono no COMO-USAR e no rascunho das notas — fechado em 2026-11-16, só local
-- [x] 13-05: 0.3.0-beta.3 gerada e instalada no CAIOPRADO — fechado em 2026-11-16; não publicada
+- [x] 13-05: 0.3.0-beta.3 gerada e instalada no CAIOPRADO — fechado em 2026-11-16; publicada como pré-release em 2026-11-17
 
 ### Phase 14: Saída 3D
 
