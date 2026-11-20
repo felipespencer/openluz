@@ -28,9 +28,12 @@
     </div>
     <div class="split v" id="splitMon" title="Arraste para mudar o tamanho; duplo clique volta ao padrão"></div>
     <div id="mons">
-      <div class="mon out"><div class="cap"><span>Composição <i id="compInfo"></i></span><span class="acts"><button id="btnAO" type="button" title="Telas, slices, deformação, soft edge e máscaras: como a composição vai para cada projetor">Saída avançada</button></span></div><div class="scr" id="outScr"></div></div>
-      <div class="mon"><div class="cap"><span>Prévia</span><span id="prevName">—</span></div><div class="scr" id="prevScr"></div></div>
-      <div class="mon"><div class="cap"><span>Telas</span><span id="scrCount"></span></div><div id="scrList" class="saidas"></div></div>
+      <div class="par">
+        <div class="mon out"><div class="cap"><span>Composição <i id="compInfo"></i></span></div><div class="scr" id="outScr"></div></div>
+        <div class="mon"><div class="cap"><span>Prévia</span><span id="prevName">—</span></div><div class="scr" id="prevScr"></div></div>
+      </div>
+      <div class="acts aoRow"><button id="btnAO" type="button" title="Telas, slices, deformação, soft edge e máscaras: como a composição vai para cada projetor">Saída avançada</button></div>
+      <div class="mon proj"><div class="cap"><span>Projetores</span><span id="scrCount"></span></div><div id="projView" title="O que sai em cada projetor. Clique num projetor para abrir a Saída avançada nele."></div><div id="scrList" class="saidas"></div><div id="projSug" hidden></div></div>
     </div>
   </div>
 

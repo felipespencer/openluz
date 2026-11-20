@@ -1146,8 +1146,67 @@ function renderScreens(relogio) {
   $('outState').textContent = on ? (on === 1 ? 'saída no ar' : on + ' saídas no ar') : 'saída fechada'; $('outState').classList.toggle('on', on > 0);
   $('btnOut').textContent = on ? 'Fechar saída' : 'Abrir saída'; $('btnOut').classList.toggle('on', on > 0); $('btnOut').title = on ? 'Fecha as janelas de saída. A saída continua montada: é só abrir de novo.' : 'Abre uma janela de saída por tela. Com um projetor ligado, ela já abre nele em tela cheia.';
   $('compName').textContent = state.name || 'sem nome';
+  renderProjView();
 }
 setInterval(() => renderScreens(true), 1000);
+
+// ---- vista Projetores (12-21, maquete projetores-mockup.html): o que sai em cada tela, em fila e na mesma escala, da esquerda
+// para a direita como o Windows arruma os monitores. Só lê o canvas que a tela já tem; desenha a miniatura poucas vezes por segundo.
+// var (não const): o renderScreens roda antes desta linha na montagem; a vista só começa com projPronto, no fim do arquivo
+var projView = $('projView'), projThumbs = new Map(), projKey = '', projSugFechada = '', projPronto = false;
+function projOrdem() {
+  const x = (sc) => { const d = displays.find(d => d.id === sc.device); return d ? d.x : 1e9 + state.screens.indexOf(sc); };
+  return [...state.screens].sort((a, b) => x(a) - x(b));
+}
+function renderProjView() {
+  if (!projPronto || !projView) return;
+  const r = projView.getBoundingClientRect(), lista = projOrdem();
+  const key = lista.map(sc => [sc.uid, sc.w, sc.h, sc.name, sc.device, sc.enabled, !!(sc.win && !sc.win.closed)].join(':')).join('|') + '@' + Math.round(r.width) + 'x' + Math.round(r.height) + '@' + displays.map(d => d.id + d.label).join();
+  if (key !== projKey) {
+    projKey = key; projView.textContent = ''; projThumbs.clear();
+    if (!lista.length) projView.appendChild(el('div', 'vazio', 'Nenhuma tela. Abra a Saída avançada para criar.'));
+    const pad = 10, baixo = 28, gap = 14, tot = lista.reduce((n, sc) => n + sc.w, 0) || 1, alto = Math.max(1, ...lista.map(sc => sc.h));
+    const esc = Math.max(0.001, Math.min((r.width - pad * 2 - gap * Math.max(0, lista.length - 1)) / tot, (r.height - pad * 2 - baixo) / alto));
+    let cx = (r.width - tot * esc - gap * Math.max(0, lista.length - 1)) / 2; const oy = pad + (r.height - pad * 2 - baixo - alto * esc) / 2;
+    for (const sc of lista) {
+      const W = Math.max(4, Math.round(sc.w * esc)), H = Math.max(4, Math.round(sc.h * esc)), open = !!(sc.win && !sc.win.closed);
+      const d = el('div', 'tela' + (open ? ' on' : '')); d.dataset.uid = sc.uid;
+      Object.assign(d.style, { left: cx + 'px', top: oy + (alto * esc - H) + 'px', width: W + 'px', height: H + 'px' }); cx += W + gap;
+      const c = el('canvas'); c.width = W; c.height = H;
+      const mon = sc.device === 'auto' ? 'automático' : sc.device === 'window' ? 'janela' : ((displays.find(x => x.id === sc.device) || {}).label || 'monitor');
+      const nm = el('div', 'nm'); nm.innerHTML = '<b></b><br><span></span> · <i></i>'; nm.querySelector('b').textContent = sc.name; nm.querySelector('span').textContent = mon; nm.querySelector('i').textContent = open ? 'no ar' : sc.enabled ? 'fechada' : 'desligada';
+      d.title = sc.name + ' · ' + sc.w + '×' + sc.h + ' · ' + mon + '. Clique para abrir a Saída avançada nesta tela.';
+      d.onclick = () => { ao.show(); ao.select(sc, null); ao.setTab('out'); ao.layout(); ao.refresh(); };
+      d.append(c, nm); projView.appendChild(d); projThumbs.set(sc.uid, c.getContext('2d'));
+    }
+    projDesenha(true);
+  }
+  // aviso: todas as telas ligadas em pé e a composição deitada (a imagem sai esticada, como no Resolume); só avisa
+  const lig = state.screens.filter(sc => sc.enabled), S = state.settings, sug = $('projSug');
+  const chave = S.w + 'x' + S.h + ':' + lig.map(sc => sc.uid).join(), mostra = lig.length > 0 && lig.every(sc => sc.h > sc.w) && S.w > S.h && projSugFechada !== chave;
+  if (mostra && sug.hidden) {
+    sug.textContent = ''; sug.append(el('span', '', lig.length === 1 ? 'O projetor está em pé e a composição deitada: a imagem sai esticada.' : 'Os projetores estão em pé e a composição deitada: a imagem sai esticada.'));
+    const b = el('button', '', 'Deixar em pé'); b.title = 'Troca a composição para ' + S.h + '×' + S.w + ' (Composição › Configurações). Dá para desfazer com Ctrl+Z.';
+    b.onclick = () => { markUndo(); applySettings({ ...state.settings, w: state.settings.h, h: state.settings.w }); render(); };
+    const x = el('button', 'x', '✕'); x.title = 'Esconder este aviso nesta composição'; x.onclick = () => { projSugFechada = chave; sug.hidden = true; };
+    sug.append(b, x);
+  }
+  sug.hidden = !mostra;
+}
+if (projView && window.ResizeObserver) new ResizeObserver(() => renderProjView()).observe(projView);
+// miniaturas: telas no ar copiam o canvas que já foi desenhado; telas fechadas são desenhadas aqui, bem mais devagar
+function projDesenha(tudo) {
+  for (const sc of state.screens) {
+    const ctx = projThumbs.get(sc.uid); if (!ctx) continue;
+    const open = sc.win && !sc.win.closed, vista = open || (ao.open && ao.curScreen() === sc) || recorder.tela === sc;
+    if (!vista) {
+      if (!sc.enabled) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); continue; }
+      if (!tudo && loop.frames % 15) continue;
+      try { screenCanvas(sc); engine.renderScreen(sc, state.layers, state.screens); engine.blit(sc.ctx, sc.w, sc.h); } catch (e) { continue; }
+    }
+    if (sc.cv && sc.cv.width) try { ctx.drawImage(sc.cv, 0, 0, ctx.canvas.width, ctx.canvas.height); } catch { }
+  }
+}
 
 const ao = new AdvancedOutput({
   get compW() { return state.settings.w; }, get compH() { return state.settings.h; }, compCanvas: monCanvas,
@@ -1767,6 +1826,7 @@ function frame() {
     catch (e) { loopErro(e, 'tela ' + (sc.name || sc.id)); }   // o erro de uma tela não tira as outras do ar
   }
   try { ao.frame(); } catch (e) { loopErro(e, 'Saída avançada'); }
+  if (projThumbs.size && projView.isConnected && loop.frames % 5 === 0) try { projDesenha(false); } catch (e) { loopErro(e, 'vista Projetores'); }
   tickAutopilot(now);
 }
 const webcam = new WebcamOut(engine, D);
@@ -1797,9 +1857,10 @@ async function alternarWebcam() {
 // (os valores também mudam por código, sem evento: por isso a conferência periódica)
 function aquaSliders() { const sync = () => { for (const r of document.querySelectorAll('input[type=range]')) { const mn = +r.min || 0, mx = r.max === '' ? 100 : +r.max, p = mx > mn ? Math.max(0, Math.min(1, (+r.value - mn) / (mx - mn))) * 100 : 0, v = p.toFixed(1) + '%'; if (r.style.getPropertyValue('--p') !== v) r.style.setProperty('--p', v); } }; addEventListener('input', sync, true); setInterval(sync, 120); sync(); }
 aquaSliders();
-window.projecionista = { iaDialog, putIaGen, iaTrocarImagem, get textEditor() { return textEditor; }, webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
+window.projecionista = { renderProjView, iaDialog, putIaGen, iaTrocarImagem, get textEditor() { return textEditor; }, webcam, alternarWebcam, keymap, putPhone, frames: () => loop.total || 0, undo: undoComp, redo: redoComp, markUndo, hist, recordingToClip, automape, setAutomapeGrid, automapeGridOn, menubar, settingsDialog, applySettings, insertColumn, removeColumn, duplicateColumn, insertLayer, duplicateLayer, copyClip, pasteClip, toggleTestCard, addDeck, switchDeck, removeDeck, duplicateDeck, newGroup, setLayerGroup, removeGroup, duplicateGroup, addLayerToGroup, fadeTo, bpm: state.bpm, tapBpm: (t) => tap(state.bpm, t), pending: () => pending.length, apc, stepClip, EFFECTS, audio, mkAudioFx, seg, applyProjectors, projectorWizard, autosave, cols: () => COLS, state, engine, putFiles, putSource, putText, putPath, prepareClip, trigger, eject, triggerColumn, moveClip, clearCell, render, ao, M, C, laser, putLaserClip, panels, browser, recorder, comps,
   probe: (pts) => engine.probe(state.layers, pts),
   probeScreen: (sc, pts) => engine.probeScreen(sc, state.layers, state.screens, pts),
   serialize: () => serializeComposition(state, laser, COLS), load: loadComposition, reset: resetComposition,
   askClose, clipMenuItems,
   screens: () => state.screens, setScreens, openOutputs, outWins: () => state.screens.map(sc => sc.win).filter(w => w && !w.closed) };
+projPronto = true; renderProjView();   // vista Projetores: agora ao, recorder e o laço já existem
