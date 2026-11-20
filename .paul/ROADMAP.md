@@ -297,7 +297,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [x] 12-18: testes com os monitores ligados — fechado em 2026-11-17, só teste: as três baterias que oscilavam passam firmes (era o ambiente, 60 qps contra 30), regressão aprovada, 0.3.0-beta.3 instalada projeta nos dois projetores
 - [x] 12-19: teste de carga com vídeos de verdade e efeitos, duas saídas ao mesmo tempo — fechado em 2026-11-17, só teste: três camadas (1080p, 4K h264, 4K HEVC) com seis efeitos seguram 27,6–30 qps no motor e 59–60 nas saídas, dez minutos sem inchar, dev e beta.3 instalada
 - [x] 12-20: arestas com os dois projetores ligados — fechado em 2026-11-20: seletor guarda o foco; projetor em pé igual ao Resolume; queda de quadros sem causa; baterias firmes
-- [ ] 12-21: Prévia e Composição na forma da composição, vista de todos os projetores (maquete antes) e 0.3.0-beta.4 publicada — aplicado em 2026-11-20 e instalado no laptop G3; falta publicar no GitHub (rede)
+- [ ] 12-21: Prévia e Composição na forma da composição, vista de todos os projetores (maquete antes) e 0.3.0-beta.4 publicada — aplicado em 2026-11-20 (laptop G3 ainda na beta.3); falta publicar no GitHub (rede)
 - [ ] parado no "risco 1" (decisão do Felipe, 2026-11-14): C2, D, E, F só se ele pedir
 
 ### Phase 13: Porta de entrada
