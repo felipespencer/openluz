@@ -88,12 +88,13 @@ export function propsKit(host) {
     s.onchange = () => {
       // o refresh refaz o painel e joga fora este <select>; se ele tinha o foco (seta do teclado), o foco vai para o
       // seletor novo de mesmo rótulo e mesma posição, senão a 2ª seta cai no vazio (12-20, achado com dois projetores)
-      const tinha = document.activeElement === s, raiz = s.closest('[id]'), rid = raiz && raiz.id;
+      // painel com id (Saída avançada, laser…) ou, nos diálogos, que não têm id, a própria caixa do diálogo
+      const tinha = document.activeElement === s, raiz = s.closest('[id]') || s.closest('.dlg') || document.body, rid = raiz.id;
       const deMesmoNome = (r) => [...r.querySelectorAll('.prow')].filter(p => p.querySelector(':scope > .pl')?.textContent === label).map(p => p.querySelector('select')).filter(Boolean);
       const pos = tinha && raiz ? deMesmoNome(raiz).indexOf(s) : -1;
       host.pushUndo(); set(s.value); host.c.onChange(); host.refresh();
       if (pos < 0 || s.isConnected) return;
-      const r2 = document.getElementById(rid), novo = r2 && deMesmoNome(r2)[pos];
+      const r2 = rid ? document.getElementById(rid) : raiz.isConnected ? raiz : document.body, novo = r2 && deMesmoNome(r2)[pos];
       if (novo) novo.focus();
     };
     box.appendChild(s); return K.prow(label, help, box);

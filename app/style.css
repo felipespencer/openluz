@@ -140,10 +140,11 @@ button.gh:hover{ color:var(--txt); background:var(--bg3); }
 .cell.pv .nm{ box-shadow:inset 0 0 0 1px #fff; }            /* na Prévia: fio branco na faixa */
 .cell.empty.sel{ box-shadow:inset 0 0 0 1px #6d7178; }
 
-#mons{ display:grid; grid-template-rows:auto auto 1fr; gap:8px; padding:8px; background:var(--bg2); min-height:0; overflow:auto; }
+#mons{ container-type:size; display:grid; grid-template-rows:auto auto 1fr; gap:8px; padding:8px; background:var(--bg2); min-height:0; overflow:auto; }
 .mon .cap{ display:flex; justify-content:space-between; gap:8px; color:var(--dim); font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px; }
 .mon .cap span:last-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:none; letter-spacing:0; }
-.mon .scr{ position:relative; aspect-ratio:16/9; background:#000; border:1px solid var(--line); overflow:hidden; display:flex; }
+/* forma da composição (12-21): em pé fica em pé, como no Resolume; a altura tem teto para a lista Telas caber, e a largura acompanha */
+.mon .scr{ position:relative; aspect-ratio:var(--comp-ar, 16 / 9); max-height:calc((100cqh - 130px) / 2); max-width:100%; margin:0 auto; background:#000; border:1px solid var(--line); overflow:hidden; display:flex; }
 .mon .scr canvas, .mon .scr video, .mon .scr img{ width:100%; height:100%; object-fit:contain; display:block; }
 
 #bot{ display:grid; grid-template-columns:360px minmax(0,1fr) 330px; min-height:0; border-top:1px solid var(--line); }

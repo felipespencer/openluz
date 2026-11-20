@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Maquete — quadros em pé e vista dos projetores (12-21)</title>
+<style>
+  :root{ --bg:#141416; --bg2:#1b1b1e; --line:#2c2d31; --txt:#e6e6e6; --dim:#9a9ca2; --ghost:#6d7178; --live:#3fd0b6; --live-ink:#0b1f1b; --accent:#e2b13c; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#0d0d0f; color:var(--txt); font:13px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header{ padding:18px 24px 6px; } h1{ font-size:17px; margin:0 0 4px; } header p{ margin:0; color:var(--dim); max-width:980px; }
+  .casos{ display:flex; gap:28px; padding:16px 24px 30px; flex-wrap:wrap; align-items:flex-start; }
+  .caso{ display:flex; flex-direction:column; gap:8px; }
+  .caso h2{ font-size:13px; margin:0; color:var(--accent); font-weight:600; } .caso .nota{ color:var(--dim); max-width:360px; margin:0; font-size:12px; }
+  /* a coluna da direita do programa, no mesmo tamanho (340 × 540) */
+  .mons{ width:340px; height:560px; background:var(--bg2); border:1px solid var(--line); padding:8px; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+  .cap{ display:flex; justify-content:space-between; gap:8px; color:var(--dim); font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px; }
+  .cap i{ font-style:normal; color:var(--ghost); letter-spacing:0; margin-left:6px; }
+  .cap button{ height:18px; padding:0 8px; font-size:11px; background:#2a2b30; color:var(--txt); border:1px solid #3a3b41; border-radius:3px; text-transform:none; letter-spacing:0; }
+  .scr{ background:#000; border:1px solid var(--line); overflow:hidden; position:relative; }
+  .par{ display:flex; gap:8px; justify-content:center; } .par > div{ flex:none; }
+  .img{ width:100%; height:100%; display:block; }
+  .tag{ position:absolute; left:4px; bottom:4px; font-size:10px; padding:1px 5px; border-radius:2px; background:rgba(0,0,0,.6); color:#fff; }
+  /* vista dos projetores */
+  .proj{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  .palco{ position:relative; flex:1; min-height:0; background:#101012; border:1px solid var(--line); border-radius:2px; }
+  .tela{ position:absolute; background:#000; outline:1px solid #3a3b41; cursor:pointer; }
+  .tela.on{ outline:2px solid var(--live); }
+  .tela.sel{ outline:2px solid #fff; }
+  .tela .nm{ position:absolute; left:0; right:0; top:100%; margin-top:3px; font-size:10px; color:var(--dim); white-space:nowrap; text-align:center; }
+  .tela .nm b{ color:var(--txt); font-weight:600; } .tela.on .nm i{ color:var(--live); font-style:normal; }
+  .leg{ display:flex; gap:10px; font-size:10.5px; color:var(--dim); margin-top:22px; flex-wrap:wrap; }
+  .leg span::before{ content:""; display:inline-block; width:9px; height:9px; margin-right:4px; vertical-align:-1px; border:2px solid var(--live); }
+  .leg span.fech::before{ border-color:#3a3b41; }
+  .linhas{ font-size:11px; color:var(--dim); margin-top:6px; display:grid; grid-template-columns:auto 1fr auto; gap:2px 8px; }
+  .linhas b{ color:var(--txt); font-weight:500; } .linhas .on{ color:var(--live); }
+  .sug{ margin-top:6px; font-size:11px; background:#2a2414; border:1px solid #5a4a1c; color:#f0d58a; padding:6px 8px; border-radius:3px; display:flex; gap:8px; align-items:center; }
+  .sug button{ height:20px; font-size:11px; padding:0 8px; background:#e2b13c; color:#111; border:0; border-radius:3px; font-weight:600; white-space:nowrap; }
+  footer{ padding:0 24px 30px; color:var(--dim); max-width:1060px; } footer ol{ padding-left:18px; } footer li{ margin:4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Maquete: quadros em pé e vista dos projetores</h1>
+  <p>É a coluna à direita da grade, em tamanho real. Hoje ela tem Composição, Prévia e a lista Telas, e os dois quadros são
+  sempre deitados. Proposta: os quadros seguem a forma da composição (isso já está feito no programa, igual ao Resolume), e a
+  lista Telas vira a vista <b>Projetores</b>, com a imagem que sai em cada um.</p>
+</header>
+
+<div class="casos">
+  <div class="caso">
+    <h2>1. Um projetor só, em pé (o seu laptop)</h2>
+    <p class="nota">Composição 1080×1920. Os dois quadros ficam em pé, lado a lado. Embaixo, a vista Projetores.</p>
+    <div class="mons">
+      <div class="par">
+        <div><div class="cap"><span>Composição <i>1080×1920</i></span></div><div class="scr" style="width:150px;height:267px"><canvas class="img" data-cena="a" width="150" height="267"></canvas></div></div>
+        <div><div class="cap"><span>Prévia</span><span style="text-transform:none;letter-spacing:0">fractal.mp4</span></div><div class="scr" style="width:150px;height:267px"><canvas class="img" data-cena="b" width="150" height="267"></canvas></div></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end"><div class="cap" style="margin:0"><button>Saída avançada</button></div></div>
+      <div class="proj">
+        <div class="cap"><span>Projetores</span><span style="text-transform:none;letter-spacing:0">1 tela · no ar</span></div>
+        <div class="palco" data-palco="1"></div>
+        <div class="linhas">
+          <b>Projetor</b><span>1080×1920 · BenQ</span><span class="on">no ar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caso">
+    <h2>2. Dois projetores, um deitado e um em pé</h2>
+    <p class="nota">Composição 1920×1080, Composição e Prévia lado a lado (como no Resolume). Cada projetor mostra o que sai nele de verdade (com slices, máscaras e emendas), em fila, na mesma escala, da esquerda para a direita como no Windows. A Tela 2 aqui tem um slice só no meio. Clique num projetor: a Saída avançada abre nele.</p>
+    <div class="mons">
+      <div class="par">
+        <div><div class="cap"><span>Composição <i>1920×1080</i></span></div><div class="scr" style="width:158px;height:89px"><canvas class="img" data-cena="a" width="158" height="89"></canvas></div></div>
+        <div><div class="cap"><span>Prévia</span><span style="text-transform:none;letter-spacing:0">fractal.mp4</span></div><div class="scr" style="width:158px;height:89px"><canvas class="img" data-cena="b" width="158" height="89"></canvas></div></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end"><div class="cap" style="margin:0"><button>Saída avançada</button></div></div>
+      <div class="proj">
+        <div class="cap"><span>Projetores</span><span style="text-transform:none;letter-spacing:0">2 telas · 2 no ar</span></div>
+        <div class="palco" data-palco="2"></div>
+        <div class="linhas">
+          <b>Projetor</b><span>1920×1080 · SAMSUNG</span><span class="on">no ar</span>
+          <b>Tela 2</b><span>1080×1920 · 23MP55</span><span class="on">no ar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caso">
+    <h2>3. Projetor em pé com a composição deitada</h2>
+    <p class="nota">O caso que mais confunde: a imagem sai esticada (o Resolume faz igual). O programa avisa, e um clique deixa a
+    composição em pé. Só avisa: não muda nada sozinho.</p>
+    <div class="mons">
+      <div class="par">
+        <div><div class="cap"><span>Composição <i>1920×1080</i></span></div><div class="scr" style="width:158px;height:89px"><canvas class="img" data-cena="a" width="158" height="89"></canvas></div></div>
+        <div><div class="cap"><span>Prévia</span><span style="text-transform:none;letter-spacing:0">—</span></div><div class="scr" style="width:158px;height:89px"><canvas class="img" data-cena="vazio" width="158" height="89"></canvas></div></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end"><div class="cap" style="margin:0"><button>Saída avançada</button></div></div>
+      <div class="proj">
+        <div class="cap"><span>Projetores</span><span style="text-transform:none;letter-spacing:0">1 tela · no ar</span></div>
+        <div class="palco" data-palco="3"></div>
+        <div class="linhas"><b>Projetor</b><span>1080×1920 · BenQ</span><span class="on">no ar</span></div>
+        <div class="sug">O projetor está em pé e a composição deitada: a imagem sai esticada. <button>Deixar em pé</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <b>Para você responder:</b>
+  <ol>
+    <li>A vista <b>Projetores</b> no lugar da lista Telas, com os projetores em fila, assim?</li>
+    <li>Composição e Prévia <b>lado a lado</b>, menores (como no Resolume), para sobrar lugar para os projetores: está bom?</li>
+    <li>O aviso "Deixar em pé" do caso 3 entra?</li>
+    <li>O clique num projetor abrir a Saída avançada nele: ou prefere que só selecione?</li>
+  </ol>
+  O desenho dos projetores fica parado na maquete. No programa ele mostra a imagem de verdade algumas vezes por segundo, sem
+  pesar nos quadros da saída.
+</footer>
+
+<script>
+// imagem de exemplo: faixas de cor que andam, a mesma cena para "composição" e outra para "prévia"
+function cena(ctx, w, h, t, tipo) {
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  if (tipo === 'b') { g.addColorStop(0, '#1a0b3a'); g.addColorStop(1, '#0c4a5e'); } else { g.addColorStop(0, '#3a0d25'); g.addColorStop(1, '#13325a'); }
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 7; i++) { const x = ((i * 0.17 + t * (tipo === 'b' ? 0.05 : 0.08)) % 1) * (w + 80) - 40;
+    ctx.fillStyle = `hsla(${(i * 47 + t * 40) % 360},90%,60%,.55)`; ctx.beginPath(); ctx.arc(x, h * (0.2 + 0.6 * ((i * 0.37) % 1)), Math.min(w, h) * 0.12, 0, 7); ctx.fill(); }
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `600 ${Math.round(Math.min(w, h) * 0.11)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('OpenLuz', w / 2, h / 2);
+}
+// os palcos: telas com tamanho proporcional e posição do Windows (em pixels de monitor)
+const PALCOS = {
+  1: [{ nm: 'Projetor', mon: 'BenQ', x: 0, y: 0, w: 1080, h: 1920, on: true, slice: 'cheia' }],
+  2: [{ nm: 'Projetor', mon: 'SAMSUNG', x: -479, y: -1080, w: 1920, h: 1080, on: true, slice: 'cheia' },
+      { nm: 'Tela 2', mon: '23MP55', x: -1080, y: 0, w: 1080, h: 1920, on: true, slice: 'meio', sel: true }],
+  3: [{ nm: 'Projetor', mon: 'BenQ', x: 0, y: 0, w: 1080, h: 1920, on: true, slice: 'esticada' }],
+};
+const telas = [];
+for (const [k, lista] of Object.entries(PALCOS)) {
+  const palco = document.querySelector(`[data-palco="${k}"]`), r = palco.getBoundingClientRect(), pad = 14, baixo = 30;
+  const gap = 18, tot = lista.reduce((n, t) => n + t.w, 0), alto = Math.max(...lista.map(t => t.h));
+  const esc = Math.min((r.width - pad * 2 - gap * (lista.length - 1)) / tot, (r.height - pad * 2 - baixo) / alto);
+  let cx = (r.width - tot * esc - gap * (lista.length - 1)) / 2; const oy = pad + (r.height - pad * 2 - baixo - alto * esc) / 2;
+  lista.sort((p, q) => p.x - q.x);
+  for (const t of lista) {
+    const d = document.createElement('div'); d.className = 'tela' + (t.on ? ' on' : '') + (t.sel ? ' sel' : '');
+    const W = Math.round(t.w * esc), H = Math.round(t.h * esc);
+    Object.assign(d.style, { left: cx + 'px', top: oy + (alto * esc - H) + 'px', width: W + 'px', height: H + 'px' }); cx += W + gap;
+    const c = document.createElement('canvas'); c.width = W; c.height = H; c.style.cssText = 'width:100%;height:100%;display:block';
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.innerHTML = `<b>${t.nm}</b><br>${t.mon} · <i>${t.on ? 'no ar' : 'fechada'}</i>`;
+    d.append(c, nm); palco.appendChild(d); telas.push({ c, t });
+  }
+}
+const quadros = [...document.querySelectorAll('canvas[data-cena]')];
+function desenha(ms) {
+  const t = ms / 1000;
+  for (const c of quadros) if (c.dataset.cena === 'vazio') { const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height); } else cena(c.getContext('2d'), c.width, c.height, t, c.dataset.cena);
+  for (const { c, t: tela } of telas) {
+    const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
+    if (tela.slice === 'cheia' || tela.slice === 'esticada') cena(x, c.width, c.height, t, 'a');
+    else { // um slice no meio da tela em pé, com a imagem só dentro dele (uma janela)
+      x.save(); x.beginPath(); x.rect(c.width * 0.1, c.height * 0.3, c.width * 0.8, c.height * 0.4); x.clip(); cena(x, c.width, c.height, t, 'a'); x.restore();
+      x.strokeStyle = 'rgba(255,255,255,.25)'; x.setLineDash([3, 3]); x.strokeRect(c.width * 0.1 + .5, c.height * 0.3 + .5, c.width * 0.8 - 1, c.height * 0.4 - 1);
+    }
+  }
+  requestAnimationFrame(desenha);
+}
+requestAnimationFrame(desenha);
+</script>
+</body>
+</html>

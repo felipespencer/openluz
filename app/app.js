@@ -1335,6 +1335,7 @@ function applySettings(s) {
     if (ao.open) ao.layout();
   }
   $('compInfo').textContent = s.w + '×' + s.h;
+  document.documentElement.style.setProperty('--comp-ar', s.w + ' / ' + s.h);   // quadros Composição e Prévia na forma da composição (12-21)
   const c = parseInt(s.bg.slice(1), 16); engine.bg = [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
   renderScreens();
 }
