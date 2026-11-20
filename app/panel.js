@@ -85,7 +85,18 @@ export function propsKit(host) {
       groups.get(g).appendChild(o);
     }
     s.value = cur;
-    s.onchange = () => { host.pushUndo(); set(s.value); host.c.onChange(); host.refresh(); }; box.appendChild(s); return K.prow(label, help, box);
+    s.onchange = () => {
+      // o refresh refaz o painel e joga fora este <select>; se ele tinha o foco (seta do teclado), o foco vai para o
+      // seletor novo de mesmo rótulo e mesma posição, senão a 2ª seta cai no vazio (12-20, achado com dois projetores)
+      const tinha = document.activeElement === s, raiz = s.closest('[id]'), rid = raiz && raiz.id;
+      const deMesmoNome = (r) => [...r.querySelectorAll('.prow')].filter(p => p.querySelector(':scope > .pl')?.textContent === label).map(p => p.querySelector('select')).filter(Boolean);
+      const pos = tinha && raiz ? deMesmoNome(raiz).indexOf(s) : -1;
+      host.pushUndo(); set(s.value); host.c.onChange(); host.refresh();
+      if (pos < 0 || s.isConnected) return;
+      const r2 = document.getElementById(rid), novo = r2 && deMesmoNome(r2)[pos];
+      if (novo) novo.focus();
+    };
+    box.appendChild(s); return K.prow(label, help, box);
   };
   K.ptext = (label, help, v, set) => {
     const box = el('div', 'pv'); const i = el('input'); i.type = 'text'; i.value = v; i.className = 'txt';
