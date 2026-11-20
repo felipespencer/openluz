@@ -32,6 +32,8 @@ const igual = (a, b) => a && b && ['x', 'y', 'w', 'h', 'rot'].every(k => Math.ab
 
 try {
   await cl(`document.querySelector('#btnAO')`); await wait(800); await cl(`document.querySelector('#aoTabOut')`); await wait(300);
+  // 12-20: na regressão inteira, com a máquina carregada, o palco às vezes ainda não tinha viewBox aos 800 ms ("reading 'split'")
+  for (let i = 0; i < 25 && !(await ev(`return !!document.querySelector('#aoSvg')?.getAttribute('viewBox');`)); i++) await wait(200);
   const svg = await ev(`const s = document.querySelector('#aoSvg'), r = s.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, W: +s.getAttribute('viewBox').split(' ')[2] };`);
   const k = svg.w / svg.W, X = v => svg.x + v * k, Y = v => svg.y + v * k;
   const ctrlZ = () => key('z', 90, CTRL);
