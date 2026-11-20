@@ -65,8 +65,6 @@ Prévia separada do ar, os 30 quadros, bateria única) junto com o resto da list
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with [INSERTED])
 
-| Phase | Name | Plans | Status | Completed |
-|-------|------|-------|--------|-----------|
 Marco v0.3 (fases carregadas do v0.2; 7, 8 e 11 fechadas no v0.2):
 
 | Phase | Name | Plans | Status | Completed |
@@ -298,6 +296,7 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 - [x] 12-17: Composição nova abre Projetores e Nova composição — fechado em 2026-11-16, só local
 - [x] 12-18: testes com os monitores ligados — fechado em 2026-11-17, só teste: as três baterias que oscilavam passam firmes (era o ambiente, 60 qps contra 30), regressão aprovada, 0.3.0-beta.3 instalada projeta nos dois projetores
 - [x] 12-19: teste de carga com vídeos de verdade e efeitos, duas saídas ao mesmo tempo — fechado em 2026-11-17, só teste: três camadas (1080p, 4K h264, 4K HEVC) com seis efeitos seguram 27,6–30 qps no motor e 59–60 nas saídas, dez minutos sem inchar, dev e beta.3 instalada
+- [ ] 12-20: arestas com os dois projetores ligados (foco do seletor, projetor em pé, queda de quadros, baterias da 1ª rodada) — plano criado em 2026-11-20
 - [ ] parado no "risco 1" (decisão do Felipe, 2026-11-14): C2, D, E, F só se ele pedir
 
 ### Phase 13: Porta de entrada
