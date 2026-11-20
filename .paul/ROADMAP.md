@@ -15,11 +15,29 @@ raiz continua sendo a lista detalhada do que veio do Resolume e do que está fei
 
 ## Current Milestone
 
-**v0.2 Automape e provas no equipamento** (v0.2.0)
-Status: In progress
-Phases: 1 of 8 complete
+**v0.3 Igual ao Resolume e redondo** (v0.3.0)
+Status: In progress (aberto em 2026-11-20; 0.3.0-beta.3 já pública)
+Meta: o OpenLuz para Windows sem arestas no uso de show (dois projetores, vídeos pesados, efeitos), o mais parecido
+possível com o Resolume, e as pendências do v0.2 fechadas com sim ou não. Fases carregadas do v0.2 com os mesmos
+números (os planos e pastas continuam valendo).
 
-### Corte da v0.2.0 (2026-11-11)
+## Completed Milestones
+
+<details>
+<summary>v0.2 Automape e provas no equipamento — 2026-11-20 (v0.2.0 publicada em 2026-11-11)</summary>
+
+| Phase | Name | Plans | Completed |
+|-------|------|-------|-----------|
+| 7 | Saída avançada | 16/16 | 2026-11-16 |
+| 8 | Webcam virtual | 1/1 | 2026-11-02 |
+| 11 | Câmera que segue o rosto | 1/1 | 2026-11-09 |
+
+Registro em `.paul/MILESTONES.md`; roadmap como estava em `.paul/milestones/v0.2.0-ROADMAP.md`. As demais fases
+passaram abertas para o v0.3.
+
+</details>
+
+### Corte da v0.2.0 (2026-11-11, histórico)
 
 O Felipe, cansado de o programa nunca acabar ("tou meio cansado de ficar so tendo ideias e ele nunca acaba"), perguntou
 o que falta para dizer que está pronto. Propus o corte abaixo e ele respondeu "Toca a ficha!" — leitura minha: topou.
@@ -49,20 +67,21 @@ Prévia separada do ar, os 30 quadros, bateria única) junto com o resto da list
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| 1 | Automape | 5 | In progress (3/5) | - |
-| 2 | Efeitos do Resolume | TBD | In progress (4 fechados) | - |
-| 3 | Celular e plugins | TBD | Not started | - |
-| 4 | Provas no equipamento (laser e APC40) | TBD | Not started | - |
-| 5 | Versão web | TBD | Not started | - |
-| 6 | Versão Android | TBD | Not started | - |
-| 7 | Saída avançada | 2/2 | Complete | 2026-11-05 |
-| 8 | Webcam virtual | 1/1 | ✅ Complete | 2026-11-02 |
-| 9 | Editor de texto | 2/3 | In progress (09-03 planejado) | - |
-| 10 | Modelos 3D | 0/1 | In progress (10-01 no checkpoint) | - |
-| 11 | Câmera que segue o rosto | 1/1 | ✅ Complete | 2026-11-09 |
-| 12 | Revisão geral | 2/7 | In progress (12-01 fechado; consertos em seis lotes) | - |
-| 13 | Porta de entrada | 0/1 | In progress (13-01 em aplicação) | - |
-| 14 | Saída 3D | 0/1 | In progress (14-01 no checkpoint: maquete e desenho) | - |
+Marco v0.3 (fases carregadas do v0.2; 7, 8 e 11 fechadas no v0.2):
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 1 | Automape | 3/5 | Parada (01-04, 01-05 a confirmar) | - |
+| 2 | Efeitos do Resolume | 9 fechados | In progress (02-08 Strokes; 02-11 CRT pausado) | - |
+| 3 | Celular e plugins | 0 | Not started (maquete a refazer) | - |
+| 4 | Provas no equipamento (laser e APC40) | 0 | Not started | - |
+| 5 | Versão web | 0 | Not started | - |
+| 6 | Versão Android | 0 | Not started | - |
+| 9 | Editor de texto | 2/3 | 09-03 no checkpoint (chave do Higgsfield) | - |
+| 10 | Modelos 3D | 0/1 | 10-01 no checkpoint | - |
+| 12 | Revisão geral | 14 fechados | In progress (12-03 a 12-07 sem o aprovado; 12-12 teste do cabo) | - |
+| 13 | Porta de entrada | 4/5 | 13-01 no checkpoint (publicar a página) | - |
+| 14 | Saída 3D | 0/1 | 14-01 no checkpoint (maquete e cinco perguntas) | - |
 
 ## Phase Details
 
@@ -321,4 +340,4 @@ modelo novo Fable 5.2). Primeiro só leitura; conserto depois, com as baterias r
 
 ---
 *Roadmap created: 2026-10-21*
-*Last updated: 2026-11-03 (07-01 fechado; Fase 7 Saída avançada concluída); 2026-11-02 (02-02 fechado; Fase 8 Webcam virtual concluída); 2026-10-30 (02-01 fechado; Fase 7 Saída avançada acrescentada); 2026-10-29 (ideia do domo/planetário anotada para depois); 2026-10-25 (inseridas depois do Automape: Fase 2 "Efeitos do Resolume" e Fase 3 "Celular e plugins"; as seguintes renumeradas)*
+*Last updated: 2026-11-20 (marco v0.2 fechado; v0.3 aberto com as fases carregadas); 2026-11-03 (07-01 fechado; Fase 7 Saída avançada concluída); 2026-11-02 (02-02 fechado; Fase 8 Webcam virtual concluída); 2026-10-30 (02-01 fechado; Fase 7 Saída avançada acrescentada); 2026-10-29 (ideia do domo/planetário anotada para depois); 2026-10-25 (inseridas depois do Automape: Fase 2 "Efeitos do Resolume" e Fase 3 "Celular e plugins"; as seguintes renumeradas)*

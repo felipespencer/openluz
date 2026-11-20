@@ -1,5 +1,5 @@
 name = "OpenLuz"
-version = "0.1.0"
+version = "0.3.0-beta.3"
 status = "active"
 path = "projecionista-pc"
 tags = []
@@ -9,8 +9,8 @@ version = "1.4"
 source = "https://chrisai.cv/skool"
 
 [milestone]
-name = "v0.2 Automape e provas no equipamento"
-version = "0.2.0"
+name = "v0.3 Igual ao Resolume e redondo"
+version = "0.3.0"
 status = "in_progress"
 phases = 7
 
@@ -31,4 +31,4 @@ groom = true
 [stats]
 total_plans = 16
 total_phases = 0
-last_activity = "2026-11-17T20:55:00-03:00"
+last_activity = "2026-11-20T12:00:00-03:00"

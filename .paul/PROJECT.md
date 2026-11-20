@@ -26,9 +26,9 @@ nível profissional.
 | Attribute | Value |
 |-----------|-------|
 | Type | Application |
-| Version | 0.2.0-beta.46 (MSI instalado; release no GitHub até a beta.44) |
-| Status | Em uso pelo Felipe; repositório público desde 2026-10-29 |
-| Last Updated | 2026-11-03 |
+| Version | 0.3.0-beta.3 (pré-release pública; 0.2.0 estável publicada em 2026-11-11) |
+| Status | Em uso pelo Felipe em show; marco v0.3 aberto em 2026-11-20 |
+| Last Updated | 2026-11-20 |
 
 **Repositório:** `felipespencer/openluz` (público; colaboradores dobidu e
 fbarretto). Pasta local `OneDrive/Documentos/projecionista-pc`, remote `origin`.
@@ -50,12 +50,17 @@ fbarretto). Pasta local `OneDrive/Documentos/projecionista-pc`, remote `origin`.
 - [x] Webcam virtual: a composição aparece como câmera no Google Meet, pela câmera do OBS — Fase 8
 - [x] Soft edge por degradê com alça, quatro por slice, nas abas Entrada e Saída (slice em trapézio ou malha) — Fase 7
 - [x] Câmera que segue o rosto: detecção local (YuNet, MIT) e recorte que acompanha a pessoa no clipe de câmera — Fase 11
+- [x] Automape: foto da lente vira slices e máscaras na Saída avançada — v0.2
+- [x] Slices em polígono na Saída avançada (com lápis, pontos, Exportar SVG) — v0.2
+- [x] Saída avançada igual à Advanced Output do Resolume (28 diferenças do 07-03 fechadas) — v0.2
+- [x] Estável com dois projetores, 4K e efeitos nas duas saídas (12-18, 12-19) — v0.2
 
 ### Active (In Progress)
 
-- [ ] **Automape** (pedido de 2026-10-21): mapeamento automático a partir de uma foto tirada
-      da posição da lente do projetor. Aviso de onde tirar a foto, envio da foto, o programa
-      fatia a imagem em slices e abre uma caixa de diálogo junto de Saída › Avançada
+- [ ] Redondo no uso de show: arestas que aparecem com os projetores ligados (v0.3)
+- [ ] Efeitos iguais ao Resolume no gabarito (CRT, Strokes, Triangulate, Sphere, Bloom…)
+- [ ] Fechar com sim ou não: Higgsfield (09-03), 3D (10-01), página de primeiros passos (13-01), Saída 3D (14-01)
+- [ ] Automape com IA em fotos novas (01-04, 01-05, a confirmar)
 
 ### Planned (Next)
 
@@ -63,7 +68,6 @@ fbarretto). Pasta local `OneDrive/Documentos/projecionista-pc`, remote `origin`.
 - [ ] Provar a APC40 mkII com a controladora de verdade (cores dos pads, SysEx, anéis dos knobs)
 - [ ] Estrutura das três versões: web (sem Electron) e Android (casca Kotlin do PROJECIONISTAapp)
 - [ ] Ler DXV1/DXV3 do Resolume e oferecer "Preparar em DXV1"
-- [ ] Slices em polígono na Saída avançada
 - [ ] Organização no GitHub (admin para dobidu e fbarretto), repositório público
 - [ ] Tradução para inglês (depois; só README e commits são bilíngues hoje)
 
@@ -123,12 +127,14 @@ teste `PROJ_TEST=<pasta> electron .`; CDP na porta 9333 para verificar a interfa
 | Projeto principal passa a ser o OpenLuz, GPL-3.0, três versões | Alcance internacional, nome neutro | 2026-10-15 | Active |
 | Repositório privado até existir organização no GitHub | Pedido do Felipe | 2026-10-15 | Superseded: público desde 2026-10-29 |
 | Webcam pela câmera virtual do OBS, sem câmera própria | A DLL assinada do OBS dispensa certificado; cada computador precisa do OBS instalado | 2026-11-02 | Active |
+| Corte da v0.2.0: Windows estável com o que existe | O programa nunca acabava | 2026-11-11 | Done (v0.2.0 publicada) |
+| Depth e Slice Delay fora da v0.3 | Decisão do Felipe | 2026-11-13 | Active |
 
 ## Success Metrics
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Felipe faz um show inteiro só com o OpenLuz (projeção + laser) | 1 show | 0 | Not started |
+| Felipe faz um show inteiro só com o OpenLuz (projeção + laser) | 1 show | 1 show em 2026-11 (falta confirmar se só com o OpenLuz) | In progress |
 | Versões web e Android abrindo o mesmo motor | 3 versões | 1 (Windows) | At risk |
 | Repositório público com colaboradores | público | público; colaboradores sem admin | In progress |
 
@@ -155,4 +161,4 @@ teste `PROJ_TEST=<pasta> electron .`; CDP na porta 9333 para verificar a interfa
 
 ---
 *PROJECT.md — Updated when requirements or context change*
-*Last updated: 2026-11-03 after Phase 7*
+*Last updated: 2026-11-20 after v0.2 Automape e provas no equipamento*

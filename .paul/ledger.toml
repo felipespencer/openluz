@@ -898,3 +898,14 @@ action = "unify"
 phase = 12
 plan = "12-19"
 at = "2026-11-17T20:55:00-03:00"
+
+[[entry]]
+action = "milestone_complete"
+milestone = "v0.2"
+phase = 14
+at = "2026-11-20T12:00:00-03:00"
+
+[[entry]]
+action = "milestone_create"
+milestone = "v0.3"
+at = "2026-11-20T12:00:00-03:00"
