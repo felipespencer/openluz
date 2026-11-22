@@ -139,3 +139,56 @@ barras de brilho conhecido) e lê o resultado em resolução cheia.
 - Tunnel 21,6 → 3,63 nos 41 casos (`sondas/tunnel_mapa.py`, imagem em que cada pixel carrega a própria posição): padrão 1,24; Kaleidoscope 2,6–5,8 (era 17–47); Wobble 4,6–8,0 (era 38–68); Twist 2,5–6,5; curvas 2,6–4,4. O túnel deles é uma malha em perspectiva (z = d/(1 − d), raio na tela 0,0935/z) com um anel a cada 1/32 de fundura, 30 anéis, parede reta entre anéis (daí o Twist facetado); o de trás é tapado pelo da frente. Centro do anel: 3,905 × d × (Turn − 0,5) − 0,327 × raio × sen(24 × Wobble × d), parado. Twist gira o anel 4 × (0,5 − valor) × d. Kaleidoscope: 2, 4, 8, 16 gomos (trocas em 0,25/0,5/0,75), cada gomo com a largura inteira e volta nos últimos 11,25°. Escurece para o fundo: 2 × (1,002 − d); some com d > 0,906. Contra a sonda o mapa bate em ~0,001 (o limite dos 8 bits); o que sobra na carta é desalinho de poucos pixels em borda fina. Em aberto: Wobble acima de 0,5 e Twist 0/1 ainda acima de 6; Kaleidoscope 0,5 + Twist 0,25 em 9,2; o número de lados de cada anel não foi medido (tratado como redondo); velocidade (Speed ≠ 0,5) segue palpite.
 - CRT: NÃO feito no 02-10. Ponto de partida medido: 28,86 nos 97 casos (padrão 14,39; Rows 1 105; Left/Right 56–100; Between Slots 40–66; Height Scale 21–60; Fisheye 33–47; Tilt 24–37). A 960×540 a grade de 340 colunas vira moiré na conta por pixel; a olho o padrão é parecido, mas as linhas finas da carta aparecem no nosso e não no deles (eles tiram a média da célula) e as células deles parecem andar em pares de colunas. Pede sondas em resolução cheia, controle por controle: plano próprio (02-11).
 - Regressão do 02-10: compila 104 efeitos, 0 não compilam; selftest e as 30 baterias aprovados na primeira rodada (a do rosto também, desta vez).
+
+## Plano 02-12 (2026-11-22): Strokes refeito; WarpSpeed, Tunnel e Bloom pelas sondas
+
+### Strokes (`engine.strokesPass`, `effects2.js`; sondas `tools/compare/sondas/strokes_*.py`)
+O que havia (5419fc9) estava longe: pinceladas pequenas, escuras e moles, Flow e Swirl com sentido trocado. Medido no Resolume e refeito:
+- **Rodadas**: Frequency vezes por segundo (BPM: por minuto, sem ligar para o BPM da composição) as Amount pinceladas caem em lugares novos
+  e ficam PARADAS até a rodada seguinte; acima da taxa de quadros é uma rodada por quadro. Frequency 0 só troca no Reset.
+- **Fundo**: a saída anterior (cor e transparência, em 8 bits) × raiz(1 − (1 − Feedback)²) a cada quadro: 0,1 → 0,435; 0,25 → 0,663;
+  0,5 → 0,867; 0,75 → 0,969; 1 = não apaga. O preto "assenta" em 3/255 (ponto fixo do arredondamento), aqui também.
+- **Flow** não move pincelada: empurra o fundo. O conteúdo anda 0,000437 × Flow × (gradiente do campo girado −90°) em unidades de tela
+  (906 px por quadro para 1 de brilho por px, em 1080 linhas) mais um resto fixo de 0,96 px × Flow para a esquerda e para baixo, na diagonal da tela.
+- **Swirl** é o raio do desfoque do campo de direção: uma borda puxa as pinceladas até 5 + 101 × Swirl px (5,5 / 17,5 / 35 / 69 / 106 px
+  em 0 / 0,15 / 0,3 / 0,6 / 1). O campo é o brilho Rec. 601 (com vermelho fixo e verde em rampa as pinceladas ficam em pé: não é o maior canal).
+- **Direção**: ao longo da borda (gradiente + 90°, a ponta rasgada sempre do mesmo lado), mais Rotation × 360°; no liso, −2°.
+- **Edges Only** esconde a pincelada onde o campo é liso (qualquer gradiente passa; numa rampa em 8 bits aparece só perto de cada degrau de nível).
+- **Tamanho**: comprimento "4 sigma" 169,5 px × Size, largura 0,414 disso. **Variation soma** ao Size um sorteio normal (tamanho =
+  |Size + Variation × sorteio|; negativo sai virado): com Size 0,2 parecia multiplicar por 1 + 5 × V × sorteio; com Size 0,1 a cobertura
+  desmentiu (7× e 33× a base em 0,25 e 0,6). Size Mode Brightness multiplica por 0,1 + 0,9 × o MAIOR canal da cor.
+- **Mistura**: a pincelada entra em "luz dura" sobre o fundo: canal < 0,5 → 2 × cor × B; ≥ 0,5 → 1 − 2 × (1 − cor) × (1 − B), com
+  B = fundo + 0,5 × (1 − transparência do fundo). Sobre fundo vazio a cor sai igual; parada com Feedback alto vai para os extremos
+  (séries quadro a quadro: 104 → 87 → 75 → … → 47; 170 → 194 → 208 → … → 227). É o que dá as cores mais vivas que as da imagem.
+- **Pincéis** (Resource): os presets do Resolume usam cinco arquivos. Aqui são cinco desenhos nossos no shader (Pincel, Riscos, Seta,
+  Bolinhas, Marca), nos tamanhos medidos (caixas 181×71, 100×69, 133×63, 65×64, 560×69 px com Size 1). O logotipo do Resolume não foi copiado.
+- **Presets**: os seis, com os valores lidos da API.
+- **Tabela** (`strokes_cmp.py`, `saida/stk/cmp.json`): 33 medidas, 0 fora da folga. Cobertura, comprimento, largura e ângulo a menos de 8 %
+  (Amount 100 e 1024, Size 0,1 / 0,2 / 0,4, Variation 0,5 e 1, Rotation 0 e 0,25); Edges Only a 3 pontos; razão claro/escuro a 2 %.
+  Estado normal sobre branco: mesmos níveis (255, 221, 191, 165, 143, 124) nas mesmas frações.
+- Não copiado: com Frequency 0 o Resolume usa um mapa de tamanhos liso no espaço (aqui é sorteio por pincelada); o tamanho segue a altura
+  da tela (só medido em 1080); o apagamento é por quadro desenhado (o Resolume aqui rende a 30).
+- Motor: `strokesField` (brilho reduzido a ~270 linhas, duas passadas de média, meia precisão se a placa deixar), camada própria das
+  pinceladas, `uFld` e `uStk` no programa do efeito. Chave `resource` não serve (palavra reservada do GLSL): ficou `brush`.
+
+### WarpSpeed: 2,09 → 1,59
+As cópias eram guardadas pela metade e as bordas saíam moles. Agora em tamanho cheio até 1080 linhas (124 MB de vídeo em vez de 31).
+
+### Tunnel: 3,63 → 2,94
+- Wobble: 4 × valor ondas ao longo da fundura (seno de 8π × Wobble × fundura; estava 24). Conferido pelos zeros do centro dos anéis
+  (Wobble 1: 0,25 / 0,375 / 0,5). Os casos de Wobble caíram de 4,6–8,0 para ≤ 3,6.
+- Speed medido (`sondas/tunnel_veloc.py`): a imagem anda 30 × (0,5 − Speed)³ alturas por segundo (0 → +3,75; 0,1 → +1,92; 0,25 → +0,47;
+  0,4 → +0,030; 0,45 → +0,004; e o espelho para cima de 0,5). Era palpite, linear e no sentido contrário. No OpenLuz: +0,464 e −0,459 em 0,25 e 0,75.
+- Twist: o giro por anel confere exato (4 × (0,5 − valor) voltas por fundura). Trocar a ordem com o Kaleidoscope piora (9 → 93).
+- Em aberto: Twist 0 e 1 (5,9 e 6,5), Kaleidoscope 0,5 + Twist 0,25 (9,2), TurnV 0,75 (8,2). O mapa de posição em 8 bits (1 nível = 7,5 px da
+  imagem) não mostra diferença de geometria; para ir além é preciso um mapa mais fino. Número de lados do anel: não medido.
+
+### Bloom: 1,67 → 1,69 (não melhorou)
+- Medido: num cinza liso de tela inteira cada volta soma exatamente 1 e a imagem sai lisa até a borda (`sondas/bloom_liso.py`). Passou a valer
+  a beirada fora da imagem (antes valia preto).
+- Cada volta sozinha na carta com Amount 0,2 (`sondas/bloom_voltas.py`), Resolume | OpenLuz: 0,034 | 0,030 · 0,030 | 0,031 · 0,038 | 0,040 ·
+  0,063 | 0,071 (+13 %) · 0,090 | 0,129 (+43 %). As voltas 4 e 5 saem fortes demais em imagem cheia, e certas num quadradinho isolado.
+- Travar a redução antes da raiz acerta a carta e estraga o quadradinho (teto em dobras acima da 1ª volta → Iterations 5 na carta |
+  quadradinho com Size 0,5): 2,44 → 6,9 | 9,3 · 3,0 → 7,0 | 6,7 · 3,5 → 10,7 | 3,2 · sem teto → 14,4 | 1,2. Não é a lei deles: não entrou.
+- A sonda de densidade (`bloom_densidade.py`) não decidiu: o padrão periódico confunde e o Amount baixo perde os casos ralos nos 8 bits.
+- Knee: a rampa confere na sonda de barras; o brilho é Rec. 601 (com o maior canal a carta vai de 0,9 para 36). Knee 0,5 na carta segue em 4,1.
