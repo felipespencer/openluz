@@ -276,8 +276,8 @@ export class Engine {
     if (!pr) {
       // Opacidade do efeito (como no Resolume, todo efeito tem): mistura o resultado com o que entrou
       // efeito com { ring: true } (Delay RGB): recebe três quadros mais antigos da própria entrada, um por canal
-      const fs = FX_HEAD + 'uniform float uFxOp;\n' + (def.ring ? 'uniform sampler2D uDelR; uniform sampler2D uDelG; uniform sampler2D uDelB;\n' : '') + (def.stage ? 'uniform sampler2D uMid;\n' : '') + (def.hist ? 'uniform highp sampler2DArray uHist; uniform float uHistI; uniform float uHistN; uniform float uHistL;\n' : '') + (def.lut ? 'uniform highp sampler3D uLut; uniform float uLutN;\n' : '') + def.params.map(uDecl).join('\n') + '\n' + EFFECT_HELPERS + def.glsl + '\nvoid main(){ vec4 r = fx(v); o = uFxOp >= 1.0 ? r : mix(texture(uTex, v), r, uFxOp); }';
-      pr = this.program(VS_QUAD, fs, ['uTex', 'uPrev', 'uMid', 'uRes', 'uTime', 'uFxOp', ...(def.ring ? ['uDelR', 'uDelG', 'uDelB'] : []), ...(def.hist ? ['uHist', 'uHistI', 'uHistN', 'uHistL'] : []), ...(def.lut ? ['uLut', 'uLutN'] : []), ...def.params.map(p => p.key)]); this.fxProg.set(def.id, pr);
+      const fs = FX_HEAD + 'uniform float uFxOp;\n' + (def.ring ? 'uniform sampler2D uDelR; uniform sampler2D uDelG; uniform sampler2D uDelB;\n' : '') + (def.stage ? 'uniform sampler2D uMid;\n' : '') + (def.strokes ? 'uniform sampler2D uFld; uniform vec2 uFldRes; uniform sampler2D uStk;\n' : '') + (def.hist ? 'uniform highp sampler2DArray uHist; uniform float uHistI; uniform float uHistN; uniform float uHistL;\n' : '') + (def.lut ? 'uniform highp sampler3D uLut; uniform float uLutN;\n' : '') + def.params.map(uDecl).join('\n') + '\n' + EFFECT_HELPERS + def.glsl + '\nvoid main(){ vec4 r = fx(v); o = uFxOp >= 1.0 ? r : mix(texture(uTex, v), r, uFxOp); }';
+      pr = this.program(VS_QUAD, fs, ['uTex', 'uPrev', 'uMid', 'uFld', 'uFldRes', 'uStk', 'uRes', 'uTime', 'uFxOp', ...(def.ring ? ['uDelR', 'uDelG', 'uDelB'] : []), ...(def.hist ? ['uHist', 'uHistI', 'uHistN', 'uHistL'] : []), ...(def.lut ? ['uLut', 'uLutN'] : []), ...def.params.map(p => p.key)]); this.fxProg.set(def.id, pr);
       // efeito com { stage }: um primeiro passe gera uma imagem intermediária (uMid), que o { gauss } desfoca para o uPrev (CRT: a máscara de fósforo e o bloom dela)
       if (def.stage) pr.stage = this.program(VS_QUAD, FX_HEAD + def.params.map(uDecl).join('\n') + '\n' + EFFECT_HELPERS + 'uniform float uPass;\n' + def.stage + '\nvoid main(){ o = fx(v); }', ['uTex', 'uPrev', 'uPass', 'uRes', 'uTime', ...def.params.map(p => p.key)]);
     }
@@ -316,50 +316,120 @@ void main(){ float sg = max(uSigma, 0.01); int R = int(ceil(sg * (uCos > 0.5 ? 1
     this.copyInto(src, m.hw, m.hh, false); gl.disable(gl.BLEND);
     return m;
   }
-  // Strokes: Amount pinceladas desenhadas por instância (sem vértices: a posição sai do número da pincelada e da "rodada").
-  // A rodada muda Frequency vezes por segundo (ou por minuto, em BPM) e no Reset; entre uma rodada e outra a pincelada anda pelo Flow.
-  // Cada pincelada lê a cor e a borda da imagem de entrada no lugar onde cai; o Swirl a deita ao longo da borda.
-  strokesPass(f, def, src, w, h) {
+  // Strokes, como medido no Resolume 7.28 (tools/compare/sondas/strokes_*.py, plano 02-12):
+  // - a cada rodada (Frequency vezes por segundo, ou por minuto em BPM; Reset força uma) Amount pinceladas caem em lugares sorteados
+  //   e ficam paradas até a rodada seguinte; cada uma tem a cor da imagem no lugar onde cai;
+  // - a direção vem do "campo": o brilho (Rec. 601) desfocado num raio de 5 + 101 × Swirl px (em 1080 linhas). A pincelada deita ao
+  //   longo da borda (gradiente + 90°, mais Rotation × uma volta); onde o campo é liso fica quase na horizontal, e some com Edges Only;
+  // - comprimento "4 sigma" 169,5 px × Size, largura 0,414 disso; a Variation soma ao Size um sorteio normal (tamanho = Size +
+  //   Variation × sorteio; negativo = pincelada virada); Size Mode Brightness multiplica por 0,1 + 0,9 × o maior canal da cor;
+  // - as pinceladas da rodada são desenhadas numa camada à parte (opacas, a última por cima); o glsl do efeito mistura essa camada com
+  //   o fundo, que é a saída anterior escurecida e empurrada ao longo das bordas pelo Flow.
+  // Os pincéis são desenho nosso (tools/compare/sondas/strokes_pincel.py gera as tabelas dos fios e as medidas do quadrado do primeiro).
+  // O Resolume troca o pincel por um arquivo de imagem (Resource); os presets dele usam cinco: o pincel, um feixe de riscos, uma seta,
+  // quatro bolinhas e o logotipo deles. Aqui são cinco desenhos feitos no shader, no tamanho medido de cada um (a marca é genérica).
+  strokesField(src, w, h, swirl) {
+    const gl = this.gl, red = Math.max(1, Math.round(h / 270)), fw = Math.max(2, Math.ceil(w / red)), fh = Math.max(2, Math.ceil(h / red));
+    if (this.stkFloat === undefined) this.stkFloat = !!gl.getExtension('EXT_color_buffer_float');
+    let F = this.stkFld;
+    if (!F || F.w !== fw || F.h !== fh) {
+      if (F) for (const q of [F.a, F.b]) { gl.deleteFramebuffer(q.fb); gl.deleteTexture(q.t); }
+      const mk = () => {   // meia precisão quando a placa deixa desenhar nela: o desfoque largo de um degradê suave precisa de mais que 8 bits
+        const t = this.newTex();
+        if (this.stkFloat) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, fw, fh, 0, gl.RGBA, gl.HALF_FLOAT, null); else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, fw, fh, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+        return { fb, t };
+      };
+      F = this.stkFld = { a: mk(), b: mk(), w: fw, h: fh };
+    }
+    if (!this.stkFldProg) this.stkFldProg = this.program(VS_QUAD, `#version 300 es
+precision highp float; in vec2 v; out vec4 o; uniform sampler2D uTex; uniform vec2 uStep; uniform float uRad; uniform int uMode;
+void main(){
+  float s = 0.0, n = 0.0;
+  if (uMode == 0) {   // brilho da entrada, média do bloco que vira um ponto do campo
+    for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) s += dot(texture(uTex, v + (vec2(float(i), float(j)) - 0.5) * uStep).rgb, vec3(0.299, 0.587, 0.114));
+    o = vec4(s * 0.25);
+  } else {            // média numa linha de uRad pontos para cada lado (as pontas entram pela metade que couber)
+    for (int k = -28; k <= 28; k++) { float p = clamp(uRad + 0.5 - abs(float(k)), 0.0, 1.0); s += p * texture(uTex, v + float(k) * uStep).r; n += p; }
+    o = vec4(s / n);
+  }
+}`, ['uTex', 'uStep', 'uRad', 'uMode']);
+    const P = this.stkFldProg, raio = Math.max(0, (5 + 101 * Math.max(0, Math.min(1, swirl)) - 4) / 4);   // em pontos do campo (1 ponto = 4 px de 1080 linhas; a diferença central já alcança um ponto)
+    gl.useProgram(P.p); gl.disable(gl.BLEND); gl.viewport(0, 0, fw, fh); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(P.u.uTex, 0);
+    const passo = (alvo, tex, modo, sx, sy) => { gl.bindFramebuffer(gl.FRAMEBUFFER, alvo.fb); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(P.u.uMode, modo); gl.uniform2f(P.u.uStep, sx, sy); gl.uniform1f(P.u.uRad, Math.min(28, raio / 2)); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); };
+    passo(F.a, src, 0, red / 2 / w, red / 2 / h);
+    for (let i = 0; i < 2; i++) { passo(F.b, F.a.t, 1, 1 / fw, 0); passo(F.a, F.b.t, 1, 0, 1 / fh); }   // duas passadas de metade do raio: o peso cai até zero na beirada (sem o degrau de uma média só)
+    return { t: F.a.t, w: fw, h: fh };
+  }
+  strokesPass(f, def, src, w, h, fld) {
     const gl = this.gl, V = Object.fromEntries(def.params.map(p => [p.key, this.paramValue(f, p)]));
+    let Y = this.stkLay;
+    if (!Y || Y.w !== w || Y.h !== h) { if (Y) { gl.deleteFramebuffer(Y.fb); gl.deleteTexture(Y.t); } Y = this.stkLay = this.fbo(w, h); }
     if (!this.stkProg) this.stkProg = this.program(`#version 300 es
 precision highp float;
-uniform sampler2D uTex; uniform vec2 uRes; uniform float uTick, uAge, uSize, uVar, uSwirl, uFlow, uRot, uEdges, uSMode;
-out vec2 vq; out vec4 vc; out float vs;
+uniform sampler2D uTex; uniform sampler2D uFld; uniform vec2 uRes, uFldRes; uniform float uTick, uSize, uVar, uRot, uEdges, uSMode; uniform vec2 uHalf;
+out vec2 vq; out vec4 vc;
 uint pcg(uint v){ uint s = v * 747796405u + 2891336453u; uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
 float hu(uint id, uint k){ return float(pcg(id * 8u + k)) / 4294967295.0; }   // sorteio por inteiros: o fract(sin) perdia precisão e punha as pinceladas numa grade
-float lm(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
+float cp(vec2 p){ return textureLod(uFld, p, 0.0).r; }
 void main(){
   uint id = pcg(uint(gl_InstanceID) + uint(uTick) * 5003u);
-  vec2 p = vec2(hu(id, 0u), hu(id, 1u));
-  vec2 d = 1.5 / uRes;
+  vec2 p = vec2(hu(id, 0u), hu(id, 1u)), t = 1.0 / uFldRes;
   vec4 c = textureLod(uTex, p, 0.0);
-  vec2 g = vec2(lm(textureLod(uTex, p + vec2(d.x, 0.0), 0.0).rgb) - lm(textureLod(uTex, p - vec2(d.x, 0.0), 0.0).rgb),
-                lm(textureLod(uTex, p + vec2(0.0, d.y), 0.0).rgb) - lm(textureLod(uTex, p - vec2(0.0, d.y), 0.0).rgb));
-  float gm = length(g), a = uRot * 6.2831853;
+  // gradiente do campo em brilho por px da tela
+  vec2 g = vec2(cp(p + vec2(t.x, 0.0)) - cp(p - vec2(t.x, 0.0)), cp(p + vec2(0.0, t.y)) - cp(p - vec2(0.0, t.y))) * 0.5 * uFldRes / uRes;
+  bool liso = length(g) * uRes.y / 1080.0 < 1.2e-5;
+  float a = (liso ? -0.035 : atan(g.y, g.x) + 1.5707963) + uRot * 6.2831853;
   vec2 dir = vec2(cos(a), sin(a));
-  if (gm > 0.004) { vec2 t = vec2(-g.y, g.x) / gm; if (dot(t, dir) < 0.0) t = -t; dir = normalize(mix(dir, t, uSwirl) + 1e-5); }
-  // tamanho: 160 px × Size em 1080 linhas, espalhado por Variation (log-normal: Variation 1 multiplica a cobertura média ~14 vezes)
-  float u1 = max(hu(id, 2u), 1e-4), u2 = hu(id, 3u), gs = sqrt(-2.0 * log(u1)) * cos(6.2831853 * u2);
-  float L = 160.0 * uSize * uRes.y / 1080.0 * exp(uVar * 1.15 * gs);
-  if (uSMode > 0.5) L *= lm(c.rgb / max(c.a, 1e-4)) * c.a;
-  bool fora = c.a < 0.01 || L < 0.5 || (uEdges > 0.5 && gm < 0.08);
-  vec2 P = p * uRes + dir * uFlow * uAge * 240.0 * uRes.y / 1080.0;
-  vec2 k = vec2(gl_VertexID & 1, gl_VertexID >> 1) * 2.0 - 1.0;
-  vec2 q = P + dir * k.x * L * 0.5 + vec2(-dir.y, dir.x) * k.y * L * 0.205;
-  vq = k; vc = c; vs = hu(id, 4u);
-  gl_Position = fora ? vec4(2.0, 2.0, 2.0, 1.0) : vec4(q / uRes * 2.0 - 1.0, 0.0, 1.0);
+  float u1 = max(hu(id, 2u), 1e-6), u2 = hu(id, 3u), n = sqrt(-2.0 * log(u1)) * cos(6.2831853 * u2);
+  float k = (uSize + uVar * n) * uRes.y / 1080.0;   // a Variation SOMA ao Size (medido com Size 0,1 e 0,2); negativo: a pincelada sai virada
+  if (uSMode > 0.5) k *= 0.1 + 0.9 * max(c.r, max(c.g, c.b));
+  bool fora = c.a < 0.01 || abs(k) * uHalf.x < 0.3 || (uEdges > 0.5 && liso);
+  vec2 q = vec2(gl_VertexID & 1, gl_VertexID >> 1) * 2.0 - 1.0;
+  vec2 P = p * uRes + dir * q.x * uHalf.x * k + vec2(-dir.y, dir.x) * q.y * uHalf.y * k;
+  vq = q; vc = c;
+  gl_Position = fora ? vec4(2.0, 2.0, 2.0, 1.0) : vec4(P / uRes * 2.0 - 1.0, 0.0, 1.0);
 }`, `#version 300 es
-precision highp float; in vec2 vq; in vec4 vc; in float vs; out vec4 o;
-float h1(float n){ return fract(sin(n) * 43758.5453); }
-float n1(float x){ float i = floor(x), f = fract(x); return mix(h1(i), h1(i + 1.0), f * f * (3.0 - 2.0 * f)); }
+precision highp float; in vec2 vq; in vec4 vc; out vec4 o; uniform float uBrush;
+// os 16 fios do pincel: onde cada um acaba e onde tem uma falha (9 = sem falha)
+const float PONTA[16] = float[16](0.62, 0.899, 0.887, 0.541, 0.719, 0.897, 0.536, 0.529, 0.705, 0.584, 0.637, 0.566, 0.569, 0.8, 0.735, 0.62);
+const float F0[16] = float[16](0.302, 0.543, 0.567, 9.0, 0.384, 9.0, 0.194, 0.199, 0.438, 0.333, 0.334, 9.0, 0.41, 9.0, 9.0, 0.29);
+const float F1[16] = float[16](0.372, 0.621, 0.702, 9.0, 0.523, 9.0, 0.307, 0.266, 0.508, 0.451, 0.415, 9.0, 0.472, 9.0, 9.0, 0.347);
+float borda(float d, float w){ return 1.0 - smoothstep(-w, w, d); }   // 1 dentro (d < 0), 0 fora, com a beirada de um pixel
 void main(){
-  float x = vq.x, y = vq.y, s = vs * 97.0;
-  float esq = -0.95 + 0.35 * n1(y * 5.0 + s) + 0.1 * n1(y * 17.0 + s);   // a ponta esquerda rasgada
-  float corpo = smoothstep(esq, esq + 0.12, x) * (1.0 - smoothstep(0.72, 1.0, x));
-  float lado = 1.0 - smoothstep(0.62, 1.0, abs(y) + 0.25 * max(x, 0.0) * max(x, 0.0));
-  float pelos = 0.78 + 0.22 * n1(y * 23.0 + s * 1.3);
-  o = vc * clamp(corpo * lado * pelos, 0.0, 1.0);
-}`, ['uTex', 'uRes', 'uTick', 'uAge', 'uSize', 'uVar', 'uSwirl', 'uFlow', 'uRot', 'uEdges', 'uSMode']);
+  float x = vq.x, y = vq.y, ay = abs(y), wx = 0.7 * fwidth(x) + 1e-5, wy = 0.7 * fwidth(y) + 1e-5, m = 0.0, tom = 1.0;
+  if (uBrush < 0.5) {          // pincel: corpo cheio, ponta esquerda redonda, ponta direita rasgada em fios
+    int i = int(clamp(floor((y * 0.5 + 0.5) * 16.0), 0.0, 15.0));
+    float esq = -1.0 + 0.5 * (1.0 - sqrt(max(0.0, 1.0 - ay * ay)));
+    float cima = 0.97 - 0.10 * pow(clamp((x - 0.2) / 0.8, 0.0, 1.0), 2.0);
+    float fino = clamp(8.0 * fwidth(y) - 0.25, 0.0, 1.0);                    // fios menores que um pixel: vale a ponta média, sem falhas
+    m = smoothstep(esq - wx, esq + wx, x) * borda(x - mix(PONTA[i], 0.678, fino), wx) * borda(ay - cima, wy);
+    m *= 1.0 - (1.0 - fino) * smoothstep(F0[i] - wx, F0[i] + wx, x) * (1.0 - smoothstep(F1[i] - wx, F1[i] + wx, x));
+  } else if (uBrush < 1.5) {   // riscos: seis traços finos e ondulados, de comprimentos diferentes
+    for (int j = 0; j < 6; j++) {
+      float fj = float(j), yc = -0.78 + fj * 0.312 + 0.07 * sin(x * 3.1 + fj * 1.7) + 0.03 * sin(x * 9.0 + fj * 4.1);
+      float x0 = -0.95 + 0.12 * fract(fj * 0.618 + 0.3), x1 = 0.95 - 0.16 * fract(fj * 0.381 + 0.1);
+      float afina = smoothstep(x0, x0 + 0.25, x) * (1.0 - smoothstep(x1 - 0.25, x1, x));
+      m = max(m, borda(abs(y - yc) - 0.075 * afina, wy) * step(x0, x) * step(x, x1));
+    }
+  } else if (uBrush < 2.5) {   // seta para a direita, com o rabo sumindo
+    float haste = borda(ay - 0.32, wy) * step(x, 0.3) * smoothstep(-1.0, 0.05, x);
+    float ponta = borda(ay - (1.0 - x) / 0.78, wy) * step(0.22, x) * borda(x - 1.0, wx);
+    m = max(haste, ponta);
+    // contorno escuro, como uma seta desenhada: por dentro de uma margem a cor é cheia
+    float dentro = max(borda(ay - 0.2, wy) * step(x, 0.34), borda(ay - (0.86 - x) / 0.78, wy) * step(0.32, x));
+    tom = mix(0.5, 1.0, dentro);
+  } else if (uBrush < 3.5) {   // quatro bolinhas
+    m = borda(length(abs(vq) - 0.68) - 0.31, max(wx, wy));
+  } else {                     // marca genérica: um quadrado de cantos redondos e uma barra (o logotipo do Resolume não entra)
+    vec2 a = abs(vec2((x + 0.9) * 8.1, y)) - 0.62;                     // o quadrado (o desenho é 8,1 vezes mais largo que alto)
+    float quad = borda(length(max(a, 0.0)) + min(max(a.x, a.y), 0.0) - 0.2, wy);
+    float bx = fract((x + 0.72) * 2.6), barra = borda(abs(y) - 0.34, wy) * step(-0.72, x) * borda(x - 0.98, wx) * step(0.16, bx);   // a barra em blocos, como letras
+    if (ay < 0.19 && bx > 0.31 && bx < 0.85) barra = 0.0;              // blocos vazados
+    m = max(quad, barra);
+  }
+  o = vec4(vc.rgb * tom, vc.a) * m;
+}`, ['uTex', 'uFld', 'uRes', 'uFldRes', 'uTick', 'uSize', 'uVar', 'uRot', 'uEdges', 'uSMode', 'uHalf', 'uBrush']);
     // a rodada
     const S = f._stk || (f._stk = { tick: 0, t0: this.time, rs: +V.reset });
     if (+V.reset !== S.rs) { S.rs = +V.reset; S.tick++; S.t0 = this.time; }
@@ -367,12 +437,18 @@ void main(){
     if (this.time < S.t0) S.t0 = this.time;
     if (this.time - S.t0 >= per) { const n = Math.floor((this.time - S.t0) / per); S.tick += n; S.t0 += n * per; }
     const P = this.stkProg; gl.useProgram(P.p);
+    gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, fld.t); gl.uniform1i(P.u.uFld, 7); gl.uniform2f(P.u.uFldRes, fld.w, fld.h);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src); gl.uniform1i(P.u.uTex, 0);
-    gl.uniform2f(P.u.uRes, w, h); gl.uniform1f(P.u.uTick, S.tick % 4096); gl.uniform1f(P.u.uAge, this.time - S.t0);
-    for (const [u, k] of [['uSize', 'size'], ['uVar', 'vari'], ['uSwirl', 'swirl'], ['uFlow', 'flow'], ['uRot', 'rot'], ['uEdges', 'edges'], ['uSMode', 'smode']]) gl.uniform1f(P.u[u], +V[k]);
+    gl.uniform2f(P.u.uRes, w, h); gl.uniform1f(P.u.uTick, S.tick % 4096);
+    for (const [u, k] of [['uSize', 'size'], ['uVar', 'vari'], ['uRot', 'rot'], ['uEdges', 'edges'], ['uSMode', 'smode']]) gl.uniform1f(P.u[u], +V[k]);
+    // meio comprimento e meia largura do quadrado de cada pincel, em px de 1080 linhas com Size 1 (medidos no Resolume; o do pincel pelo "4 sigma")
+    const meio = [[90.83, 31.85], [50, 34.5], [66.5, 31.5], [32.5, 32], [280, 34.5]][Math.max(0, Math.min(4, Math.round(+V.brush || 0)))];
+    gl.uniform2f(P.u.uHalf, meio[0], meio[1]); gl.uniform1f(P.u.uBrush, Math.round(+V.brush || 0));
+    gl.bindFramebuffer(gl.FRAMEBUFFER, Y.fb); gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, Math.max(1, Math.min(5000, Math.round(V.amount))));
     gl.disable(gl.BLEND);
+    return Y.t;
   }
   // a textura 3D da LUT de um efeito LUT (lut.js): refeita quando a LUT muda
   lutTex(f) {
@@ -450,8 +526,11 @@ void main(){
         if (dst.w !== w || dst.h !== h) { gl.deleteFramebuffer(dst.fb); gl.deleteTexture(dst.t); dst = this.scratch[1 + (i & 1)] = this.fbo(w, h); }
         if (dst.t === src) { dst = this.scratch[1 + ((i + 1) & 1)]; }
       }
+      const fld = def.strokes ? this.strokesField(src, w, h, +this.paramValue(f, def.params.find(p => p.key === 'swirl'))) : null;   // Strokes: o campo de direção (brilho desfocado)
+      const stk = def.strokes ? this.strokesPass(f, def, src, w, h, fld) : null;   // e a camada com as pinceladas da rodada
       gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fb); gl.viewport(0, 0, w, h);
       gl.useProgram(pr.p);
+      if (fld) { gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, fld.t); gl.uniform1i(pr.u.uFld, 7); gl.uniform2f(pr.u.uFldRes, fld.w, fld.h); gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, stk); gl.uniform1i(pr.u.uStk, 8); }
       if (ring) for (let k = 0; k < 3; k++) { gl.activeTexture(gl.TEXTURE2 + k); gl.bindTexture(gl.TEXTURE_2D, ring[k]); gl.uniform1i(pr.u[['uDelR', 'uDelG', 'uDelB'][k]], 2 + k); }
       if (midTex) { gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, midTex); gl.uniform1i(pr.u.uMid, 2); }
       if (def.lut) { const T = this.lutTex(f); gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_3D, T ? T.t : this.lutVazio()); gl.uniform1i(pr.u.uLut, 6); gl.uniform1f(pr.u.uLutN, T ? T.n : 0); }
@@ -466,7 +545,6 @@ void main(){
         for (const k in U) { if (!(k in pr.ux)) pr.ux[k] = gl.getUniformLocation(pr.p, k); if (pr.ux[k]) gl.uniform1fv(pr.ux[k], U[k]); }
       }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      if (def.strokes) this.strokesPass(f, def, src, w, h);   // as pinceladas por cima do fundo (saída anterior × Feedback), no mesmo alvo
       src = dst.t; i++;
     }
     gl.enable(gl.BLEND); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
