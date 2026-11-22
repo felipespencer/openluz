@@ -1,5 +1,5 @@
 name = "OpenLuz"
-version = "0.3.0-beta.3"
+version = "0.3.0-beta.4"
 status = "active"
 path = "projecionista-pc"
 tags = []
@@ -21,9 +21,9 @@ status = "in_progress"
 plans_completed = 6
 
 [loop]
-position = "UNIFY"
-plan = "12-21"
-plan_path = "phases/12-revisao-geral/12-21-PLAN.md"
+position = "PLAN"
+plan = "02-12"
+plan_path = "phases/02-efeitos-do-resolume/02-12-PLAN.md"
 
 [satellite]
 groom = true
@@ -31,4 +31,4 @@ groom = true
 [stats]
 total_plans = 16
 total_phases = 0
-last_activity = "2026-11-20T12:00:00-03:00"
+last_activity = "2026-11-22T00:30:00-03:00"
