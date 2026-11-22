@@ -132,11 +132,11 @@ imagem automaticamente; licença de cada modelo de `ai-models/` antes de embarca
 - [x] 02-05: Text Block e Text Animator iguais ao Resolume — fechado em 2026-11-05 com a beta.51
 - [x] 02-06: Texto com IA (✦ Montar com IA; Gemini, Groq, Ollama, Claude) — fechado em 2026-11-05 com a beta.52
 - [x] 02-07: Grid Cloner, SearchLight, WarpSpeed, LUT — fechado em 2026-11-06 com a beta.53
-- [ ] 02-08: Slice Delay e Strokes
+- [x] 02-08: Slice Delay e Strokes — fechado no papel em 2026-11-22: Strokes refeito no 02-12; Slice Delay fora da v0.3
 - [x] 02-09: gabarito dos efeitos (fotos do Resolume em disco, confere offline) e três rodadas de igualar — feito em 2026-11-12/13 SEM plano; registrado depois em 02-09-SUMMARY.md, sem checkpoint do Felipe
 - [x] 02-10: Distortion (3,52 → 0,00) e Tunnel (21,6 → 3,63) pelas sondas — fechado em 2026-11-13 ("aprovado"); o CRT não coube (28,86 medido) e foi para o 02-11
 - [ ] 02-11: CRT em plano próprio (sondas em resolução cheia, controle por controle) — aprovado e PAUSADO em 2026-11-13 na Tarefa 1 ("vamos deixar esses efeitos pra depois"); retoma depois do pente fino
-- [ ] 02-12: Strokes conferido com o Resolume (vem do 02-08) e os "perto" afinados: Bloom (Iterations 5, Knee), WarpSpeed e o resto do Tunnel — plano criado em 2026-11-22 ("Faz")
+- [x] 02-12: Strokes refeito pelas medidas (33 de 33 na folga, seis presets, controle Pincel); WarpSpeed 2,09 → 1,59; Tunnel 3,63 → 2,94 — fechado em 2026-11-22 ("Faz"); Bloom não melhorou (voltas 4 e 5 e Knee em aberto), Twist do Tunnel em aberto
 - [ ] 02-13: Triangulate, Sphere, Stingy Sphere (malha 3D no motor) — abre depois do 02-12; sorteados aprovados a olho. **Fora da v0.3 (decisão do Felipe, 2026-11-13): os seis Depth e o Slice Delay**
 
 ### Phase 3: Celular e plugins
