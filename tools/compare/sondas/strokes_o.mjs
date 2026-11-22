@@ -1,6 +1,6 @@
 // Strokes no OpenLuz (lado de cá das sondas strokes_*.py): põe a imagem e o efeito com os valores pedidos, pelos nomes do
 // Resolume, e guarda N quadros da saída do motor em tools/compare/saida/stk/O-<rotulo>-<i>.png.
-// Uso: node tools/compare/sondas/strokes_o.mjs <rotulo> <imagem> [Controle=valor ...] [--n 6] [--intervalo 550] [--espera 20] [--porta 9333]
+// Uso: node tools/compare/sondas/strokes_o.mjs <rotulo> <imagem> [Controle=valor ...] [--n 6] [--intervalo 550] [--espera 20] [--porta 9333] [--efeito "Bloom"]
 //   --intervalo  ms entre um quadro guardado e o seguinte (550 pega rodadas diferentes com Frequency 2)
 //   --espera     quadros desenhados antes do primeiro (para o Feedback assentar use 60)
 //   --seguidos   guarda quadros desenhados um atrás do outro (ignora --intervalo)
@@ -10,11 +10,11 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)), ROOT = path.resolve(HERE, '..', '..', '..'), OUT = path.join(HERE, '..', 'saida', 'stk');
-const a = { n: 6, intervalo: 550, espera: 20, porta: 9333, seguidos: false, vals: {}, pos: [] };
+const a = { n: 6, intervalo: 550, espera: 20, porta: 9333, seguidos: false, efeito: 'Strokes', vals: {}, pos: [] };
 for (let i = 2; i < process.argv.length; i++) {
   const k = process.argv[i];
   if (k === '--n') a.n = +process.argv[++i]; else if (k === '--intervalo') a.intervalo = +process.argv[++i]; else if (k === '--espera') a.espera = +process.argv[++i];
-  else if (k === '--porta') a.porta = +process.argv[++i]; else if (k === '--seguidos') a.seguidos = true;
+  else if (k === '--porta') a.porta = +process.argv[++i]; else if (k === '--seguidos') a.seguidos = true; else if (k === '--efeito') a.efeito = process.argv[++i];
   else if (k.includes('=')) { const j = k.indexOf('='); a.vals[k.slice(0, j)] = k.slice(j + 1); } else a.pos.push(k);
 }
 const [rot, img] = a.pos;
@@ -30,7 +30,8 @@ const ev = async expr => { const r = await send('Runtime.evaluate', { expression
 
 // definição fresca do efeito (só dados; o código do motor só muda reabrindo o programa)
 const { EFFECTS } = await import(pathToFileURL(path.join(ROOT, 'app/effects.js')).href + '?t=' + Date.now());
-const def = EFFECTS.find(e => e.id === 'strokes');
+const def = EFFECTS.find(e => (e.rname || e.name) === a.efeito);   // --efeito "<nome no Resolume>": serve para qualquer efeito (padrão: Strokes)
+if (!def) { console.error('o OpenLuz não tem o efeito ' + a.efeito); process.exit(1); }
 const clip = path.resolve(img).replace(/\\/g, '/');
 const r = await ev(`(async () => {
   const P = window.projecionista, L = P.state.layers[0], S = ms => new Promise(r => setTimeout(r, ms));
@@ -39,7 +40,7 @@ const r = await ev(`(async () => {
   for (const k of Object.keys(P.EFFECTS[i])) if (typeof P.EFFECTS[i][k] !== 'function' && !(k in novo)) delete P.EFFECTS[i][k];
   Object.assign(P.EFFECTS[i], novo); P.engine.fxProg.delete(novo.id);
   const d = P.EFFECTS[i];
-  if (window.__stkClip !== ${JSON.stringify(clip)}) { await P.putPath(0, 1, ${JSON.stringify(clip)}, ${JSON.stringify(path.basename(clip))}); P.trigger(0, 1); await S(500); window.__stkClip = ${JSON.stringify(clip)}; }
+  await P.putPath(0, 1, ${JSON.stringify(clip)}, ${JSON.stringify(path.basename(clip))}); P.trigger(0, 1); await S(450);   // sempre repõe a imagem: outra ferramenta da bancada pode ter trocado a casa
   const params = {}; for (const p of d.params) params[p.key] = p.def;
   const vr = ${JSON.stringify(a.vals)}, fora = [];
   for (const [rn, v] of Object.entries(vr)) {
@@ -57,5 +58,5 @@ const r = await ev(`(async () => {
 })()`);
 r.out.forEach((q, i) => fs.writeFileSync(path.join(OUT, `O-${rot}-${i}.png`), Buffer.from(q.png.split(',')[1], 'base64')));
 for (let i = r.out.length; fs.existsSync(path.join(OUT, `O-${rot}-${i}.png`)); i++) fs.rmSync(path.join(OUT, `O-${rot}-${i}.png`));
-console.log(JSON.stringify({ rot, quadros: r.out.length, tamanho: [r.w, r.h], semControle: r.fora, quadrosDesenhados: r.out.map(q => q.f - r.out[0].f) }));
+console.log(JSON.stringify({ rot, quadros: r.out.length, tamanho: [r.w, r.h], semControle: r.fora, quadrosDesenhados: r.out.map(q => q.f - r.out[0].f), ms: r.out.map(q => Math.round(q.t)) }));
 ws.close();

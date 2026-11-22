@@ -186,12 +186,12 @@ export const R6 = [
   // (fundura = 1 − 0,0914/(ρ + 0,0907) − Position, ρ = raio/meia altura; cada volta mostra de 0,055 a 0,996 da altura;
   // lei ajustada às fotos, erro ~0,003).
   // Rotation soma (0,5 − valor) a u; Kaleidoscope repete o ângulo 2^(4 × valor) vezes; Twist torce u com a fundura.
-  // TurnH/TurnV puxam o centro (valor − 0,5) × min(4 × fundura, 1,2). Speed 0,5 é parado; a escala da velocidade
-  // e o Wobble são palpite. Segunda passada (fotos com o efeito recém-posto, fase zerada): Twist torce 4 × (0,5 − valor) × fundura
+  // TurnH/TurnV puxam o centro (valor − 0,5) × min(4 × fundura, 1,2). Speed 0,5 é parado; a imagem anda 30 × (0,5 − Speed)³ alturas
+  // por segundo (medido no 02-12 com o Resolume a 30 quadros por segundo, sondas/tunnel_veloc.py: 0 → +3,75; 0,25 → +0,47; 0,4 → +0,03). Segunda passada (fotos com o efeito recém-posto, fase zerada): Twist torce 4 × (0,5 − valor) × fundura
   // (de ~85 para ~13 de diferença); Kaleidoscope (17 a 47) e Wobble (38 a 60) seguem em aberto.
   // Plano 02-10 (sondas/tunnel_mapa.py, imagem em que cada pixel carrega a própria posição): cada fundura d é um círculo de raio
   // 0,0935/d − 0,0933 com o centro em 3,905 × d × (Turn − 0,5) − 0,327 × raio × sen(24 × Wobble × d) (o Wobble é parado e a força dele só
-  // muda a frequência); vale o círculo mais perto que cobre o ponto (os da frente tapam os de trás). Kaleidoscope: 2, 4, 8 ou 16 gomos
+  // muda a frequência: 4 × Wobble ondas ao longo da fundura, 8π e não 24, conferido pelos zeros do centro dos anéis no 02-12); vale o círculo mais perto que cobre o ponto (os da frente tapam os de trás). Kaleidoscope: 2, 4, 8 ou 16 gomos
   // (trocas em 0,25 / 0,5 / 0,75), cada gomo mostra a largura inteira e volta nos últimos 11,25°. A imagem escurece para o fundo:
   // 2 × (1,002 − d), e some para d > 0,91. O túnel deles é uma malha em perspectiva (z = d/(1 − d), raio na tela 0,0935/z) com um anel a
   // cada 1/32 de d, 30 anéis; entre dois anéis a parede é reta, então Twist, curvas e Wobble valem nos anéis e o meio é interpolado
@@ -200,7 +200,7 @@ export const R6 = [
     params: [N('pos', 'Position', 'Posição', 0, 0, 1), N('speed', 'Speed', 'Velocidade', 0.5, 0, 1), N('twist', 'Twist', 'Torção', 0.5, 0, 1), N('kal', 'Kaleidoscope', 'Caleidoscópio', 0, 0, 1), N('rot', 'Rotation', 'Giro', 0.5, 0, 1),
       N('turnh', 'TurnH', 'Curva horizontal', 0.5, 0, 1), N('turnv', 'TurnV', 'Curva vertical', 0.5, 0, 1), N('wobh', 'WobbleH', 'Balanço horizontal', 0, 0, 1), N('wobv', 'WobbleV', 'Balanço vertical', 0, 0, 1), B('blackbg', 'Black BG', 'Fundo preto')],
     glsl: `float tnZ(float d){ return d / (1.0 - 0.99786 * d); }
-    vec2 tnW(float d){ return 3.905 * d * tnZ(d) * vec2(turnh - 0.5, turnv - 0.5) - 0.03057 * sin(24.0 * d * vec2(wobh, wobv)); }
+    vec2 tnW(float d){ return 3.905 * d * tnZ(d) * vec2(turnh - 0.5, turnv - 0.5) - 0.03057 * sin(25.132741 * d * vec2(wobh, wobv)); }
     float tnG(vec2 Q, float d, out vec2 P, out float s, out float k){
       k = min(floor(d * 32.0), 29.0); float z0 = tnZ(k / 32.0), z1 = tnZ((k + 1.0) / 32.0), z = tnZ(d);
       s = (z - z0) / (z1 - z0); float dth = 0.7853982 * (0.5 - twist);
@@ -218,7 +218,7 @@ export const R6 = [
       float u = fract(atan(P.y, P.x) / 6.2831853 + 0.5 - rot + (0.5 - twist) * 4.0 * k / 32.0 + atan(s * sin(dth), 1.0 - s + s * cos(dth)) / 6.2831853);
       float n = kal <= 0.0 ? 1.0 : pow(2.0, ceil(4.0 * kal - 0.0001));
       if (n > 1.5) { float t = fract(u * n), w = n / 32.0; u = t < 1.0 - w ? t : (1.0 - t) * (1.0 - w) / w; }
-      float v = 0.059 + 0.941 * fract(1.0004 - d - pos + (speed - 0.5) * 2.0 * uTime);
+      float sv = 0.5 - speed, v = 0.059 + 0.941 * fract(1.0004 - d - pos + 30.0 * sv * sv * sv * uTime);
       vec4 c = texture(uTex, vec2(u, 1.0 - v)) * clamp(2.0 * (1.002 - d), 0.0, 1.0);
       return c + bg * (1.0 - c.a); }` }),
   // No Resolume, sem o arquivo de mapa (Image) a saída é vazia: é o que o gabarito mostra em todos os casos.

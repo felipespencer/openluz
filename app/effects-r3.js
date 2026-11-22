@@ -25,7 +25,7 @@ const PXB = `vec4 pxb(sampler2D t, vec2 uv, vec2 px, float R, float st, float g)
 const BLM = `vec3 blmK(vec2 uv, float R, float sg, float lod){ vec3 s = vec3(0.0); float tt = 0.0, k = R / 5.0 / max(sg, 1e-4);
   for (float i = -5.0; i <= 5.0; i += 1.0) { float wi = exp(-0.5 * i * i * k * k); if (wi < 0.002) continue;
     for (float j = -5.0; j <= 5.0; j += 1.0) { float w = wi * exp(-0.5 * j * j * k * k); if (w < 0.002) continue;
-      vec2 q = uv + vec2(i, j) * R / 5.0 / uRes; tt += w; if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) continue;
+      vec2 q = clamp(uv + vec2(i, j) * R / 5.0 / uRes, 0.0, 1.0); tt += w;   // fora da imagem vale a beirada (medido: um cinza liso sai liso até a borda)
       s += sqrt(textureLod(uMid, q, lod).rgb) * w; } }
   return s / max(tt, 1e-5); }
 `;
@@ -43,8 +43,11 @@ export const R3 = [
     params: [N('blur', 'Blur', 'Desfoque', 1, 0, 1), N('dx', 'Distance X', 'Distância X', 20, 0, 250, 0.1, ' px'), N('dy', 'Distance Y', 'Distância Y', 20, 0, 250, 0.1, ' px'), N('interval', 'Interval', 'Intervalo', 2, 1, 6), N('gaussian', 'Gaussian', 'Suavidade', 0.2, 0, 1)],
     stage: PXB + `vec4 fx(vec2 uv){ if (uPass > 0.5) return vec4(0.0); return pxb(uTex, uv, vec2(1.0 / uRes.x, 0.0), blur * dx, floor(interval), gaussian); }`,
     glsl: PXB + `vec4 fx(vec2 uv){ return pxb(uMid, uv, vec2(0.0, 1.0 / uRes.y), blur * dy, floor(interval), gaussian); }` }),
-  // Bloom: o 1º passe guarda o que passou do limiar; a redução vem dos mipmaps dessa imagem (stageMip). Em aberto: 5 voltas na
-  // carta (12,9) e Knee longe do padrão
+  // Bloom: o 1º passe guarda o que passou do limiar; a redução vem dos mipmaps dessa imagem (stageMip). Medido no 02-12: num cinza liso
+  // cada volta soma exatamente 1 e a imagem sai lisa até a borda (sondas/bloom_liso.py), por isso fora da imagem vale a beirada.
+  // Em aberto: as voltas 4 e 5 saem fortes demais em imagem cheia (na carta, +13 % e +43 %; sondas/bloom_voltas.py) e certas num
+  // quadradinho isolado; travar a redução da raiz acerta uma e estraga a outra (tabela no 02-12-SUMMARY). Knee 0,5 na carta: 4,1
+  // (a rampa do limiar confere na sonda de barras; o brilho é Rec. 601, o maior canal fica muito pior).
   def({ id: 'bloom', name: 'Bloom', desc: 'As partes claras brilham e vazam para fora.',
     params: [N('amount', 'Amount', 'Quantidade', 1, 0, 1), N('threshold', 'Threshold', 'Limiar', 0.9, 0, 1), N('knee', 'Knee', 'Joelho', 0.1, 0, 1), N('iterations', 'Iterations', 'Voltas', 2, 1, 5, 1), N('size', 'Size', 'Tamanho', 0.25, 0, 1), N('gaussian', 'Gaussian', 'Suavidade', 0.5, 0, 1)],
     stageMip: true,

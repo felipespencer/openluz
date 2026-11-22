@@ -119,7 +119,7 @@ export const MORE = [
   { id: 'warpspeed', name: 'WarpSpeed', desc: 'Salto para a velocidade da luz: a imagem se repete do centro para fora, em rastro, como estrelas passando.',
     params: [P('vig', 'Vinheta', 0.2, 0, 1), P('fade', 'Esmaecer', 0.5, 0, 1), P('scale', 'Escala', 0.5, 0, 1), P('rot', 'Giro', 0, -1, 1), P('cx', 'Centro X', 0, -1, 1), P('cy', 'Centro Y', 0, -1, 1)],
     rparams: { Vignette: 'vig', Fade: 'fade', Scale: 'scale', Rotate: 'rot', 'Center X': 'cx', 'Center Y': 'cy' },
-    hist: () => ({ n: 15, s: 0.5 }),
+    hist: (v, w, h) => ({ n: 15, s: Math.min(1, 1080 / h) }),   // as cópias em tamanho cheio até 1080 linhas (na metade as bordas saíam moles: 2,09 → 1,59 na carta); acima disso, 1080
     glsl: `vec2 wsR(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(p.x * c + p.y * s, -p.x * s + p.y * c); }
     vec4 fx(vec2 uv){
       vec2 P = vec2(uv.x, 1.0 - uv.y) * uRes, c0 = uRes * 0.5;
