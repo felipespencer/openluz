@@ -140,7 +140,7 @@ button.gh:hover{ color:var(--txt); background:var(--bg3); }
 .cell.pv .nm{ box-shadow:inset 0 0 0 1px #fff; }            /* na Prévia: fio branco na faixa */
 .cell.empty.sel{ box-shadow:inset 0 0 0 1px #6d7178; }
 
-#mons{ container-type:size; display:grid; grid-template-rows:auto auto minmax(0,1fr); gap:8px; padding:8px; background:var(--bg2); min-height:0; overflow:auto; }
+#mons{ container-type:size; display:grid; grid-template-rows:auto auto 5px minmax(0,1fr); gap:6px; padding:8px; background:var(--bg2); min-height:0; overflow:auto; }
 .mon .cap{ display:flex; justify-content:space-between; gap:8px; color:var(--dim); font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px; }
 .mon .cap span:last-child:not(:first-child){ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:none; letter-spacing:0; }
 /* forma da composição (12-21): em pé fica em pé, como no Resolume; a altura tem teto para a lista Telas caber, e a largura acompanha */
@@ -175,14 +175,22 @@ button.gh:hover{ color:var(--txt); background:var(--bg3); }
 .saidas .s b{ color:var(--txt); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .saidas .s i{ font-style:normal; color:var(--ghost); white-space:nowrap; } .saidas .s i.on{ color:var(--accent); }
 /* Composição e Prévia lado a lado (12-21, maquete projetores-mockup.html); a vista Projetores ocupa o resto */
-#mons .par{ display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:end; min-width:0; } #mons .par .mon{ min-width:0; }
+#mons .par{ display:grid; grid-template-columns:var(--parL, 1fr) 5px minmax(0,1fr); gap:3px; align-items:end; min-width:0; min-height:0; }
+/* divisórias da coluna (12-22): com a altura do par escolhida, o par vira caixa de tamanho e os quadros cabem nela (forma da
+   composição); a vista Projetores fica sempre com pelo menos 190 px */
+#mons.fixo{ grid-template-rows:min(var(--parH, 200px), calc(100% - 190px)) auto 5px minmax(0,1fr); }
+#mons.fixo .par{ container-type:size; height:100%; } #mons.fixo .par .scr{ max-height:calc(100cqh - 16px); }
+#mons .par .split{ align-self:stretch; } #mons > .split.h{ margin:0 -8px; } #mons .par .mon{ min-width:0; }
 #mons .aoRow{ display:flex; justify-content:flex-end; margin-top:-2px; } #mons .aoRow button{ height:20px; padding:0 10px; font-size:11px; }
 .mon.proj{ display:flex; flex-direction:column; min-height:0; }
 #projView{ position:relative; flex:1 1 auto; min-height:90px; background:#101012; border:1px solid var(--line); border-radius:2px; overflow:hidden; }
 #projView .tela{ position:absolute; background:#000; outline:1px solid #3a3b41; cursor:pointer; }
 #projView .tela.on{ outline:2px solid var(--live); } #projView .tela:hover{ outline-color:#fff; }
 #projView .tela canvas{ width:100%; height:100%; display:block; }
-#projView .tela .nm{ position:absolute; left:-20px; right:-20px; top:100%; margin-top:3px; font-size:10px; line-height:12px; color:var(--dim); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+#projView .tela .nm{ position:absolute; left:0; right:0; bottom:0; padding:2px 4px; font-size:10px; line-height:12px; color:var(--dim); background:linear-gradient(transparent, rgba(0,0,0,.75)); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+#projView .ctlmon{ position:absolute; box-sizing:border-box; border:1px dashed #4a4c53; color:var(--ghost); font-size:10px; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; }
+#projView .ctlmon span{ padding:0 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#projView .fila{ position:absolute; left:0; right:0; border-top:1px dashed #2f3036; color:var(--ghost); font-size:9.5px; padding-left:6px; pointer-events:none; }
 #projView .tela .nm b{ color:var(--txt); font-weight:600; } #projView .tela.on .nm i{ color:var(--live); font-style:normal; } #projView .tela .nm i{ font-style:normal; }
 #projView .vazio{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--ghost); font-size:11px; }
 #projSug{ margin-top:6px; font-size:11px; background:#2a2414; border:1px solid #5a4a1c; color:#f0d58a; padding:5px 8px; border-radius:3px; display:flex; gap:8px; align-items:center; }

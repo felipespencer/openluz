@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Maquete — janelas da direita com divisórias e projetores montados (12-22)</title>
+<style>
+  :root{ --bg:#141416; --bg2:#1b1b1e; --line:#2c2d31; --txt:#e6e6e6; --dim:#9a9ca2; --ghost:#6d7178; --live:#3fd0b6; --accent:#e2b13c; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#0d0d0f; color:var(--txt); font:13px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header{ padding:18px 24px 6px; } h1{ font-size:17px; margin:0 0 4px; } header p{ margin:0 0 6px; color:var(--dim); max-width:980px; }
+  .wrap{ display:flex; gap:30px; padding:14px 24px 30px; align-items:flex-start; flex-wrap:wrap; }
+  .ctl{ display:flex; flex-direction:column; gap:10px; max-width:360px; }
+  .ctl h2{ font-size:13px; margin:6px 0 0; color:var(--accent); font-weight:600; }
+  .ctl label{ display:flex; gap:6px; align-items:center; color:var(--dim); cursor:pointer; } .ctl p{ margin:0; color:var(--dim); font-size:12px; }
+  /* a coluna da direita, como no programa; a borda da esquerda é a divisória que já existe (largura da coluna) */
+  .col{ display:flex; height:640px; }
+  .split{ background:#202125; flex:none; } .split:hover, .split.drag{ background:var(--accent); }
+  .split.v{ width:5px; cursor:col-resize; } .split.h{ height:5px; cursor:row-resize; }
+  .mons{ width:var(--monW, 340px); background:var(--bg2); border:1px solid var(--line); padding:8px; display:grid;
+         grid-template-rows:var(--parH, 150px) auto 5px minmax(0,1fr); gap:6px; overflow:hidden; }
+  .par{ display:grid; grid-template-columns:var(--parL, 1fr) 5px minmax(0,1fr); gap:3px; min-height:0; }
+  .mon{ display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .cap{ display:flex; justify-content:space-between; gap:8px; color:var(--dim); font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px; }
+  .cap i{ font-style:normal; color:var(--ghost); letter-spacing:0; margin-left:6px; } .cap .n{ text-transform:none; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .caixa{ flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+  .scr{ background:#000; border:1px solid var(--line); aspect-ratio:16/9; max-width:100%; max-height:100%; width:100%; }
+  .scr canvas{ width:100%; height:100%; display:block; }
+  .aoRow{ display:flex; justify-content:flex-end; } .aoRow button{ height:20px; padding:0 10px; font-size:11px; background:#2a2b30; color:var(--txt); border:1px solid #3a3b41; border-radius:3px; }
+  .palco{ position:relative; flex:1; min-height:0; background:#101012; border:1px solid var(--line); border-radius:2px; overflow:hidden; }
+  .tela{ position:absolute; background:#000; outline:1px solid #3a3b41; cursor:pointer; }
+  .tela.on{ outline:2px solid var(--live); } .tela:hover{ outline-color:#fff; }
+  .tela canvas{ width:100%; height:100%; display:block; }
+  .ctlmon{ position:absolute; border:1px dashed #4a4c53; color:var(--ghost); font-size:10px; display:flex; align-items:center; justify-content:center; text-align:center; line-height:12px; }
+  .nm{ position:absolute; left:0; right:0; bottom:0; padding:2px 4px; font-size:10px; line-height:12px; color:var(--dim); background:linear-gradient(transparent, rgba(0,0,0,.75)); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+  .nm b{ color:var(--txt); font-weight:600; } .tela.on .nm i{ color:var(--live); } .nm i{ font-style:normal; }
+  .fila{ position:absolute; left:0; right:0; border-top:1px dashed #2f3036; color:var(--ghost); font-size:9.5px; padding-left:6px; }
+  footer{ padding:0 24px 30px; color:var(--dim); max-width:1060px; } footer ol{ padding-left:18px; } footer li{ margin:4px 0; }
+  .medida{ font:11px ui-monospace, Consolas, monospace; color:var(--ghost); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Maquete: janelas da direita com divisórias, e os projetores montados como no Windows</h1>
+  <p>É a coluna à direita da grade. As <b>duas divisórias novas</b> (amarelas ao passar o mouse) funcionam aqui de verdade:
+  uma <b>entre Composição e Prévia</b> e outra <b>entre esse par e Projetores</b>. Duplo clique volta ao padrão. A borda da
+  esquerda é a divisória que já existe (largura da coluna), para ver as três juntas. No programa o tamanho fica guardado ao fechar.</p>
+  <p>Na vista <b>Projetores</b>, cada projetor fica no lugar em que está em <i>Configurações › Sistema › Tela</i> do Windows, na
+  mesma escala. O monitor de controle, sem projeção, aparece só tracejado, para orientar.</p>
+</header>
+
+<div class="wrap">
+  <div class="col" id="col">
+    <div class="split v" id="sMon" title="Largura da coluna (já existe)"></div>
+    <div class="mons" id="mons">
+      <div class="par" id="par">
+        <div class="mon"><div class="cap"><span>Composição <i>1920×1080</i></span></div><div class="caixa"><div class="scr"><canvas data-cena="a" width="320" height="180"></canvas></div></div></div>
+        <div class="split v" id="sPar" title="Arraste para mudar o tamanho; duplo clique volta ao padrão"></div>
+        <div class="mon"><div class="cap"><span>Prévia</span><span class="n">fractal.mp4</span></div><div class="caixa"><div class="scr"><canvas data-cena="b" width="320" height="180"></canvas></div></div></div>
+      </div>
+      <div class="aoRow"><button>Saída avançada</button></div>
+      <div class="split h" id="sProj" title="Arraste para mudar o tamanho; duplo clique volta ao padrão"></div>
+      <div class="mon"><div class="cap"><span>Projetores</span><span class="n" id="cont"></span></div><div class="palco" id="palco"></div></div>
+    </div>
+  </div>
+
+  <div class="ctl">
+    <h2>Ver outros casos</h2>
+    <label><input type="radio" name="c" value="felipe" checked> Os seus três monitores (2 em cima do 1, 3 em pé ao lado)</label>
+    <label><input type="radio" name="c" value="um"> Laptop + um projetor à direita</label>
+    <label><input type="radio" name="c" value="auto"> Um projetor + uma tela em "automático" (sem monitor)</label>
+    <p>Clique num projetor: no programa abre a Saída avançada nele (como hoje).</p>
+    <div class="medida" id="medida"></div>
+  </div>
+</div>
+
+<footer>
+  <b>Para você responder:</b>
+  <ol>
+    <li>As duas divisórias assim, no lugar e no jeito de arrastar?</li>
+    <li>Os projetores montados como no Windows, com o monitor de controle tracejado: está bom, ou prefere esconder o de controle?</li>
+    <li>Telas sem monitor (automático, janela) numa fila embaixo: ok?</li>
+  </ol>
+  O desenho fica animado na maquete só para mostrar que é a imagem de cada projetor. No programa é a imagem de verdade,
+  algumas vezes por segundo, como já é hoje.
+</footer>
+
+<script>
+const root = document.documentElement, mons = document.getElementById('mons'), par = document.getElementById('par'), palco = document.getElementById('palco');
+// ---- casos: monitores do Windows (posição em pixels) e as telas da Saída avançada ligadas a eles
+const CASOS = {
+  felipe: { mons: [{ id: 1, nome: 'DISPLAY1', x: 0, y: 0, w: 1920, h: 1080 }, { id: 2, nome: 'DISPLAY2', x: 0, y: -1080, w: 1920, h: 1080 }, { id: 3, nome: 'DISPLAY3', x: 1920, y: -420, w: 1080, h: 1920 }],
+    telas: [{ nome: 'Fachada', w: 1920, h: 1080, mon: 2, on: true, cena: 'a' }, { nome: 'Coluna', w: 1080, h: 1920, mon: 3, on: true, cena: 'c' }] },
+  um: { mons: [{ id: 1, nome: 'Laptop', x: 0, y: 0, w: 1366, h: 768 }, { id: 2, nome: 'BenQ', x: 1366, y: 0, w: 1920, h: 1080 }],
+    telas: [{ nome: 'Projetor', w: 1920, h: 1080, mon: 2, on: true, cena: 'a' }] },
+  auto: { mons: [{ id: 1, nome: 'DISPLAY1', x: 0, y: 0, w: 1920, h: 1080 }, { id: 2, nome: 'SAMSUNG', x: 1920, y: 0, w: 1920, h: 1080 }],
+    telas: [{ nome: 'Projetor', w: 1920, h: 1080, mon: 2, on: true, cena: 'a' }, { nome: 'Tela 2', w: 1280, h: 720, mon: null, on: false, cena: 'b', onde: 'automático' }] },
+};
+let caso = 'felipe';
+// ---- montagem: a mesma conta que vai para o renderProjView do programa
+function monta() {
+  const C = CASOS[caso], r = palco.getBoundingClientRect(); palco.textContent = '';
+  const pad = 10, rot = 0, gapFila = 22, folga = 2;   // folga: um fio entre monitores encostados, para cada um se ler sozinho
+  const ligadas = C.telas.filter(t => C.mons.some(m => m.id === t.mon)), soltas = C.telas.filter(t => !ligadas.includes(t));
+  const x0 = Math.min(...C.mons.map(m => m.x)), y0 = Math.min(...C.mons.map(m => m.y));
+  const bw = Math.max(...C.mons.map(m => m.x + m.w)) - x0, bh = Math.max(...C.mons.map(m => m.y + m.h)) - y0;
+  const filaW = soltas.reduce((n, t) => n + t.w, 0) + Math.max(0, soltas.length - 1) * 200, filaH = soltas.length ? Math.max(...soltas.map(t => t.h)) : 0;
+  const altoUtil = r.height - pad * 2 - rot - (soltas.length ? gapFila + rot : 0);
+  const esc = Math.max(0.001, Math.min((r.width - pad * 2) / Math.max(bw, filaW), altoUtil / (bh + filaH)));
+  const ox = (r.width - bw * esc) / 2, oy = pad + (altoUtil - (bh + filaH) * esc) / 2;
+  const caixa = (d, x, y, w, h) => Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  for (const m of C.mons) {
+    const rx = ox + (m.x - x0) * esc + folga, ry = oy + (m.y - y0) * esc + folga, rw = m.w * esc - folga * 2, rh = m.h * esc - folga * 2;
+    const ts = ligadas.filter(t => t.mon === m.id);
+    if (!ts.length) { const d = document.createElement('div'); d.className = 'ctlmon'; d.innerHTML = m.nome + '<br>controle'; caixa(d, rx, ry, rw, rh); palco.appendChild(d); continue; }
+    ts.forEach((t, i) => {   // a tela encaixada (contain) no retângulo do monitor; uma segunda no mesmo monitor desloca 8 px
+      const k = Math.min(rw / t.w, rh / t.h), w = t.w * k, h = t.h * k;
+      palco.appendChild(tela(t, m.nome, rx + (rw - w) / 2 + i * 8, ry + (rh - h) / 2 + i * 8, w, h));
+    });
+  }
+  if (soltas.length) {
+    const fy = oy + bh * esc + gapFila / 2, f = document.createElement('div'); f.className = 'fila'; f.style.top = (fy - 4) + 'px'; f.textContent = 'sem monitor'; palco.appendChild(f);
+    let cx = (r.width - filaW * esc) / 2;
+    for (const t of soltas) { palco.appendChild(tela(t, t.onde || 'janela', cx, fy + 10 + (filaH - t.h) * esc, t.w * esc, t.h * esc)); cx += (t.w + 200) * esc; }
+  }
+  document.getElementById('cont').textContent = C.telas.length + ' telas · ' + C.telas.filter(t => t.on).length + ' no ar';
+  medida();
+}
+function tela(t, onde, x, y, w, h) {
+  const d = document.createElement('div'); d.className = 'tela' + (t.on ? ' on' : '');
+  Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  const c = document.createElement('canvas'); c.width = Math.max(4, Math.round(w)); c.height = Math.max(4, Math.round(h)); c.dataset.cena = t.cena;
+  const nm = document.createElement('div'); nm.className = 'nm'; nm.innerHTML = '<b></b><br><span></span> · <i></i>';
+  nm.querySelector('b').textContent = t.nome; nm.querySelector('span').textContent = onde; nm.querySelector('i').textContent = t.on ? 'no ar' : 'fechada';
+  d.title = t.nome + ' · ' + t.w + '×' + t.h + ' · ' + onde + '. Clique para abrir a Saída avançada nesta tela.';
+  d.append(c, nm); return d;
+}
+// ---- divisórias: a da coluna (borda da janela), a do par (fração da largura) e a de Projetores (altura do par)
+const PAD = { sMon: null, sPar: null, sProj: null };
+function arrasta(id, fn, padrao) {
+  const s = document.getElementById(id);
+  s.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); s.setPointerCapture(e.pointerId); s.classList.add('drag');
+    const mv = (ev) => { fn(ev); monta(); }, up = () => { s.removeEventListener('pointermove', mv); s.removeEventListener('pointerup', up); s.classList.remove('drag'); };
+    s.addEventListener('pointermove', mv); s.addEventListener('pointerup', up);
+  });
+  s.addEventListener('dblclick', () => { padrao(); monta(); });
+}
+const lim = (v, a, b) => Math.max(a, Math.min(b, v));
+arrasta('sMon', (ev) => { const r = mons.getBoundingClientRect(); root.style.setProperty('--monW', Math.round(lim(r.right - ev.clientX - 2, 220, 900)) + 'px'); }, () => root.style.removeProperty('--monW'));
+arrasta('sPar', (ev) => { const r = par.getBoundingClientRect(), f = lim((ev.clientX - r.left) / r.width, 0.2, 0.8); root.style.setProperty('--parL', (f / (1 - f)).toFixed(3) + 'fr'); }, () => root.style.removeProperty('--parL'));
+arrasta('sProj', (ev) => { const r = mons.getBoundingClientRect(), ao = document.querySelector('.aoRow').getBoundingClientRect().height + 6 * 2;   // a divisória fica embaixo do botão: desconta o botão e os vãos
+  root.style.setProperty('--parH', Math.round(lim(ev.clientY - r.top - 8 - ao, 90, r.height - 8 * 2 - ao - 5 - 90)) + 'px'); }, () => root.style.removeProperty('--parH'));
+function medida() {
+  const m = mons.getBoundingClientRect(), [a, b] = par.querySelectorAll('.scr');
+  document.getElementById('medida').textContent = 'coluna ' + Math.round(m.width) + ' px · Composição ' + Math.round(a.getBoundingClientRect().width) + ' × Prévia ' + Math.round(b.getBoundingClientRect().width) + ' px · par ' + Math.round(par.getBoundingClientRect().height) + ' px de alto · Projetores ' + Math.round(palco.getBoundingClientRect().height) + ' px';
+}
+document.querySelectorAll('input[name=c]').forEach(i => i.onchange = () => { caso = i.value; monta(); });
+new ResizeObserver(monta).observe(palco);
+// ---- imagem de exemplo: faixas que andam (só para ver que cada quadro tem imagem)
+const COR = { a: [200, 30], b: [280, 120], c: [20, 160] };
+function desenha(t) {
+  for (const c of document.querySelectorAll('canvas[data-cena]')) {
+    const g = c.getContext('2d'), [h1, h2] = COR[c.dataset.cena] || [0, 0], w = c.width, h = c.height;
+    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, `hsl(${(h1 + t / 40) % 360} 70% 45%)`); gr.addColorStop(1, `hsl(${(h2 + t / 30) % 360} 70% 30%)`);
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,.18)'; for (let i = 0; i < 6; i++) { const x = ((t / 12 + i * w / 3) % (w * 2)) - w / 2; g.fillRect(x, 0, w / 14, h); }
+  }
+  requestAnimationFrame(desenha);
+}
+monta(); requestAnimationFrame(desenha);
+</script>
+</body>
+</html>

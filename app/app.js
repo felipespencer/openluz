@@ -1150,8 +1150,9 @@ function renderScreens(relogio) {
 }
 setInterval(() => renderScreens(true), 1000);
 
-// ---- vista Projetores (12-21, maquete projetores-mockup.html): o que sai em cada tela, em fila e na mesma escala, da esquerda
-// para a direita como o Windows arruma os monitores. Só lê o canvas que a tela já tem; desenha a miniatura poucas vezes por segundo.
+// ---- vista Projetores (12-21; montada no 12-22, maquete janelas-direita-mockup.html): o que sai em cada tela, cada uma no lugar
+// do seu monitor como em Configurações › Tela do Windows, na mesma escala. Monitor sem tela da Saída avançada (o de controle)
+// aparece só tracejado; telas sem monitor (automático, janela) ficam numa fila embaixo. Só lê o canvas que a tela já tem.
 // var (não const): o renderScreens roda antes desta linha na montagem; a vista só começa com projPronto, no fim do arquivo
 var projView = $('projView'), projThumbs = new Map(), projKey = '', projSugFechada = '', projPronto = false;
 function projOrdem() {
@@ -1161,26 +1162,49 @@ function projOrdem() {
 function renderProjView() {
   if (!projPronto || !projView) return;
   const r = projView.getBoundingClientRect(), lista = projOrdem();
-  const key = lista.map(sc => [sc.uid, sc.w, sc.h, sc.name, sc.device, sc.enabled, !!(sc.win && !sc.win.closed)].join(':')).join('|') + '@' + Math.round(r.width) + 'x' + Math.round(r.height) + '@' + displays.map(d => d.id + d.label).join();
-  if (key !== projKey) {
-    projKey = key; projView.textContent = ''; projThumbs.clear();
-    if (!lista.length) projView.appendChild(el('div', 'vazio', 'Nenhuma tela. Abra a Saída avançada para criar.'));
-    const pad = 10, baixo = 28, gap = 14, tot = lista.reduce((n, sc) => n + sc.w, 0) || 1, alto = Math.max(1, ...lista.map(sc => sc.h));
-    const esc = Math.max(0.001, Math.min((r.width - pad * 2 - gap * Math.max(0, lista.length - 1)) / tot, (r.height - pad * 2 - baixo) / alto));
-    let cx = (r.width - tot * esc - gap * Math.max(0, lista.length - 1)) / 2; const oy = pad + (r.height - pad * 2 - baixo - alto * esc) / 2;
-    for (const sc of lista) {
-      const W = Math.max(4, Math.round(sc.w * esc)), H = Math.max(4, Math.round(sc.h * esc)), open = !!(sc.win && !sc.win.closed);
-      const d = el('div', 'tela' + (open ? ' on' : '')); d.dataset.uid = sc.uid;
-      Object.assign(d.style, { left: cx + 'px', top: oy + (alto * esc - H) + 'px', width: W + 'px', height: H + 'px' }); cx += W + gap;
-      const c = el('canvas'); c.width = W; c.height = H;
-      const mon = sc.device === 'auto' ? 'automático' : sc.device === 'window' ? 'janela' : ((displays.find(x => x.id === sc.device) || {}).label || 'monitor');
-      const nm = el('div', 'nm'); nm.innerHTML = '<b></b><br><span></span> · <i></i>'; nm.querySelector('b').textContent = sc.name; nm.querySelector('span').textContent = mon; nm.querySelector('i').textContent = open ? 'no ar' : sc.enabled ? 'fechada' : 'desligada';
-      d.title = sc.name + ' · ' + sc.w + '×' + sc.h + ' · ' + mon + '. Clique para abrir a Saída avançada nesta tela.';
-      d.onclick = () => { ao.show(); ao.select(sc, null); ao.setTab('out'); ao.layout(); ao.refresh(); };
-      d.append(c, nm); projView.appendChild(d); projThumbs.set(sc.uid, c.getContext('2d'));
-    }
-    projDesenha(true);
+  const key = lista.map(sc => [sc.uid, sc.w, sc.h, sc.name, sc.device, sc.enabled, !!(sc.win && !sc.win.closed)].join(':')).join('|') + '@' + Math.round(r.width) + 'x' + Math.round(r.height) + '@' + displays.map(d => [d.id, d.label, d.x, d.y, d.w, d.h].join(':')).join();
+  if (key === projKey) return projAviso();
+  projKey = key; projView.textContent = ''; projThumbs.clear();
+  if (!lista.length) projView.appendChild(el('div', 'vazio', 'Nenhuma tela. Abra a Saída avançada para criar.'));
+  const mons = displays.filter(d => d.w > 0 && d.h > 0), noMon = (sc) => mons.find(d => d.id === sc.device);
+  const ligadas = lista.filter(noMon), soltas = lista.filter(sc => !noMon(sc));
+  const pad = 10, folga = 2, vaoFila = 22, vaoSolta = 200;   // folga: um fio entre monitores encostados, para cada um se ler sozinho
+  const x0 = mons.length ? Math.min(...mons.map(d => d.x)) : 0, y0 = mons.length ? Math.min(...mons.map(d => d.y)) : 0;
+  const bw = ligadas.length ? Math.max(...mons.map(d => d.x + d.w)) - x0 : 0, bh = ligadas.length ? Math.max(...mons.map(d => d.y + d.h)) - y0 : 0;
+  const fw = soltas.reduce((n, sc) => n + sc.w, 0) + Math.max(0, soltas.length - 1) * vaoSolta, fh = soltas.length ? Math.max(...soltas.map(sc => sc.h)) : 0;
+  const util = r.height - pad * 2 - (ligadas.length && soltas.length ? vaoFila : 0);
+  const esc = Math.max(0.001, Math.min((r.width - pad * 2) / Math.max(1, bw, fw), util / Math.max(1, bh + fh)));
+  const ox = (r.width - bw * esc) / 2, oy = pad + (util - (bh + fh) * esc) / 2;
+  const caixa = (d, x, y, w, h) => Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  if (ligadas.length) for (const m of mons) {
+    const rx = ox + (m.x - x0) * esc + folga, ry = oy + (m.y - y0) * esc + folga, rw = m.w * esc - folga * 2, rh = m.h * esc - folga * 2;
+    const ts = ligadas.filter(sc => sc.device === m.id);
+    if (!ts.length) { const d = el('div', 'ctlmon'); d.append(el('span', '', m.label)); d.title = m.label + ' · ' + m.w + '×' + m.h + ' · sem tela da Saída avançada'; caixa(d, rx, ry, rw, rh); projView.appendChild(d); continue; }
+    ts.forEach((sc, i) => {   // a tela encaixada no retângulo do monitor; uma segunda no mesmo monitor desloca 8 px
+      const k = Math.min(m.w / sc.w, m.h / sc.h) * esc, w = sc.w * k - folga * 2, h = sc.h * k - folga * 2;   // encaixa no monitor inteiro e só depois tira a folga: a forma não muda
+      projTela(sc, m.label, rx + (rw - w) / 2 + i * 8, ry + (rh - h) / 2 + i * 8, w, h);
+    });
   }
+  if (soltas.length) {
+    const fy = oy + bh * esc + (ligadas.length ? vaoFila : 0);
+    if (ligadas.length) { const f = el('div', 'fila', 'sem monitor'); f.style.top = (fy - vaoFila / 2 - 6) + 'px'; projView.appendChild(f); }
+    let cx = (r.width - fw * esc) / 2;
+    for (const sc of soltas) { projTela(sc, sc.device === 'auto' ? 'automático' : sc.device === 'window' ? 'janela' : 'monitor desligado', cx, fy + (fh - sc.h) * esc, sc.w * esc, sc.h * esc); cx += (sc.w + vaoSolta) * esc; }
+  }
+  projDesenha(true);
+  projAviso();
+}
+function projTela(sc, mon, x, y, w, h) {
+  const W = Math.max(4, Math.round(w)), H = Math.max(4, Math.round(h)), open = !!(sc.win && !sc.win.closed);
+  const d = el('div', 'tela' + (open ? ' on' : '')); d.dataset.uid = sc.uid;
+  Object.assign(d.style, { left: Math.round(x) + 'px', top: Math.round(y) + 'px', width: W + 'px', height: H + 'px' });
+  const c = el('canvas'); c.width = W; c.height = H;
+  const nm = el('div', 'nm'); nm.innerHTML = '<b></b><br><span></span> · <i></i>'; nm.querySelector('b').textContent = sc.name; nm.querySelector('span').textContent = mon; nm.querySelector('i').textContent = open ? 'no ar' : sc.enabled ? 'fechada' : 'desligada';
+  d.title = sc.name + ' · ' + sc.w + '×' + sc.h + ' · ' + mon + '. Clique para abrir a Saída avançada nesta tela.';
+  d.onclick = () => { ao.show(); ao.select(sc, null); ao.setTab('out'); ao.layout(); ao.refresh(); };
+  d.append(c, nm); projView.appendChild(d); projThumbs.set(sc.uid, c.getContext('2d'));
+}
+function projAviso() {
   // aviso: todas as telas ligadas em pé e a composição deitada (a imagem sai esticada, como no Resolume); só avisa
   const lig = state.screens.filter(sc => sc.enabled), S = state.settings, sug = $('projSug');
   const chave = S.w + 'x' + S.h + ':' + lig.map(sc => sc.uid).join(), mostra = lig.length > 0 && lig.every(sc => sc.h > sc.w) && S.w > S.h && projSugFechada !== chave;
@@ -1862,5 +1886,5 @@ window.projecionista = { renderProjView, iaDialog, putIaGen, iaTrocarImagem, get
   probeScreen: (sc, pts) => engine.probeScreen(sc, state.layers, state.screens, pts),
   serialize: () => serializeComposition(state, laser, COLS), load: loadComposition, reset: resetComposition,
   askClose, clipMenuItems,
-  screens: () => state.screens, setScreens, openOutputs, outWins: () => state.screens.map(sc => sc.win).filter(w => w && !w.closed) };
+  screens: () => state.screens, setScreens, openOutputs, displays: () => displays, setDisplaysTeste: (d) => { displays = d; renderProjView(); }, /* 12-22: a bateria monta arranjos de monitores */ outWins: () => state.screens.map(sc => sc.win).filter(w => w && !w.closed) };
 projPronto = true; renderProjView();   // vista Projetores: agora ao, recorder e o laço já existem
